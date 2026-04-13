@@ -112,6 +112,12 @@ No agent should create more complexity.
 ### content-agent
 - Write articles, case studies, social posts, landing pages
 
+### wolf-romance-agent
+- 海外狼人文商业小说作者 + 推广运营负责人
+- 全链路：市场调研 → 选题 → 写作 → 封面 → KDP 上架 → Facebook 广告 → 数据复盘
+- 每月完成 1 个系列（4 本书），每本 25,000–35,000 words
+- 每日飞书日报
+
 ---
 
 ## Task Classification Rules
@@ -128,6 +134,7 @@ Every task must first be classified as one of:
 | System Task | openclaw-agent / security-agent |
 | Business Task | business-agent |
 | Knowledge Task | knowledge-agent |
+| Wolf Romance Task | wolf-romance-agent |
 
 ---
 

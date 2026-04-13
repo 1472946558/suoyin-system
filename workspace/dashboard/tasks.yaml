@@ -1,0 +1,133 @@
+# OpenClaw Task Panel Data
+
+# 任务状态看板
+tasks:
+  # ===== Golf iOS =====
+  - id: T001
+    title: 修复 Unity CSV/JSON 协议
+    agent: golf-ios
+    project: Golf iOS
+    priority: P0
+    status: in_progress
+    created: 2026-04-13
+    updated: 2026-04-13
+    description: Unity 与 Native iOS 之间数据交换协议修复
+    acceptance:
+      - JSON 字段名与 Android 一致
+      - CSV 格式可正确解析
+      - 日志输出正常
+    blocker: null
+
+  - id: T002
+    title: 完成相机模式 UI 对齐
+    agent: golf-ios
+    project: Golf iOS
+    priority: P1
+    status: pending
+    created: 2026-04-13
+    updated: 2026-04-13
+    description: 相机模式 UI 与 Android 版本对齐
+    acceptance:
+      - 布局像素级对齐
+      - 交互流程一致
+      - 无新增依赖
+    blocker: T001
+
+  - id: T003
+    title: 完成二期合同需求拆解
+    agent: golf-ios
+    project: Golf iOS
+    priority: P1
+    status: pending
+    created: 2026-04-13
+    updated: 2026-04-13
+    description: 拆解二期合同中的功能需求
+    acceptance:
+      - 需求列表完整
+      - 每个需求有验收标准
+      - 优先级排序
+    blocker: null
+
+  # ===== Amazon DE =====
+  - id: T004
+    title: 609 圆灯差评分析
+    agent: amazon-de
+    project: Amazon DE
+    priority: P1
+    status: pending
+    created: 2026-04-13
+    updated: 2026-04-13
+    description: 分析 609 圆灯差评原因，制定改进方案
+    acceptance:
+      - 差评分类统计
+      - 根因分析
+      - 改进建议
+    blocker: null
+
+  - id: T005
+    title: 德国站选品调研
+    agent: amazon-de
+    project: Amazon DE
+    priority: P2
+    status: pending
+    created: 2026-04-13
+    updated: 2026-04-13
+    description: 按选品框架评估潜在新品
+    acceptance:
+      - 至少 3 个候选品
+      - 每个有完整评分
+      - 利润测算
+    blocker: null
+
+  # ===== OpenClaw =====
+  - id: T006
+    title: 补齐系统基础架构
+    agent: openclaw
+    project: OpenClaw
+    priority: P1
+    status: in_progress
+    created: 2026-04-13
+    updated: 2026-04-13
+    description: USER/Agent/Skill/Dashboard 四层补齐
+    acceptance:
+      - 3 个 USER 文件
+      - 全部 Agent 定义
+      - 核心 Skills
+      - Dashboard 数据结构
+    blocker: null
+
+# 任务状态定义
+task_statuses:
+  - id: pending
+    label: 待开始
+    color: gray
+  - id: in_progress
+    label: 进行中
+    color: blue
+  - id: review
+    label: 验收中
+    color: yellow
+  - id: done
+    label: 已完成
+    color: green
+  - id: blocked
+    label: 阻塞
+    color: red
+
+# 按项目分组统计
+projects:
+  - name: Golf iOS
+    total: 3
+    pending: 2
+    in_progress: 1
+    done: 0
+  - name: Amazon DE
+    total: 2
+    pending: 2
+    in_progress: 0
+    done: 0
+  - name: OpenClaw
+    total: 1
+    pending: 0
+    in_progress: 1
+    done: 0

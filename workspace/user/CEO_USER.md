@@ -9,9 +9,10 @@
 
 1. **Golf iOS App** — 交付验收，1:1 对齐 Android，零妥协
 2. **Amazon DE** — 德国站持续盈利，ACOS 控得住，选品有逻辑
-3. **GEO / AI Search** — 产品 MVP，抢占先机
-4. **OpenClaw** — 成为你真正的多 Agent 工作台，自动运转
-5. **Candy** — 企业后台系统，按模块推进
+3. **Wolf Romance** — 海外狼人文每月 1 个系列，KDP 持续上架，广告跑正 ROI
+4. **GEO / AI Search** — 产品 MVP，抢占先机
+5. **OpenClaw** — 成为你真正的多 Agent 工作台，自动运转
+6. **Candy** — 企业后台系统，按模块推进
 
 ## 工作风格
 
@@ -34,9 +35,10 @@
 优先级排序：
 1. Golf 交付（有合同死线）
 2. Amazon 运营（每天都有花费）
-3. GEO 产品（战略布局）
-4. OpenClaw 维护（基础设施）
-5. Candy（排期待定）
+3. Wolf Romance（每天都有产出，直接变现）
+4. GEO 产品（战略布局）
+5. OpenClaw 维护（基础设施）
+6. Candy（排期待定）
 
 ## 讨厌的输出
 

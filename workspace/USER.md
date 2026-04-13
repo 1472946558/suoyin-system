@@ -38,6 +38,13 @@
 - Flow: Company Profile -> Question Bank -> Content -> AI Monitoring -> Optimization -> Conversion
 - Modules: Dashboard, Company Profile, Brand White Paper, 150 Question Bank, Content Generation Center, Platform Account Integration, AI Monitoring Center, Competitor Comparison, Conversion Data, Optimization Suggestions
 
+### 5. Wolf Romance Publishing (海外狼人文)
+- US-market Paranormal Romance / Werewolf novel publishing
+- Platforms: Amazon KDP, GoodNovel
+- Target: 1 series (4 books) per month, each 25K-35K words
+- Topics: Rejected Mate, Alpha, Secret Baby, Second Chance, Possessive Alpha
+- Full pipeline: market research -> writing -> cover -> KDP -> Facebook ads -> data review
+
 ## Work Preferences
 
 - Wants actionable output, not explanations

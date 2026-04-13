@@ -1,0 +1,163 @@
+# OpenClaw Agent Dashboard Data
+
+agents:
+  - name: Commander Agent
+    id: commander
+    role: 总协调，拆任务，分配给其他 Agent
+    status: active
+    emoji: "\U0001F3AF"
+    current_tasks: []
+    skills: []
+
+  - name: Strategist Agent
+    id: strategist
+    role: 优先级排序，Today TOP5
+    status: active
+    emoji: "\U0001F4CA"
+    current_tasks:
+      - 生成每日 TOP5 任务列表
+    skills: []
+
+  - name: Golf iOS Agent
+    id: golf-ios
+    role: iOS Native + Unity + BLE 开发
+    status: active
+    emoji: "\u26F3"
+    current_tasks:
+      - 修复 Unity CSV/JSON 协议
+      - 完成相机模式 UI 对齐
+      - 完成二期合同需求拆解
+    skills:
+      - golf_ios_acceptance
+      - golf_ble_protocol
+      - golf_unity_json_csv
+
+  - name: Golf QA Agent
+    id: golf-qa
+    role: 验收检查，Android 对齐
+    status: active
+    emoji: "\u2705"
+    current_tasks:
+      - 等待 Golf iOS Agent 完成后验收
+    skills:
+      - golf_ios_acceptance
+
+  - name: Amazon DE Agent
+    id: amazon-de
+    role: Amazon.de 德国站运营
+    status: active
+    emoji: "\U0001F4E6"
+    current_tasks:
+      - 德国站选品
+      - 609 圆灯差评分析
+      - 广告 ACOS 控制
+    skills:
+      - amazon_product_selection
+      - amazon_ads_optimization
+      - amazon_listing_review
+      - amazon_profit_judgement
+
+  - name: GEO Research Agent
+    id: geo-research
+    role: GEO/AI 搜索竞品调研
+    status: standby
+    emoji: "\U0001F50D"
+    current_tasks: []
+    skills:
+      - geo_competitor_analysis
+
+  - name: Prompt Engineer Agent
+    id: prompt-engineer
+    role: 生成 Cursor / Codex Prompt
+    status: active
+    emoji: "\u270D\uFE0F"
+    current_tasks: []
+    skills:
+      - cursor_prompt_builder
+
+  - name: SOP Builder Agent
+    id: sop-builder
+    role: 沉淀 SOP / Skill / 模板
+    status: standby
+    emoji: "\U0001F4CB"
+    current_tasks: []
+    skills:
+      - sop_generator
+
+  - name: Memory Agent
+    id: memory
+    role: 整理长期记忆、归档、日报
+    status: active
+    emoji: "\U0001F9E0"
+    current_tasks:
+      - 每日记忆归档
+    skills:
+      - meeting_summary
+
+  - name: Delivery Agent
+    id: delivery
+    role: 项目交付和外包管理
+    status: active
+    emoji: "\U0001F680"
+    current_tasks: []
+    skills: []
+
+  - name: Research Agent
+    id: research
+    role: 调研、文档验证、工具对比
+    status: active
+    emoji: "\U0001F52C"
+    current_tasks: []
+    skills: []
+
+  - name: Security Agent
+    id: security
+    role: 安全校验，MCP/Plugin 审核
+    status: active
+    emoji: "\U0001F6E1\uFE0F"
+    current_tasks: []
+    skills: []
+
+  - name: Backup Agent
+    id: backup
+    role: 备份配置、Agent、Skills
+    status: active
+    emoji: "\U0001F4BE"
+    current_tasks: []
+    skills: []
+
+  - name: OpenClaw Agent
+    id: openclaw
+    role: 平台维护，Gateway/MCP 故障排除
+    status: active
+    emoji: "\u2699\uFE0F"
+    current_tasks: []
+    skills:
+      - openclaw_skill
+
+# 状态定义
+statuses:
+  - id: active
+    label: 运行中
+    color: green
+  - id: standby
+    label: 待命
+    color: yellow
+  - id: offline
+    label: 离线
+    color: red
+
+# 优先级定义
+priorities:
+  - id: P0
+    label: 紧急
+    color: red
+  - id: P1
+    label: 高
+    color: orange
+  - id: P2
+    label: 中
+    color: yellow
+  - id: P3
+    label: 低
+    color: blue
