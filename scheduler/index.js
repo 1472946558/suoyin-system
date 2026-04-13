@@ -15,6 +15,7 @@
  */
 
 const http = require('http');
+const net = require('net');
 const fs = require('fs');
 const path = require('path');
 
@@ -136,12 +137,15 @@ function gatewayRequest(method, path, body) {
 }
 
 async function checkGatewayHealth() {
-  try {
-    const res = await gatewayRequest('GET', '/health');
-    return res.status === 200;
-  } catch {
-    return false;
-  }
+  // OpenClaw Gateway is a UI server, not REST API
+  // Check TCP connectivity instead of HTTP health endpoint
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host: GATEWAY.host, port: GATEWAY.port });
+    socket.setTimeout(3000);
+    socket.on('connect', () => { socket.destroy(); resolve(true); });
+    socket.on('timeout', () => { socket.destroy(); resolve(false); });
+    socket.on('error', () => { socket.destroy(); resolve(false); });
+  });
 }
 
 async function triggerAgent(agentId, task) {

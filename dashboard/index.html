@@ -3,440 +3,531 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenClaw Dashboard</title>
+<title>OpenClaw 工作台</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a28;--border:#2a2a3a;
-  --text:#e8e8f0;--text2:#8888a0;--accent:#6c5ce7;--accent2:#a29bfe;
-  --green:#00d68f;--yellow:#ffaa00;--red:#ff4757;--blue:#3498db;
-  --radius:12px;
+  --bg:#08090d;--bg2:#0f1117;--surface:#151720;--surface2:#1c1e2c;--surface3:#232638;
+  --border:#2a2d3e;--border2:#363a52;
+  --text:#e4e6f0;--text2:#8b8fa8;--text3:#5c6080;
+  --accent:#6c5ce7;--accent2:#a29bfe;--accent-bg:rgba(108,92,231,.08);
+  --green:#00d68f;--green-bg:rgba(0,214,143,.1);
+  --yellow:#ffaa00;--yellow-bg:rgba(255,170,0,.1);
+  --red:#ff4757;--red-bg:rgba(255,71,87,.1);
+  --blue:#3498db;--blue-bg:rgba(52,152,219,.1);
+  --radius:10px;--radius2:14px;
+  --shadow:0 2px 8px rgba(0,0,0,.3);
+  --transition:all .2s ease;
 }
-html,body{height:100%;font:14px/1.5 -apple-system,BlinkMacSystemFont,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
-.app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+html,body{height:100%;font:13px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ===== Layout ===== */
+.app{display:grid;grid-template-rows:48px 1fr;height:100vh;overflow:hidden}
 
 /* Header */
-.header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
-.header h1{font-size:18px;font-weight:700;letter-spacing:.5px}
-.header h1 span{color:var(--accent2)}
-.header-right{display:flex;gap:12px;align-items:center}
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.status-text{font-size:12px;color:var(--text2)}
-.clock{font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:10}
+.hd-left{display:flex;align-items:center;gap:14px}
+.hd-logo{font-size:16px;font-weight:800;letter-spacing:.5px}.hd-logo b{color:var(--accent2)}
+.hd-tabs{display:flex;gap:2px;margin-left:20px}
+.hd-tab{padding:6px 14px;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer;color:var(--text2);transition:var(--transition)}
+.hd-tab:hover{color:var(--text);background:var(--surface)}
+.hd-tab.on{color:var(--accent2);background:var(--accent-bg)}
+.hd-right{display:flex;align-items:center;gap:16px;font-size:12px}
+.gw-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.gw-on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.gw-off{background:var(--red);box-shadow:0 0 6px var(--red)}
 
-/* Layout */
-.main{display:grid;grid-template-columns:280px 1fr;overflow:hidden}
+/* Body */
+.body{display:grid;grid-template-columns:240px 1fr;overflow:hidden}
 
 /* Sidebar */
-.sidebar{border-right:1px solid var(--border);overflow-y:auto;padding:16px}
-.sidebar h2{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:12px;padding:0 12px}
-.agent-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;transition:background .15s}
-.agent-card:hover{background:var(--surface2)}
-.agent-card.active{background:var(--surface2);border-left:3px solid var(--accent)}
-.agent-emoji{font-size:20px;width:32px;text-align:center;flex-shrink:0}
-.agent-info{flex:1;min-width:0}
-.agent-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.agent-role{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.agent-badge{font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;flex-shrink:0}
-.badge-active{background:rgba(0,214,143,.15);color:var(--green)}
-.badge-standby{background:rgba(255,170,0,.15);color:var(--yellow)}
+.side{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:12px 8px}
+.side-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--text3);padding:8px 12px 6px;font-weight:700}
+.ag{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:var(--transition);margin-bottom:2px}
+.ag:hover{background:var(--surface)}
+.ag.on{background:var(--surface2);box-shadow:inset 3px 0 0 var(--accent)}
+.ag-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0}
+.ag-body{flex:1;min-width:0}
+.ag-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-role{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-badge{font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700;flex-shrink:0}
+.st-active{background:var(--green-bg);color:var(--green)}
+.st-standby{background:var(--yellow-bg);color:var(--yellow)}
 
-/* Content */
-.content{overflow-y:auto;padding:24px}
+/* Main */
+.main{overflow-y:auto;padding:20px 24px}
 
-/* Stats Row */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
-.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:4px}
-.stat-value{font-size:28px;font-weight:700}
-.stat-sub{font-size:11px;color:var(--text2);margin-top:4px}
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.st{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:14px 16px;transition:var(--transition)}
+.st:hover{border-color:var(--border2);transform:translateY(-1px)}
+.st-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:2px;font-weight:600}
+.st-val{font-size:26px;font-weight:800;line-height:1.1}
+.st-sub{font-size:10px;color:var(--text3);margin-top:2px}
 
-/* Sections */
-.section{margin-bottom:24px}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.section-title{font-size:15px;font-weight:700}
+/* Section */
+.sec{margin-bottom:20px}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-title{font-size:14px;font-weight:700}
+.sec-actions{display:flex;gap:6px}
 
-/* Task Table */
-.task-table{width:100%;border-collapse:separate;border-spacing:0}
-.task-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);padding:8px 12px;border-bottom:1px solid var(--border)}
-.task-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
-.task-table tr:hover td{background:var(--surface)}
-.task-id{font-family:monospace;color:var(--text2);font-size:12px}
-.task-title{font-weight:600}
-.priority-badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
-.p0{background:rgba(255,71,87,.15);color:var(--red)}
-.p1{background:rgba(255,170,0,.15);color:var(--yellow)}
-.p2{background:rgba(52,152,219,.15);color:var(--blue)}
-.status-badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:600}
-.s-pending{background:rgba(136,136,160,.15);color:var(--text2)}
-.s-in_progress{background:rgba(108,92,231,.15);color:var(--accent2)}
-.s-done{background:rgba(0,214,143,.15);color:var(--green)}
+/* Buttons */
+.btn{appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-sm{padding:3px 8px;font-size:10px;border-radius:4px}
+.btn-danger{color:var(--red);border-color:var(--red-bg)}
+.btn-danger:hover{background:var(--red-bg)}
+
+/* Table */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden}
+.tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);padding:10px 12px;background:var(--surface2);font-weight:700;border-bottom:1px solid var(--border)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(108,92,231,.03)}
+.t-id{font-family:ui-monospace,monospace;font-size:11px;color:var(--text3)}
+.t-title{font-weight:600}
+.p0{background:var(--red-bg);color:var(--red);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;display:inline-block}
+.p1{background:var(--yellow-bg);color:var(--yellow);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;display:inline-block}
+.p2{background:var(--blue-bg);color:var(--blue);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;display:inline-block}
+.p3{background:rgba(136,136,160,.1);color:var(--text2);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;display:inline-block}
+.s-tag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;display:inline-block}
+.s-pending{background:rgba(136,136,160,.1);color:var(--text2)}
+.s-in_progress{background:var(--accent-bg);color:var(--accent2)}
+.s-review{background:var(--yellow-bg);color:var(--yellow)}
+.s-done{background:var(--green-bg);color:var(--green)}
+.s-blocked{background:var(--red-bg);color:var(--red)}
+
+/* Projects */
+.projs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.proj{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;transition:var(--transition)}
+.proj:hover{border-color:var(--border2)}
+.proj-name{font-weight:700;font-size:13px;margin-bottom:8px}
+.proj-bar{height:5px;border-radius:3px;background:var(--surface3);overflow:hidden;margin:6px 0}
+.proj-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.proj-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--text3)}
 
 /* Agent Detail */
-.agent-detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:none}
-.agent-detail.show{display:block}
-.agent-detail-header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
-.agent-detail-emoji{font-size:40px}
-.agent-detail-title{font-size:20px;font-weight:700}
-.agent-detail-role{font-size:13px;color:var(--text2)}
-.skill-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.skill-tag{font-size:11px;padding:4px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--accent2)}
+.detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;display:none}
+.detail.show{display:block}
+.det-hd{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.det-icon{font-size:36px}
+.det-info{flex:1}
+.det-name{font-size:18px;font-weight:800}
+.det-role{font-size:12px;color:var(--text2);margin-top:2px}
+.det-skills{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.sk-tag{font-size:10px;padding:3px 8px;border-radius:5px;background:var(--surface3);border:1px solid var(--border);color:var(--accent2)}
+.det-tasks{margin-top:12px}
+.det-task{padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.det-task:last-child{border-bottom:none}
+.det-task-title{font-size:12px;font-weight:500}
+.det-task-actions{display:flex;gap:4px}
 
-/* Project cards */
-.projects{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.project-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
-.project-name{font-weight:700;margin-bottom:8px}
-.project-bar{height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;margin:8px 0}
-.project-bar-fill{height:100%;border-radius:3px;transition:width .5s}
-.project-stats{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}
+/* Log */
+.logs{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:12px;font:11px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:180px;overflow-y:auto}
+.log-l{color:var(--text2)}.log-l .lt{color:var(--text3)}.log-l .la{color:var(--accent2)}.log-l .lr{color:var(--yellow)}
 
-/* Log panel */
-.log-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:200px;overflow-y:auto}
-.log-line{color:var(--text2)}
-.log-line .time{color:var(--accent2)}
-.log-line .agent{color:var(--green)}
-.log-line .action{color:var(--text)}
-.log-line .result{color:var(--yellow)}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;place-items:center}
+.modal-bg.show{display:grid}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:24px;width:min(480px,90%);max-height:80vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:var(--transition)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent)}
+.fg textarea{min-height:60px;resize:vertical}
+.fg select{appearance:none;cursor:pointer}
+.fg select option{background:var(--surface);color:var(--text)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* Toast */
+.toast-wrap{position:fixed;top:56px;right:20px;z-index:200;display:flex;flex-direction:column;gap:6px}
+.toast{padding:10px 16px;border-radius:var(--radius);font-size:12px;font-weight:500;animation:slideIn .3s ease;box-shadow:var(--shadow)}
+.toast-ok{background:var(--green-bg);border:1px solid var(--green);color:var(--green)}
+.toast-err{background:var(--red-bg);border:1px solid var(--red);color:var(--red)}
+.toast-info{background:var(--blue-bg);border:1px solid var(--blue);color:var(--blue)}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
 
 /* Responsive */
-@media(max-width:768px){
-  .main{grid-template-columns:1fr}
-  .sidebar{display:none}
-  .stats{grid-template-columns:repeat(2,1fr)}
-}
+@media(max-width:900px){.body{grid-template-columns:1fr}.side{display:none}.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div class="app">
-  <header class="header">
-    <h1><span>Open</span>Claw Dashboard</h1>
-    <div class="header-right">
-      <div class="status-dot" id="gw-dot"></div>
-      <span class="status-text" id="gw-status">Gateway: checking...</span>
-      <span class="clock" id="clock"></span>
+  <header class="hd">
+    <div class="hd-left">
+      <div class="hd-logo"><b>Open</b>Claw 工作台</div>
+      <div class="hd-tabs">
+        <div class="hd-tab on" data-tab="overview">总览</div>
+        <div class="hd-tab" data-tab="agents">Agent</div>
+        <div class="hd-tab" data-tab="tasks">任务</div>
+        <div class="hd-tab" data-tab="projects">项目</div>
+        <div class="hd-tab" data-tab="logs">日志</div>
+      </div>
+    </div>
+    <div class="hd-right">
+      <span><span class="gw-dot gw-off" id="gw-dot"></span> <span id="gw-txt">网关检测中...</span></span>
+      <span>调度器 <span id="sch-txt" style="color:var(--red)">离线</span></span>
+      <span id="clock" style="font-variant-numeric:tabular-nums;color:var(--text3)"></span>
     </div>
   </header>
 
-  <div class="main">
-    <aside class="sidebar">
-      <h2>Agents</h2>
-      <div id="agent-list"></div>
-    </aside>
-
-    <main class="content">
-      <div class="stats" id="stats-row"></div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Task Board</div>
-        </div>
-        <table class="task-table">
-          <thead><tr><th>ID</th><th>Task</th><th>Agent</th><th>Priority</th><th>Status</th><th>Project</th></tr></thead>
-          <tbody id="task-tbody"></tbody>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Projects</div>
-        </div>
-        <div class="projects" id="projects-row"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Agent Detail</div>
-        </div>
-        <div class="agent-detail" id="agent-detail">
-          <div class="agent-detail-header">
-            <div class="agent-detail-emoji" id="detail-emoji"></div>
-            <div>
-              <div class="agent-detail-title" id="detail-name"></div>
-              <div class="agent-detail-role" id="detail-role"></div>
-              <div class="skill-tags" id="detail-skills"></div>
-            </div>
-          </div>
-          <div style="font-size:13px;color:var(--text2)" id="detail-tasks"></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">Activity Log</div>
-        </div>
-        <div class="log-panel" id="log-panel"></div>
-      </div>
-    </main>
+  <div class="body">
+    <aside class="side" id="sidebar"></aside>
+    <main class="main" id="main"></main>
   </div>
 </div>
 
+<!-- 新建任务弹窗 -->
+<div class="modal-bg" id="modal-new-task">
+  <div class="modal">
+    <h3>新建任务</h3>
+    <div class="fg"><label>标题</label><input id="nt-title" placeholder="输入任务标题"></div>
+    <div class="fg"><label>分配 Agent</label><select id="nt-agent"></select></div>
+    <div class="fg"><label>所属项目</label><select id="nt-project"><option>Golf iOS</option><option>Amazon DE</option><option>OpenClaw</option><option>Candy</option><option>GEO</option></select></div>
+    <div class="fg"><label>优先级</label><select id="nt-priority"><option value="P0">P0 紧急</option><option value="P1">P1 高</option><option value="P2" selected>P2 中</option><option value="P3">P3 低</option></select></div>
+    <div class="fg"><label>描述</label><textarea id="nt-desc" placeholder="任务描述（可选）"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitNewTask()">创建</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
 <script>
-(() => {
-  const GW = 'http://localhost:18789';
-  const TOKEN = '7b069612a41d2cdde5e035c05288c02f01c62c7b11db217c';
+const API = 'http://localhost:18790';
+const GW = 'http://localhost:18789';
 
-  // ---- Data ----
-  let agents = [];
-  let tasks = [];
-  let projects = [];
-  let logs = [];
+let S = { agents:[], tasks:[], projects:[], logs:[], tab:'overview', selAgent:null };
 
-  function addLog(agent, action, result) {
-    const now = new Date().toLocaleTimeString('zh-CN', {hour12:false});
-    logs.unshift({time:now, agent, action, result});
-    if (logs.length > 50) logs.pop();
-    renderLogs();
-  }
+// ===== API =====
+async function api(path, opts) {
+  try { const r = await fetch(API + path, opts); return await r.json(); }
+  catch(e) { return null; }
+}
 
-  // ---- YAML Parser (minimal, for our format) ----
-  function parseYAML(text) {
-    // Super minimal - just enough for our data files
-    const lines = text.split('\n');
-    const result = {};
-    let currentArray = null;
-    let currentObj = null;
-    let parentKey = '';
-    let depth = 0;
+// ===== 数据加载 =====
+async function reload() {
+  const d = await api('/api/tasks');
+  if (d) { S.tasks = d.tasks||[]; S.projects = d.projects||[]; }
+  const a = await api('/api/agents');
+  if (a) S.agents = a.agents||[];
+  const l = await api('/api/logs');
+  if (l) S.logs = (l.logs||[]).reverse();
+  render();
+}
 
-    function getIndent(line) {
-      const m = line.match(/^(\s*)/);
-      return m ? m[1].length : 0;
-    }
-
-    function parseValue(v) {
-      v = v.trim();
-      if (v === 'null' || v === '~') return null;
-      if (v === 'true') return true;
-      if (v === 'false') return false;
-      if (/^-?\d+$/.test(v)) return parseInt(v);
-      if (/^-?\d+\.\d+$/.test(v)) return parseFloat(v);
-      if (/^["']/.test(v)) return v.slice(1,-1);
-      return v;
-    }
-
-    // Use js-yAML if available, otherwise fallback
-    return null;
-  }
-
-  const API = 'http://localhost:18790';
-
-  // ---- Fetch Data ----
-  async function fetchData() {
-    // Priority: Scheduler API > Gateway > Embedded defaults
-    try {
-      const aRes = await fetch(API + '/api/agents', {signal: AbortSignal.timeout(3000)});
-      if (aRes.ok) agents = (await aRes.json()).agents || [];
-    } catch {}
-
-    if (!agents.length) {
-      try {
-        const res = await fetch(GW + '/api/agents', {
-          headers: {'Authorization': 'Bearer ' + TOKEN},
-          signal: AbortSignal.timeout(3000)
-        });
-        if (res.ok) agents = (await res.json()).agents || [];
-      } catch {}
-    }
-
-    try {
-      const tRes = await fetch(API + '/api/tasks', {signal: AbortSignal.timeout(3000)});
-      if (tRes.ok) {
-        const td = await tRes.json();
-        tasks = td.tasks || [];
-        projects = td.projects || [];
-      }
-    } catch {}
-
-    if (!agents.length) agents = DEFAULT_AGENTS;
-    if (!tasks.length) tasks = DEFAULT_TASKS;
-    if (!projects.length) projects = DEFAULT_PROJECTS;
-
-    render();
-  }
-
-  // ---- Render ----
-  function render() {
-    renderStats();
-    renderAgentList();
-    renderTaskTable();
-    renderProjects();
-  }
-
-  function renderStats() {
-    const active = agents.filter(a => a.status === 'active').length;
-    const standby = agents.filter(a => a.status === 'standby').length;
-    const inProgress = tasks.filter(t => t.status === 'in_progress').length;
-    const pending = tasks.filter(t => t.status === 'pending').length;
-    const done = tasks.filter(t => t.status === 'done').length;
-    const total = tasks.length || 1;
-
-    document.getElementById('stats-row').innerHTML = `
-      <div class="stat-card"><div class="stat-label">Active Agents</div><div class="stat-value" style="color:var(--green)">${active}</div><div class="stat-sub">${standby} standby</div></div>
-      <div class="stat-card"><div class="stat-label">In Progress</div><div class="stat-value" style="color:var(--accent2)">${inProgress}</div><div class="stat-sub">of ${total} tasks</div></div>
-      <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--yellow)">${pending}</div><div class="stat-sub">awaiting</div></div>
-      <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value" style="color:var(--green)">${done}</div><div class="stat-sub">${total ? Math.round(done/total*100) : 0}% success</div></div>
-    `;
-  }
-
-  function renderAgentList() {
-    const el = document.getElementById('agent-list');
-    el.innerHTML = agents.map(a => `
-      <div class="agent-card" data-id="${a.id}" onclick="window._selectAgent('${a.id}')">
-        <div class="agent-emoji">${a.emoji || '🤖'}</div>
-        <div class="agent-info">
-          <div class="agent-name">${a.name}</div>
-          <div class="agent-role">${a.role}</div>
-        </div>
-        <span class="agent-badge badge-${a.status}">${a.status}</span>
-      </div>
-    `).join('');
-  }
-
-  function renderTaskTable() {
-    const tbody = document.getElementById('task-tbody');
-    const sorted = [...tasks].sort((a,b) => {
-      const po = {P0:0,P1:1,P2:2,P3:3};
-      return (po[a.priority]||9) - (po[b.priority]||9);
-    });
-    tbody.innerHTML = sorted.map(t => `
-      <tr>
-        <td class="task-id">${t.id}</td>
-        <td class="task-title">${t.title}</td>
-        <td>${agentEmoji(t.agent)} ${t.agent}</td>
-        <td><span class="priority-badge ${t.priority.toLowerCase()}">${t.priority}</span></td>
-        <td><span class="status-badge s-${t.status}">${t.status.replace('_',' ')}</span></td>
-        <td>${t.project || ''}</td>
-      </tr>
-    `).join('');
-  }
-
-  function renderProjects() {
-    const el = document.getElementById('projects-row');
-    el.innerHTML = projects.map(p => {
-      const done = p.done || 0;
-      const total = p.total || 1;
-      const pct = Math.round(done/total*100);
-      const color = pct > 60 ? 'var(--green)' : pct > 30 ? 'var(--yellow)' : 'var(--red)';
-      return `
-        <div class="project-card">
-          <div class="project-name">${p.name}</div>
-          <div class="project-bar"><div class="project-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-          <div class="project-stats">
-            <span>${done}/${total} done</span><span>${pct}%</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function renderLogs() {
-    const el = document.getElementById('log-panel');
-    el.innerHTML = logs.map(l =>
-      `<div class="log-line"><span class="time">[${l.time}]</span> <span class="agent">${l.agent}</span> <span class="action">${l.action}</span> <span class="result">${l.result || ''}</span></div>`
-    ).join('');
-  }
-
-  function agentEmoji(id) {
-    const a = agents.find(x => x.id === id);
-    return a ? a.emoji : '🤖';
-  }
-
-  // ---- Agent Detail ----
-  window._selectAgent = function(id) {
-    const a = agents.find(x => x.id === id);
-    if (!a) return;
-    const el = document.getElementById('agent-detail');
-    el.classList.add('show');
-    document.getElementById('detail-emoji').textContent = a.emoji || '🤖';
-    document.getElementById('detail-name').textContent = a.name;
-    document.getElementById('detail-role').textContent = a.role;
-
-    const skillsEl = document.getElementById('detail-skills');
-    skillsEl.innerHTML = (a.skills || []).map(s =>
-      `<span class="skill-tag">${s}</span>`
-    ).join('') || '<span style="color:var(--text2)">No skills assigned</span>';
-
-    const agentTasks = tasks.filter(t => t.agent === id);
-    document.getElementById('detail-tasks').innerHTML = agentTasks.length
-      ? agentTasks.map(t => `<div style="margin:6px 0">• ${t.title} <span class="status-badge s-${t.status}">${t.status.replace('_',' ')}</span></div>`).join('')
-      : 'No active tasks';
-
-    // Highlight in sidebar
-    document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
-    document.querySelector(`.agent-card[data-id="${id}"]`)?.classList.add('active');
-
-    addLog(a.name, 'selected', '');
-  };
-
-  // ---- Gateway Check ----
-  async function checkGateway() {
+// ===== 网关检测 =====
+async function checkGW() {
+  try {
+    const r = await fetch(GW + '/', {signal: AbortSignal.timeout(3000)});
     const dot = document.getElementById('gw-dot');
-    const txt = document.getElementById('gw-status');
-    try {
-      const res = await fetch(GW + '/health', {
-        headers: {'Authorization': 'Bearer ' + TOKEN},
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) {
-        dot.style.background = 'var(--green)';
-        txt.textContent = 'Gateway: online';
-        addLog('system', 'gateway health check', 'OK');
-      } else throw 0;
-    } catch {
-      dot.style.background = 'var(--red)';
-      txt.textContent = 'Gateway: offline';
-      addLog('system', 'gateway health check', 'FAILED');
-    }
+    const txt = document.getElementById('gw-txt');
+    if (r.ok) { dot.className='gw-dot gw-on'; txt.textContent='网关在线'; txt.style.color='var(--green)'; }
+    else throw 0;
+  } catch {
+    document.getElementById('gw-dot').className='gw-dot gw-off';
+    document.getElementById('gw-txt').textContent='网关离线';
+    document.getElementById('gw-txt').style.color='var(--red)';
   }
+}
 
-  // ---- Clock ----
-  function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString('zh-CN', {hour12:false}) + ' CST';
+async function checkScheduler() {
+  try {
+    const r = await fetch(API + '/health', {signal: AbortSignal.timeout(2000)});
+    if (r && r.ok) { document.getElementById('sch-txt').textContent='在线'; document.getElementById('sch-txt').style.color='var(--green)'; }
+    else throw 0;
+  } catch {
+    document.getElementById('sch-txt').textContent='离线';
+    document.getElementById('sch-txt').style.color='var(--red)';
   }
+}
 
-  // ---- Defaults (embedded so dashboard works without server) ----
-  const DEFAULT_AGENTS = [
-    {id:'commander',name:'Commander Agent',role:'总协调，拆任务，分配给其他 Agent',status:'active',emoji:'🎯',skills:[]},
-    {id:'strategist',name:'Strategist Agent',role:'优先级排序，Today TOP5',status:'active',emoji:'📊',skills:[]},
-    {id:'golf-ios',name:'Golf iOS Agent',role:'iOS Native + Unity + BLE 开发',status:'active',emoji:'⛳',skills:['golf_ios_acceptance','golf_ble_protocol','golf_unity_json_csv']},
-    {id:'golf-qa',name:'Golf QA Agent',role:'验收检查，Android 对齐',status:'active',emoji:'✅',skills:['golf_ios_acceptance']},
-    {id:'amazon-de',name:'Amazon DE Agent',role:'Amazon.de 德国站运营',status:'active',emoji:'📦',skills:['amazon_product_selection','amazon_ads_optimization','amazon_listing_review','amazon_profit_judgement']},
-    {id:'geo-research',name:'GEO Research Agent',role:'GEO/AI 搜索竞品调研',status:'standby',emoji:'🔍',skills:['geo_competitor_analysis']},
-    {id:'prompt-engineer',name:'Prompt Engineer Agent',role:'生成 Cursor / Codex Prompt',status:'active',emoji:'✍️',skills:['cursor_prompt_builder']},
-    {id:'sop-builder',name:'SOP Builder Agent',role:'沉淀 SOP / Skill / 模板',status:'standby',emoji:'📋',skills:['sop_generator']},
-    {id:'memory',name:'Memory Agent',role:'整理长期记忆、归档、日报',status:'active',emoji:'🧠',skills:['meeting_summary']},
-    {id:'delivery',name:'Delivery Agent',role:'项目交付和外包管理',status:'active',emoji:'🚀',skills:[]},
-    {id:'research',name:'Research Agent',role:'调研、文档验证、工具对比',status:'active',emoji:'🔬',skills:[]},
-    {id:'security',name:'Security Agent',role:'安全校验，MCP/Plugin 审核',status:'active',emoji:'🛡️',skills:[]},
-    {id:'backup',name:'Backup Agent',role:'备份配置、Agent、Skills',status:'active',emoji:'💾',skills:[]},
-    {id:'openclaw',name:'OpenClaw Agent',role:'平台维护，Gateway/MCP 故障排除',status:'active',emoji:'⚙️',skills:['openclaw_skill']},
-  ];
+// ===== Tab 切换 =====
+document.querySelectorAll('.hd-tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.hd-tab').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    S.tab = t.dataset.tab;
+    render();
+  };
+});
 
-  const DEFAULT_TASKS = [
-    {id:'T001',title:'修复 Unity CSV/JSON 协议',agent:'golf-ios',project:'Golf iOS',priority:'P0',status:'in_progress'},
-    {id:'T002',title:'完成相机模式 UI 对齐',agent:'golf-ios',project:'Golf iOS',priority:'P1',status:'pending'},
-    {id:'T003',title:'完成二期合同需求拆解',agent:'golf-ios',project:'Golf iOS',priority:'P1',status:'pending'},
-    {id:'T004',title:'609 圆灯差评分析',agent:'amazon-de',project:'Amazon DE',priority:'P1',status:'pending'},
-    {id:'T005',title:'德国站选品调研',agent:'amazon-de',project:'Amazon DE',priority:'P2',status:'pending'},
-    {id:'T006',title:'补齐系统基础架构',agent:'openclaw',project:'OpenClaw',priority:'P1',status:'in_progress'},
-  ];
+// ===== 渲染 =====
+function render() {
+  renderSidebar();
+  renderMain();
+}
 
-  const DEFAULT_PROJECTS = [
-    {name:'Golf iOS',total:3,done:0,pending:2,in_progress:1},
-    {name:'Amazon DE',total:2,done:0,pending:2,in_progress:0},
-    {name:'OpenClaw',total:1,done:0,pending:0,in_progress:1},
-  ];
+function renderSidebar() {
+  const el = document.getElementById('sidebar');
+  const activeCount = S.agents.filter(a => a.status === 'active').length;
+  el.innerHTML = `<div class="side-title">Agent 团队 (${activeCount}/${S.agents.length})</div>` +
+    S.agents.map(a => {
+      const tasks = S.tasks.filter(t => t.agent === a.id && t.status !== 'done');
+      const cls = S.selAgent === a.id ? ' on' : '';
+      return `<div class="ag${cls}" onclick="selectAgent('${a.id}')">
+        <div class="ag-icon">${a.emoji||'🤖'}</div>
+        <div class="ag-body">
+          <div class="ag-name">${a.name}</div>
+          <div class="ag-role">${a.role}${tasks.length ? ` · ${tasks.length}任务` : ''}</div>
+        </div>
+        <span class="ag-badge st-${a.status}">${a.status==='active'?'活跃':'待命'}</span>
+      </div>`;
+    }).join('');
+}
 
-  // ---- Init ----
-  fetchData();
-  checkGateway();
-  updateClock();
-  setInterval(updateClock, 1000);
-  setInterval(checkGateway, 30000);
-  setInterval(fetchData, 10000);
-})();
+function renderMain() {
+  const m = document.getElementById('main');
+  switch(S.tab) {
+    case 'overview': m.innerHTML = renderOverview(); break;
+    case 'agents': m.innerHTML = renderAgentPage(); break;
+    case 'tasks': m.innerHTML = renderTaskPage(); break;
+    case 'projects': m.innerHTML = renderProjectPage(); break;
+    case 'logs': m.innerHTML = renderLogPage(); break;
+  }
+}
+
+// ----- 总览 -----
+function renderOverview() {
+  const active = S.agents.filter(a=>a.status==='active').length;
+  const ip = S.tasks.filter(t=>t.status==='in_progress').length;
+  const pending = S.tasks.filter(t=>t.status==='pending').length;
+  const done = S.tasks.filter(t=>t.status==='done').length;
+  const total = S.tasks.length||1;
+
+  return `
+  <div class="stats">
+    <div class="st"><div class="st-label">活跃 Agent</div><div class="st-val" style="color:var(--green)">${active}</div><div class="st-sub">共 ${S.agents.length} 个</div></div>
+    <div class="st"><div class="st-label">进行中</div><div class="st-val" style="color:var(--accent2)">${ip}</div><div class="st-sub">共 ${total} 个任务</div></div>
+    <div class="st"><div class="st-label">待处理</div><div class="st-val" style="color:var(--yellow)">${pending}</div><div class="st-sub">等待分配</div></div>
+    <div class="st"><div class="st-label">已完成</div><div class="st-val" style="color:var(--green)">${done}</div><div class="st-sub">完成率 ${Math.round(done/total*100)}%</div></div>
+  </div>
+  ${renderProjectCards()}
+  <div class="sec">
+    <div class="sec-hd"><div class="sec-title">当前进行中的任务</div></div>
+    <table class="tbl"><thead><tr><th>编号</th><th>任务</th><th>Agent</th><th>优先级</th><th>项目</th><th>操作</th></tr></thead>
+    <tbody>${S.tasks.filter(t=>t.status==='in_progress').map(t=>`<tr>
+      <td class="t-id">${t.id}</td><td class="t-title">${t.title}</td>
+      <td>${agentEmoji(t.agent)} ${agentName(t.agent)}</td>
+      <td><span class="${t.priority.toLowerCase()}">${t.priority}</span></td>
+      <td>${t.project}</td>
+      <td><button class="btn btn-sm" onclick="taskAction('${t.id}','done')">完成</button>
+          <button class="btn btn-sm btn-danger" onclick="taskAction('${t.id}','blocked')">阻塞</button></td>
+    </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">暂无进行中的任务</td></tr>'}</tbody></table>
+  </div>
+  ${renderRecentLogs()}`;
+}
+
+// ----- Agent 页 -----
+function renderAgentPage() {
+  if (S.selAgent) return renderAgentDetail();
+  return `<div class="sec"><div class="sec-hd"><div class="sec-title">Agent 团队</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+  ${S.agents.map(a => {
+    const tasks = S.tasks.filter(t=>t.agent===a.id);
+    const active = tasks.filter(t=>t.status==='in_progress').length;
+    const done = tasks.filter(t=>t.status==='done').length;
+    return `<div class="proj" style="cursor:pointer" onclick="selectAgent('${a.id}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:24px">${a.emoji||'🤖'}</span>
+        <div><div style="font-weight:700;font-size:13px">${a.name}</div><div style="font-size:11px;color:var(--text3)">${a.role}</div></div>
+        <span class="ag-badge st-${a.status}" style="margin-left:auto">${a.status==='active'?'活跃':'待命'}</span>
+      </div>
+      ${(a.skills||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">${a.skills.map(s=>`<span class="sk-tag">${s}</span>`).join('')}</div>` : ''}
+      <div style="font-size:10px;color:var(--text3)">${tasks.length} 任务 · ${active} 进行中 · ${done} 已完成</div>
+    </div>`;
+  }).join('')}</div></div>`;
+}
+
+function renderAgentDetail() {
+  const a = S.agents.find(x=>x.id===S.selAgent);
+  if (!a) return '';
+  const tasks = S.tasks.filter(t=>t.agent===a.id);
+  return `<div class="detail show">
+    <div class="det-hd"><div class="det-icon">${a.emoji}</div>
+      <div class="det-info"><div class="det-name">${a.name}</div><div class="det-role">${a.role}</div>
+        ${(a.skills||[]).length ? `<div class="det-skills">${a.skills.map(s=>`<span class="sk-tag">${s}</span>`).join('')}</div>` : ''}
+      </div>
+      <button class="btn" onclick="S.selAgent=null;render()">返回列表</button>
+    </div>
+    <div class="det-tasks"><div style="font-weight:700;margin-bottom:8px">任务 (${tasks.length})</div>
+    ${tasks.length ? tasks.map(t => `<div class="det-task">
+      <div><span class="t-id">${t.id}</span> <span class="det-task-title">${t.title}</span>
+        <span class="${t.priority.toLowerCase()}" style="margin-left:6px">${t.priority}</span>
+        <span class="s-tag s-${t.status}" style="margin-left:4px">${statusLabel(t.status)}</span></div>
+      <div class="det-task-actions">
+        ${t.status==='pending'?`<button class="btn btn-sm btn-primary" onclick="taskAction('${t.id}','in_progress')">开始</button>`:''}
+        ${t.status==='in_progress'?`<button class="btn btn-sm" onclick="taskAction('${t.id}','review')">提交验收</button>
+          <button class="btn btn-sm" onclick="taskAction('${t.id}','done')">完成</button>`:''}
+        ${t.status==='review'?`<button class="btn btn-sm btn-primary" onclick="taskAction('${t.id}','done')">验收通过</button>
+          <button class="btn btn-sm btn-danger" onclick="taskAction('${t.id}','in_progress')">打回</button>`:''}
+        ${t.status!=='done'?`<button class="btn btn-sm btn-danger" onclick="taskAction('${t.id}','blocked')">阻塞</button>`:''}
+      </div>
+    </div>`).join('') : '<div style="color:var(--text3);padding:8px 0">暂无任务</div>'}</div>
+  </div>`;
+}
+
+// ----- 任务页 -----
+function renderTaskPage() {
+  const sorted = [...S.tasks].sort((a,b)=>({P0:0,P1:1,P2:2,P3:3}[a.priority]||9)-({P0:0,P1:1,P2:2,P3:3}[b.priority]||9));
+  return `<div class="sec">
+    <div class="sec-hd">
+      <div class="sec-title">全部任务 (${S.tasks.length})</div>
+      <div class="sec-actions">
+        <button class="btn btn-primary" onclick="openNewTask()">+ 新建任务</button>
+        <button class="btn" onclick="triggerSchedule()">手动调度</button>
+      </div>
+    </div>
+    <table class="tbl"><thead><tr><th>编号</th><th>任务</th><th>Agent</th><th>优先级</th><th>状态</th><th>项目</th><th>操作</th></tr></thead>
+    <tbody>${sorted.map(t=>`<tr>
+      <td class="t-id">${t.id}</td><td class="t-title">${t.title}</td>
+      <td>${agentEmoji(t.agent)} ${agentName(t.agent)}</td>
+      <td><span class="${t.priority.toLowerCase()}">${t.priority}</span></td>
+      <td><span class="s-tag s-${t.status}">${statusLabel(t.status)}</span></td>
+      <td>${t.project}</td>
+      <td>
+        ${t.status==='pending'?`<button class="btn btn-sm btn-primary" onclick="taskAction('${t.id}','in_progress')">开始</button>`:''}
+        ${t.status==='in_progress'?`<button class="btn btn-sm" onclick="taskAction('${t.id}','done')">完成</button>`:''}
+        ${t.status!=='done'?`<button class="btn btn-sm btn-danger" onclick="deleteTask('${t.id}')">删除</button>`:''}
+      </td>
+    </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">暂无任务</td></tr>'}</tbody></table>
+  </div>`;
+}
+
+// ----- 项目页 -----
+function renderProjectPage() {
+  return `<div class="sec"><div class="sec-hd"><div class="sec-title">项目进度</div></div>
+  <div class="projs">${(S.projects.length ? S.projects : [
+    {name:'Golf iOS',total:3,done:0,in_progress:1,pending:2},
+    {name:'Amazon DE',total:2,done:0,in_progress:0,pending:2},
+    {name:'OpenClaw',total:1,done:0,in_progress:1,pending:0},
+  ]).map(p => {
+    const total = p.total||1;
+    const pct = Math.round((p.done||0)/total*100);
+    const color = pct>60?'var(--green)':pct>30?'var(--yellow)':'var(--accent2)';
+    return `<div class="proj">
+      <div class="proj-name">${p.name}</div>
+      <div class="proj-bar"><div class="proj-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="proj-meta"><span>完成 ${p.done||0}/${total}</span><span style="color:${color}">${pct}%</span></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">进行中 ${p.in_progress||0} · 待处理 ${p.pending||0}</div>
+    </div>`;
+  }).join('')}</div></div>`;
+}
+
+// ----- 日志页 -----
+function renderLogPage() {
+  return `<div class="sec"><div class="sec-hd"><div class="sec-title">系统日志</div>
+    <button class="btn" onclick="reload()">刷新</button></div>
+    <div class="logs">${S.logs.length ? S.logs.map(l =>
+      `<div class="log-l"><span class="lt">[${l.time?.slice(11,19)||''}]</span> <span class="la">[${l.source}]</span> ${l.message}</div>`
+    ).join('') : '<div style="color:var(--text3)">暂无日志</div>'}</div></div>`;
+}
+
+// ----- 共用组件 -----
+function renderProjectCards() {
+  return `<div class="sec"><div class="sec-hd"><div class="sec-title">项目进度</div></div>
+  <div class="projs">${(S.projects.length?S.projects:[]).map(p=>{
+    const t=p.total||1;const pct=Math.round((p.done||0)/t*100);
+    const c=pct>60?'var(--green)':pct>30?'var(--yellow)':'var(--accent2)';
+    return `<div class="proj"><div class="proj-name">${p.name}</div><div class="proj-bar"><div class="proj-fill" style="width:${pct}%;background:${c}"></div></div><div class="proj-meta"><span>${p.done||0}/${t} 完成</span><span style="color:${c}">${pct}%</span></div></div>`;
+  }).join('')}</div></div>`;
+}
+
+function renderRecentLogs() {
+  const recent = S.logs.slice(0,8);
+  if (!recent.length) return '';
+  return `<div class="sec"><div class="sec-hd"><div class="sec-title">最近日志</div></div>
+  <div class="logs">${recent.map(l=>`<div class="log-l"><span class="lt">[${l.time?.slice(11,19)||''}]</span> <span class="la">[${l.source}]</span> ${l.message}</div>`).join('')}</div></div>`;
+}
+
+// ===== 辅助 =====
+function agentName(id) { return (S.agents.find(a=>a.id===id)||{}).name||id; }
+function agentEmoji(id) { return (S.agents.find(a=>a.id===id)||{}).emoji||'🤖'; }
+function statusLabel(s) { return {pending:'待处理',in_progress:'进行中',review:'验收中',done:'已完成',blocked:'已阻塞'}[s]||s; }
+
+// ===== 操作 =====
+async function taskAction(id, status) {
+  const r = await api(`/api/tasks/${id}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+  if (r) { toast(`任务 ${id} 已标记为 ${statusLabel(status)}`,'ok'); reload(); }
+  else toast('操作失败','err');
+}
+
+async function deleteTask(id) {
+  if (!confirm(`确定删除任务 ${id}?`)) return;
+  // Mark as removed by updating status
+  const r = await api(`/api/tasks/${id}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'deleted'})});
+  if (r) { toast(`任务 ${id} 已删除`,'ok'); reload(); }
+  else toast('删除失败','err');
+}
+
+async function triggerSchedule() {
+  const r = await api('/api/schedule', {method:'POST'});
+  if (r) { toast('调度完成','ok'); reload(); }
+  else toast('调度失败','err');
+}
+
+function selectAgent(id) {
+  S.selAgent = id;
+  S.tab = 'agents';
+  document.querySelectorAll('.hd-tab').forEach(t => {
+    t.classList.toggle('on', t.dataset.tab === 'agents');
+  });
+  render();
+}
+
+// ===== 新建任务 =====
+function openNewTask() {
+  const sel = document.getElementById('nt-agent');
+  sel.innerHTML = S.agents.map(a=>`<option value="${a.id}">${a.emoji} ${a.name}</option>`).join('');
+  document.getElementById('modal-new-task').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modal-new-task').classList.remove('show'); }
+
+async function submitNewTask() {
+  const title = document.getElementById('nt-title').value.trim();
+  if (!title) { toast('请输入任务标题','err'); return; }
+  const body = {
+    title,
+    agent: document.getElementById('nt-agent').value,
+    project: document.getElementById('nt-project').value,
+    priority: document.getElementById('nt-priority').value,
+    description: document.getElementById('nt-desc').value.trim(),
+  };
+  const r = await api('/api/tasks', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if (r) { toast(`任务 ${r.id} 已创建`,'ok'); closeModal(); reload(); }
+  else toast('创建失败','err');
+}
+
+// ===== Toast =====
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(), 3000);
+}
+
+// ===== Clock =====
+function tick() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('zh-CN',{hour12:false});
+}
+
+// ===== Init =====
+async function init() {
+  tick(); setInterval(tick, 1000);
+  await reload();
+  await checkGW(); setInterval(checkGW, 30000);
+  await checkScheduler(); setInterval(checkScheduler, 15000);
+  setInterval(reload, 5000);
+}
+init();
 </script>
 </body>
 </html>
