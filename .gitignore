@@ -3,5 +3,6 @@
 update-check.json
 openclaw.json.bak
 openclaw.json.save
-workspace/
+workspace/.git/
+workspace/.openclaw/
 node_modules/
