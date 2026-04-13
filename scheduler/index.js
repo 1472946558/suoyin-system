@@ -35,6 +35,8 @@ let tasks = [];
 let agents = [];
 let projects = [];
 let runLog = [];
+let messages = [];
+const MESSAGES_FILE = path.join(DASHBOARD_DIR, 'messages.json');
 
 function log(level, source, message) {
   const entry = {
@@ -66,10 +68,88 @@ function loadData() {
       agents = raw.agents || agents;
     }
 
-    log('INFO', 'loader', `Loaded ${tasks.length} tasks, ${agents.length} agents`);
+    if (fs.existsSync(MESSAGES_FILE)) {
+      messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+    }
+
+    log('INFO', 'loader', `Loaded ${tasks.length} tasks, ${agents.length} agents, ${messages.length} messages`);
   } catch (e) {
     log('ERROR', 'loader', e.message);
   }
+}
+
+function saveMessages() {
+  fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
+}
+
+// ---- Message Parser ----
+function parseMessage(raw) {
+  const now = new Date().toISOString();
+  const lines = raw.split('\n').filter(l => l.trim());
+
+  // Extract keywords
+  const keywords = {
+    deadline: [],
+    requirements: [],
+    decisions: [],
+    contacts: [],
+  };
+
+  // Date patterns
+  const datePatterns = [
+    /(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}[日号]?)/g,
+    /(下个?[周月]\d{0,2}[号日]?)/g,
+    /(周[一二三四五六日末])/g,
+    /(明天|后天|下周|月底|月底前)/g,
+    /(\d{1,2}月\d{1,2}[日号])/g,
+  ];
+
+  for (const line of lines) {
+    for (const p of datePatterns) {
+      const m = line.match(p);
+      if (m) keywords.deadline.push(...m);
+    }
+  }
+
+  // Requirement patterns
+  const reqPatterns = [/需要|要求|必须|要做|帮我|开发|实现|修复|完成|做一下|弄一下|改一下|加上|去掉/g];
+  for (const line of lines) {
+    for (const p of reqPatterns) {
+      if (p.test(line)) {
+        p.lastIndex = 0;
+        keywords.requirements.push(line.trim());
+        break;
+      }
+    }
+  }
+
+  // Decision patterns
+  const decPatterns = [/确定|决定|就这样|同意|没问题|可以的|OK|确认|不改了|用这个/g];
+  for (const line of lines) {
+    for (const p of decPatterns) {
+      if (p.test(line)) {
+        p.lastIndex = 0;
+        keywords.decisions.push(line.trim());
+        break;
+      }
+    }
+  }
+
+  // Extract contact name (first line often has name in WeChat export)
+  const contactMatch = raw.match(/^([^\s:：]{2,10})\s*[\[(:：]/m);
+  const contact = contactMatch ? contactMatch[1] : '';
+
+  return {
+    id: 'M' + Date.now().toString(36).toUpperCase(),
+    raw,
+    contact,
+    time: now,
+    lines: lines.length,
+    keywords,
+    source: 'wechat_paste',
+    project: '',
+    tags: [],
+  };
 }
 
 function saveTasks() {
@@ -303,6 +383,35 @@ function createServer() {
         json(res, { gateway: healthy ? 'online' : 'offline' });
       } else if (route === '/api/logs' && req.method === 'GET') {
         json(res, { logs: runLog.slice(-50) });
+      } else if (route === '/api/messages' && req.method === 'GET') {
+        json(res, { messages: messages.slice(-100) });
+      } else if (route === '/api/messages' && req.method === 'POST') {
+        const data = JSON.parse(body);
+        if (!data.raw) { error(res, 'Missing raw text'); return; }
+        const msg = parseMessage(data.raw);
+        if (data.contact) msg.contact = data.contact;
+        if (data.project) msg.project = data.project;
+        if (data.tags) msg.tags = data.tags;
+        messages.push(msg);
+        saveMessages();
+        log('INFO', 'api', `New message from ${msg.contact || 'unknown'}: ${msg.lines} lines, ${msg.keywords.requirements.length} requirements, ${msg.keywords.deadline.length} deadlines`);
+        json(res, msg, 201);
+      } else if (route.match(/^\/api\/messages\//) && req.method === 'PUT') {
+        const id = route.split('/').pop();
+        const msg = messages.find(m => m.id === id);
+        if (!msg) { error(res, 'Not found', 404); return; }
+        const data = JSON.parse(body);
+        if (data.project) msg.project = data.project;
+        if (data.tags) msg.tags = data.tags;
+        if (data.contact) msg.contact = data.contact;
+        saveMessages();
+        json(res, msg);
+      } else if (route === '/api/messages/parse' && req.method === 'POST') {
+        // Preview parse without saving
+        const data = JSON.parse(body);
+        if (!data.raw) { error(res, 'Missing raw text'); return; }
+        const msg = parseMessage(data.raw);
+        json(res, msg);
       } else if (route === '/health' && req.method === 'GET') {
         json(res, { status: 'ok', uptime: process.uptime() });
       } else {
