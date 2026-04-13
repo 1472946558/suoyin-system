@@ -1,0 +1,6 @@
+.DS_Store
+*.log
+update-check.json
+openclaw.json.bak
+openclaw.json.save
+workspace/

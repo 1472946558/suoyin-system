@@ -1,0 +1,163 @@
+{
+  "wizard": {
+    "lastRunAt": "2026-03-07T07:18:28.783Z",
+    "lastRunVersion": "2026.3.2",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local"
+  },
+
+  "auth": {
+    "profiles": {
+      "deepseek": {
+        "provider": "openai",
+        "api_key": "sk-3175793380f64da681900b5956e0ed3a",
+        "base_url": "https://api.deepseek.com/v1"
+      },
+
+      "openai": {
+        "provider": "openai",
+        "api_key": "sk-i4T8oIZxv1bT6dYE8HDaFJ8asduSR1bLfr3WCV7O4FFLL5x"
+      },
+
+      "anthropic": {
+        "provider": "anthropic",
+        "api_key": "sk-EknU1SIdt43vUfArI6KjpmcoRIi5pk0y8sPnR9LtiNbb8APZ"
+      }
+    }
+  },
+
+  "agents": {
+    "default": {
+      "model": {
+        "profile": "deepseek",
+        "primary": "deepseek-chat"
+      }
+    },
+
+    "coder": {
+      "model": {
+        "profile": "deepseek",
+        "primary": "deepseek-chat"
+      }
+    },
+
+    "analysis": {
+      "model": {
+        "profile": "deepseek",
+        "primary": "deepseek-chat"
+      }
+    },
+
+    "general": {
+      "model": {
+        "profile": "openai",
+        "primary": "gpt-5.2"
+      }
+    }
+  },
+
+  "workspace": "/Users/xiaoliao/Desktop/openclaw",
+
+  "compaction": {
+    "mode": "safeguard"
+  },
+
+  "maxConcurrent": 4,
+
+  "subagents": {
+    "maxConcurrent": 8
+  },
+
+  "tools": {
+    "profile": "messaging"
+  },
+
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
+
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "command-logger": {
+          "enabled": true
+        },
+        "session-memory": {
+          "enabled": true
+        }
+      }
+    }
+  },
+
+  "channels": {
+    "feishu": {
+      "enabled": true,
+      "appId": "cli_a9210f16dbf99bb5",
+      "appSecret": "wAybg1htq7oePPXurk1TqentoHvfK7vk",
+      "connectionMode": "websocket",
+      "domain": "feishu",
+      "groupPolicy": "open"
+    }
+  },
+
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "7b069612a41d2cdde5e035c05288c02f01c62c7b11db217c"
+    },
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    },
+    "nodes": {
+      "denyCommands": [
+        "camera.snap",
+        "camera.clip",
+        "screen.record",
+        "contacts.add",
+        "calendar.add",
+        "reminders.add",
+        "sms.send"
+      ]
+    }
+  },
+
+  "skills": {
+    "entries": {
+      "openai-image-gen": {
+        "apiKey": "sk-i4T8oIZxv1bT6dYE8HDaFJ8asduSR1bLfr3WCV7O4FFLL5x"
+      },
+      "openai-whisper-api": {
+        "apiKey": "sk-i4T8oIZxv1bT6dYE8HDaFJ8asduSR1bLfr3WCV7O4FFLL5x"
+      }
+    }
+  },
+
+  "plugins": {
+    "entries": {
+      "feishu": {
+        "enabled": true
+      }
+    }
+  },
+
+  "meta": {
+    "lastTouchedVersion": "2026.3.2",
+    "lastTouchedAt": "2026-03-07T07:18:28.867Z"
+  }
+}
