@@ -4,3 +4,4 @@ update-check.json
 openclaw.json.bak
 openclaw.json.save
 workspace/
+node_modules/
