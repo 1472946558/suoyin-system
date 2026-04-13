@@ -1,0 +1,11 @@
+{
+  "name": "@openclaw/gold-trader",
+  "version": "1.0.0",
+  "description": "Gold price monitor & trading strategy advisor for OpenClaw",
+  "type": "module",
+  "scripts": {
+    "gold-report": "node gold-report.mjs",
+    "test": "node --test fetch-gold.mjs"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,137 @@
+{
+  "agents": [
+    {
+      "id": "commander",
+      "name": "Commander Agent",
+      "role": "总协调",
+      "status": "active",
+      "emoji": "🎯",
+      "skills": []
+    },
+    {
+      "id": "strategist",
+      "name": "Strategist Agent",
+      "role": "优先级排序",
+      "status": "active",
+      "emoji": "📊",
+      "skills": []
+    },
+    {
+      "id": "golf-ios",
+      "name": "Golf iOS Agent",
+      "role": "iOS Native + Unity + BLE",
+      "status": "active",
+      "emoji": "⛳",
+      "skills": [
+        "golf_ios_acceptance",
+        "golf_ble_protocol",
+        "golf_unity_json_csv"
+      ]
+    },
+    {
+      "id": "golf-qa",
+      "name": "Golf QA Agent",
+      "role": "验收检查",
+      "status": "active",
+      "emoji": "✅",
+      "skills": [
+        "golf_ios_acceptance"
+      ]
+    },
+    {
+      "id": "amazon-de",
+      "name": "Amazon DE Agent",
+      "role": "Amazon.de 运营",
+      "status": "active",
+      "emoji": "📦",
+      "skills": [
+        "amazon_product_selection",
+        "amazon_ads_optimization",
+        "amazon_listing_review",
+        "amazon_profit_judgement"
+      ]
+    },
+    {
+      "id": "geo-research",
+      "name": "GEO Research Agent",
+      "role": "竞品调研",
+      "status": "standby",
+      "emoji": "🔍",
+      "skills": [
+        "geo_competitor_analysis"
+      ]
+    },
+    {
+      "id": "prompt-engineer",
+      "name": "Prompt Engineer Agent",
+      "role": "Prompt 生成",
+      "status": "active",
+      "emoji": "✍️",
+      "skills": [
+        "cursor_prompt_builder"
+      ]
+    },
+    {
+      "id": "sop-builder",
+      "name": "SOP Builder Agent",
+      "role": "SOP 沉淀",
+      "status": "standby",
+      "emoji": "📋",
+      "skills": [
+        "sop_generator"
+      ]
+    },
+    {
+      "id": "memory",
+      "name": "Memory Agent",
+      "role": "记忆归档",
+      "status": "active",
+      "emoji": "🧠",
+      "skills": [
+        "meeting_summary"
+      ]
+    },
+    {
+      "id": "delivery",
+      "name": "Delivery Agent",
+      "role": "项目交付",
+      "status": "active",
+      "emoji": "🚀",
+      "skills": []
+    },
+    {
+      "id": "research",
+      "name": "Research Agent",
+      "role": "调研",
+      "status": "active",
+      "emoji": "🔬",
+      "skills": []
+    },
+    {
+      "id": "security",
+      "name": "Security Agent",
+      "role": "安全校验",
+      "status": "active",
+      "emoji": "🛡️",
+      "skills": []
+    },
+    {
+      "id": "backup",
+      "name": "Backup Agent",
+      "role": "备份",
+      "status": "active",
+      "emoji": "💾",
+      "skills": []
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw Agent",
+      "role": "平台维护",
+      "status": "active",
+      "emoji": "⚙️",
+      "skills": [
+        "openclaw_skill"
+      ]
+    }
+  ]
+}

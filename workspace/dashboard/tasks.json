@@ -1,0 +1,168 @@
+{
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "修复 Unity CSV/JSON 协议",
+      "agent": "golf-ios",
+      "project": "Golf iOS",
+      "priority": "P0",
+      "status": "in_progress",
+      "created": "2026-04-13",
+      "updated": "2026-04-13",
+      "description": "Unity 与 Native iOS 之间数据交换协议修复",
+      "acceptance": [
+        "JSON 字段名与 Android 一致",
+        "CSV 格式可正确解析"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "T002",
+      "title": "完成相机模式 UI 对齐",
+      "agent": "golf-ios",
+      "project": "Golf iOS",
+      "priority": "P1",
+      "status": "pending",
+      "created": "2026-04-13",
+      "updated": "2026-04-13",
+      "description": "相机模式 UI 对齐 Android",
+      "acceptance": [
+        "布局像素级对齐",
+        "交互流程一致"
+      ],
+      "blocker": "T001"
+    },
+    {
+      "id": "T003",
+      "title": "完成二期合同需求拆解",
+      "agent": "golf-ios",
+      "project": "Golf iOS",
+      "priority": "P1",
+      "status": "pending",
+      "created": "2026-04-13",
+      "updated": "2026-04-13",
+      "description": "拆解二期合同功能需求",
+      "acceptance": [
+        "需求列表完整",
+        "每个需求有验收标准"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "T004",
+      "title": "609 圆灯差评分析",
+      "agent": "amazon-de",
+      "project": "Amazon DE",
+      "priority": "P1",
+      "status": "in_progress",
+      "created": "2026-04-13",
+      "updated": "2026-04-13",
+      "description": "分析差评原因",
+      "acceptance": [
+        "差评分类统计",
+        "根因分析"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "T005",
+      "title": "德国站选品调研",
+      "agent": "amazon-de",
+      "project": "Amazon DE",
+      "priority": "P2",
+      "status": "pending",
+      "created": "2026-04-13",
+      "updated": "2026-04-13",
+      "description": "按选品框架评估新品",
+      "acceptance": [
+        "至少 3 个候选品",
+        "利润测算"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "T006",
+      "title": "补齐系统基础架构",
+      "agent": "openclaw",
+      "project": "OpenClaw",
+      "priority": "P1",
+      "status": "in_progress",
+      "created": "2026-04-13",
+      "updated": "2026-04-13",
+      "description": "USER/Agent/Skill/Dashboard 四层补齐",
+      "acceptance": [
+        "3 个 USER 文件",
+        "全部 Agent",
+        "核心 Skills"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "T007",
+      "title": "为 Golf iOS BLE 扫描功能生成 Cursor Prompt",
+      "agent": "prompt-engineer",
+      "project": "Golf iOS",
+      "priority": "P1",
+      "status": "done",
+      "created": "2026-04-13",
+      "updated": "2026-04-13",
+      "description": "需要用 Cursor 开发 BLE 设备扫描页面，必须对齐 Android 版本",
+      "acceptance": [
+        "生成完整 Prompt",
+        "包含约束和验收标准",
+        "可复制粘贴到 Cursor 使用"
+      ],
+      "blocker": null
+    }
+  ],
+  "task_statuses": [
+    {
+      "id": "pending",
+      "label": "待开始",
+      "color": "gray"
+    },
+    {
+      "id": "in_progress",
+      "label": "进行中",
+      "color": "blue"
+    },
+    {
+      "id": "review",
+      "label": "验收中",
+      "color": "yellow"
+    },
+    {
+      "id": "done",
+      "label": "已完成",
+      "color": "green"
+    },
+    {
+      "id": "blocked",
+      "label": "阻塞",
+      "color": "red"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Golf iOS",
+      "total": 4,
+      "done": 1,
+      "in_progress": 1,
+      "pending": 2
+    },
+    {
+      "name": "Amazon DE",
+      "total": 2,
+      "done": 0,
+      "in_progress": 1,
+      "pending": 1
+    },
+    {
+      "name": "OpenClaw",
+      "total": 1,
+      "done": 0,
+      "in_progress": 1,
+      "pending": 0
+    }
+  ]
+}
