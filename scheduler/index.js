@@ -111,9 +111,11 @@ function parseMessage(raw) {
     }
   }
 
-  // Requirement patterns
-  const reqPatterns = [/需要|要求|必须|要做|帮我|开发|实现|修复|完成|做一下|弄一下|改一下|加上|去掉/g];
+  // Requirement patterns - broadened for real WeChat conversations
+  const reqPatterns = [/需要|要求|必须|要做|帮我|开发|实现|修复|完成|做一下|弄一下|改一下|加上|去掉|改了|修改|调整|更新|升级|问题|bug|BUG|崩了|闪退|卡了|不动|不行|报错|拒绝|审核|图标|登录|功能|按钮|页面|接口|协议|对接|验收|测试|上架|提审|重新|还是|没好|还没|进度|什么时候|多久|能不能|可以不|我改|你改|他改|正常了|搞定了|通过了|没通过|被拒|打回/g];
   for (const line of lines) {
+    // Skip lines that are just images/links/mentions
+    if (/^\[图片\]$|^\[视频\]$|^\[语音\]$|正在studying.*动态$/.test(line.trim())) continue;
     for (const p of reqPatterns) {
       if (p.test(line)) {
         p.lastIndex = 0;
@@ -124,12 +126,25 @@ function parseMessage(raw) {
   }
 
   // Decision patterns
-  const decPatterns = [/确定|决定|就这样|同意|没问题|可以的|OK|确认|不改了|用这个/g];
+  const decPatterns = [/确定|决定|就这样|同意|没问题|可以的|OK|ok|确认|不改了|用这个|通过了|正常了|搞定了|好了|可以了|行了|就这样吧|没问题了|改好了|已解决/g];
   for (const line of lines) {
     for (const p of decPatterns) {
       if (p.test(line)) {
         p.lastIndex = 0;
         keywords.decisions.push(line.trim());
+        break;
+      }
+    }
+  }
+
+  // Extract issues/blockers
+  keywords.blockers = [];
+  const blockerPatterns = [/拒绝|被拒|审核不|打回|闪退|崩了|不行|报错|失败|bug|BUG|有问题|没好|还没|卡住|阻塞|不通|连不上|登不上|白屏|黑屏|无响应/g];
+  for (const line of lines) {
+    for (const p of blockerPatterns) {
+      if (p.test(line)) {
+        p.lastIndex = 0;
+        keywords.blockers.push(line.trim());
         break;
       }
     }

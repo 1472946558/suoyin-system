@@ -449,6 +449,7 @@ function renderMessagePage() {
           <div style="font-size:11px;color:var(--text2);max-height:60px;overflow:hidden;margin-bottom:6px;white-space:pre-wrap">${escHtml((m.raw||'').slice(0,200))}</div>
           ${m.keywords.deadline.length ? `<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--yellow)">截止:</span> ${m.keywords.deadline.map(d=>`<span class="s-tag s-review" style="font-size:9px">${d}</span>`).join(' ')}</div>` : ''}
           ${m.keywords.requirements.length ? `<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--accent2)">需求:</span> ${m.keywords.requirements.length} 条</div>` : ''}
+          ${m.keywords.blockers && m.keywords.blockers.length ? `<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--red)">阻塞:</span> ${m.keywords.blockers.length} 条</div>` : ''}
           ${m.keywords.decisions.length ? `<div><span style="font-size:10px;color:var(--green)">决策:</span> ${m.keywords.decisions.length} 条</div>` : ''}
         </div>`).join('') || '<div style="color:var(--text3);text-align:center;padding:40px">暂无沟通记录<br><br>粘贴微信聊天内容到左侧输入框</div>'}
         </div>
