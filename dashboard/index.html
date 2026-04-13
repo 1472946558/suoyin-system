@@ -445,12 +445,15 @@ function renderMessagePage() {
           <button class="btn btn-primary" style="align-self:flex-end" onclick="submitMessage()">解析并保存</button>
           <button class="btn" style="align-self:flex-end" onclick="aiAnalyzeMessage()" id="btn-ai-msg">AI 智能分析</button>
         </div>
-        <div style="margin-top:8px">
-          <div style="font-weight:700;font-size:12px;margin-bottom:4px">分析文档（Word/PDF/文本）</div>
-          <div style="display:flex;gap:6px">
-            <input id="doc-path" placeholder="输入文件路径，如 /Users/xiaoliao/Desktop/需求文档.docx" style="flex:1;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none">
-            <button class="btn" onclick="analyzeDocument()" id="btn-ai-doc">分析文档</button>
+        <div style="margin-top:12px">
+          <div style="font-weight:700;font-size:12px;margin-bottom:6px">拖拽文档到这里（Word/PDF/TXT/MD）</div>
+          <div id="drop-zone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:28px;text-align:center;background:var(--surface);cursor:pointer;transition:var(--transition)" onclick="document.getElementById('file-input').click()">
+            <div style="font-size:28px;margin-bottom:6px">📄</div>
+            <div style="font-size:12px;color:var(--text2)">拖拽文件到这里，或点击选择文件</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">支持 .doc .docx .pdf .txt .md</div>
+            <div id="drop-status" style="margin-top:8px;font-size:11px;color:var(--accent2);display:none"></div>
           </div>
+          <input type="file" id="file-input" style="display:none" accept=".doc,.docx,.pdf,.txt,.md" onchange="handleFileSelect(event)">
         </div>
         </div>
       </div>
@@ -510,16 +513,66 @@ async function aiAnalyzeMessage() {
 }
 
 async function analyzeDocument() {
-  const p = document.getElementById('doc-path').value.trim();
-  if (!p) { toast('请输入文件路径','err'); return; }
+  const p = document.getElementById('doc-path')?.value?.trim();
+  if (!p) { toast('请拖拽文件到上传区域','err'); return; }
   const btn = document.getElementById('btn-ai-doc');
-  btn.textContent = '解析中...'; btn.disabled = true;
+  if (btn) { btn.textContent = '解析中...'; btn.disabled = true; }
   const r = await api('/api/analyze/document', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p,project:document.getElementById('msg-project').value})});
-  btn.textContent = '分析文档'; btn.disabled = false;
+  if (btn) { btn.textContent = '分析文档'; btn.disabled = false; }
   if (r && r.analysis) {
     document.getElementById('ai-result').innerHTML = `<div class="logs" style="max-height:300px;white-space:pre-wrap">${escHtml(r.analysis)}</div>`;
     reload();
   } else toast('文档分析失败','err');
+}
+
+// ---- File Drag & Drop ----
+function initDropZone() {
+  const dz = document.getElementById('drop-zone');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; dz.style.background='var(--accent-bg)'; });
+  dz.addEventListener('dragleave', e => { e.preventDefault(); dz.style.borderColor='var(--border)'; dz.style.background='var(--surface)'; });
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.style.borderColor='var(--border)'; dz.style.background='var(--surface)';
+    if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+  });
+}
+
+function handleFileSelect(e) {
+  if (e.target.files.length) uploadFile(e.target.files[0]);
+}
+
+async function uploadFile(file) {
+  const dz = document.getElementById('drop-zone');
+  const st = document.getElementById('drop-status');
+  st.style.display = 'block';
+  st.textContent = `正在上传: ${file.name} (${(file.size/1024).toFixed(1)}KB)...`;
+  dz.style.borderColor = 'var(--yellow)';
+
+  try {
+    const r = await fetch(API + '/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Disposition': `filename="${encodeURIComponent(file.name)}"` },
+      body: file,
+    });
+    const data = await r.json();
+
+    if (data.analysis) {
+      st.textContent = `✓ ${file.name} 已解析完成`;
+      dz.style.borderColor = 'var(--green)';
+      document.getElementById('ai-result').innerHTML = `<div style="margin-bottom:8px;font-weight:700;font-size:13px">${file.name} - AI 分析结果</div><div class="logs" style="max-height:400px;white-space:pre-wrap">${escHtml(data.analysis)}</div>`;
+      toast(`${file.name} 已上传并完成 AI 分析`, 'ok');
+      reload();
+    } else {
+      st.textContent = `✗ 解析失败: ${data.error || '未知错误'}`;
+      dz.style.borderColor = 'var(--red)';
+      toast('文档解析失败: ' + (data.error || ''), 'err');
+    }
+  } catch (e) {
+    st.textContent = `✗ 上传失败: ${e.message}`;
+    dz.style.borderColor = 'var(--red)';
+    toast('上传失败', 'err');
+  }
 }
 
 async function generateSummary() {
@@ -639,6 +692,9 @@ async function init() {
   await checkGW(); setInterval(checkGW, 30000);
   await checkScheduler(); setInterval(checkScheduler, 15000);
   setInterval(reload, 5000);
+  // Init drop zone after first render
+  setTimeout(initDropZone, 500);
+  setInterval(initDropZone, 3000);
 }
 init();
 </script>

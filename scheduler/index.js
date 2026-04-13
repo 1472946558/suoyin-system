@@ -270,6 +270,45 @@ let projectSummary = null;
 let projectSummaryTime = null;
 const UPLOAD_DIR = path.join(ROOT, 'workspace', 'uploads');
 
+// ---- File Upload Handler ----
+function ensureUploadDir() {
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+async function handleFileUpload(req) {
+  // Read raw body as Buffer
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  const buf = Buffer.concat(chunks);
+
+  // Get filename from header
+  const disposition = req.headers['content-disposition'] || '';
+  const nameMatch = disposition.match(/filename="?(.+?)"?$/);
+  const filename = nameMatch ? nameMatch[1] : `upload_${Date.now()}`;
+  const ext = path.extname(filename).toLowerCase();
+
+  ensureUploadDir();
+  const filePath = path.join(UPLOAD_DIR, filename);
+  fs.writeFileSync(filePath, buf);
+  log('INFO', 'upload', `Saved: ${filename} (${buf.length} bytes)`);
+
+  // Parse text content
+  let text = '';
+  if (['.doc', '.docx'].includes(ext)) {
+    try {
+      text = execSync(`textutil -convert txt -stdout "${filePath}"`, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+    } catch (e) { text = '[Word 文档解析失败: ' + e.message + ']'; }
+  } else if (ext === '.pdf') {
+    try {
+      text = execSync(`textutil -convert txt -stdout "${filePath}"`, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+    } catch { text = '[PDF 解析需要安装 poppler]'; }
+  } else {
+    text = buf.toString('utf8');
+  }
+
+  return { filename, filePath, text, size: buf.length };
+}
+
 function saveTasks() {
   const data = {
     tasks,
@@ -584,6 +623,39 @@ function createServer() {
         json(res, { summary, time: projectSummaryTime });
       } else if (route === '/api/summary' && req.method === 'GET') {
         json(res, { summary: projectSummary, time: projectSummaryTime });
+      } else if (route === '/api/upload' && req.method === 'POST') {
+        // Handle file upload via drag-and-drop
+        const uploaded = await handleFileUpload(req);
+        if (uploaded.text.startsWith('[')) {
+          error(res, uploaded.text, 400); return;
+        }
+        // Auto AI analyze
+        log('INFO', 'ai', `Auto-analyzing uploaded file: ${uploaded.filename} (${uploaded.text.length} chars)`);
+        const analysis = await analyzeWithAI(uploaded.text, 'document');
+        const docMsg = {
+          id: 'M' + Date.now().toString(36).toUpperCase(),
+          raw: uploaded.text.slice(0, 5000),
+          contact: uploaded.filename,
+          time: new Date().toISOString(),
+          lines: uploaded.text.split('\n').length,
+          keywords: { deadline: [], requirements: [], decisions: [], blockers: [] },
+          source: 'document_upload',
+          project: '',
+          tags: ['document', 'auto-analyzed'],
+          analysis,
+          filename: uploaded.filename,
+        };
+        messages.push(docMsg);
+        saveMessages();
+        json(res, docMsg);
+      } else if (route === '/api/uploads' && req.method === 'GET') {
+        ensureUploadDir();
+        const files = fs.readdirSync(UPLOAD_DIR).map(f => ({
+          name: f,
+          size: fs.statSync(path.join(UPLOAD_DIR, f)).size,
+          time: fs.statSync(path.join(UPLOAD_DIR, f)).mtime.toISOString(),
+        }));
+        json(res, { files });
       } else if (route === '/health' && req.method === 'GET') {
         json(res, { status: 'ok', uptime: process.uptime() });
       } else {
