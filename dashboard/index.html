@@ -442,8 +442,8 @@ function renderMessagePage() {
         <div style="display:flex;gap:8px;margin-top:8px">
           <div class="fg" style="flex:1;margin:0"><label style="font-size:10px">联系人</label><input id="msg-contact" placeholder="客户名称" style="padding:6px 8px;font-size:12px"></div>
           <div class="fg" style="flex:1;margin:0"><label style="font-size:10px">项目</label><select id="msg-project" style="padding:6px 8px;font-size:12px"><option value="">未指定</option><option>Golf iOS</option><option>Amazon DE</option><option>OpenClaw</option><option>Candy</option><option>GEO</option></select></div>
-          <button class="btn btn-primary" style="align-self:flex-end" onclick="submitMessage()">解析并保存</button>
-          <button class="btn" style="align-self:flex-end" onclick="aiAnalyzeMessage()" id="btn-ai-msg">AI 智能分析</button>
+          <button class="btn btn-primary" style="align-self:flex-end" onclick="submitMessage()">粘贴并分析</button>
+          <button class="btn" style="align-self:flex-end;display:none" onclick="aiAnalyzeMessage()" id="btn-ai-msg">AI 智能分析</button>
         </div>
         <div style="margin-top:12px">
           <div style="font-weight:700;font-size:12px;margin-bottom:6px">拖拽文档到这里（Word/PDF/TXT/MD）</div>
@@ -491,13 +491,24 @@ async function submitMessage() {
     contact: document.getElementById('msg-contact').value.trim(),
     project: document.getElementById('msg-project').value,
   };
+
+  // Step 1: Save and parse
   const r = await api('/api/messages', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  if (r) {
-    toast(`已解析：${r.keywords.requirements.length} 个需求，${r.keywords.deadline.length} 个截止日期`,'ok');
-    document.getElementById('msg-input').value = '';
-    document.getElementById('msg-contact').value = '';
-    reload();
-  } else toast('解析失败','err');
+  if (!r) { toast('解析失败','err'); return; }
+
+  toast(`已提取 ${r.keywords.requirements.length} 个需求，正在 AI 分析...`,'info');
+
+  // Step 2: Auto AI analyze
+  const ai = await api('/api/analyze/message', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raw})});
+  if (ai && ai.analysis) {
+    document.getElementById('ai-result').innerHTML = `<div style="margin-bottom:6px;font-weight:700;font-size:13px">${r.contact || '沟通'} - AI 分析</div><div class="logs" style="max-height:400px;white-space:pre-wrap">${escHtml(ai.analysis)}</div>`;
+    toast('AI 分析完成','ok');
+  } else {
+    toast('AI 分析失败，但消息已保存','err');
+  }
+  document.getElementById('msg-input').value = '';
+  document.getElementById('msg-contact').value = '';
+  reload();
 }
 
 async function aiAnalyzeMessage() {
