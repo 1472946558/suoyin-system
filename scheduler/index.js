@@ -15,9 +15,11 @@
  */
 
 const http = require('http');
+const https = require('https');
 const net = require('net');
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const DASHBOARD_DIR = path.join(ROOT, 'workspace', 'dashboard');
@@ -166,6 +168,110 @@ function parseMessage(raw) {
     tags: [],
   };
 }
+
+// ---- AI Analysis via DeepSeek ----
+async function callDeepSeek(prompt, content) {
+  const apiKey = 'sk-3175793380f64da681900b5956e0ed3a';
+  const body = JSON.stringify({
+    model: 'deepseek-chat',
+    messages: [
+      { role: 'system', content: prompt },
+      { role: 'user', content: content.slice(0, 8000) },
+    ],
+    temperature: 0.3,
+    max_tokens: 2000,
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.deepseek.com',
+      port: 443,
+      path: '/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      let buf = '';
+      res.on('data', c => buf += c);
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(buf);
+          resolve(j.choices?.[0]?.message?.content || '分析失败');
+        } catch { resolve('AI 分析失败: ' + buf.slice(0, 200)); }
+      });
+    });
+    req.on('error', e => resolve('AI 连接失败: ' + e.message));
+    req.write(body);
+    req.end();
+  });
+}
+
+async function analyzeWithAI(text, type) {
+  const prompts = {
+    message: `你是一个项目助理。分析以下微信聊天记录，输出：
+1. 【项目状态】一句话概括当前进度
+2. 【阻塞点】列出所有卡住的问题（标严重程度 P0-P3）
+3. 【需跟进】列出廖总需要亲自处理的事
+4. 【下一步】接下来该做什么（按优先级排列）
+5. 【关键信息】提到的截止日期、金额、版本号等
+
+格式要求：每个要点一行，用 - 开头，简洁直接。`,
+    document: `你是一个项目需求分析师。分析以下项目文档，输出：
+1. 【项目概述】一句话说明这是什么项目
+2. 【核心需求】列出所有功能需求（编号）
+3. 【技术要点】关键技术栈和架构
+4. 【风险点】可能延期或出问题的地方
+5. 【验收标准】怎么算做完了
+
+格式要求：每个要点一行，用 - 开头，简洁直接。`,
+    summary: `你是项目总监。根据以下所有沟通记录和项目信息，输出一份综合报告：
+1. 【各项目进度】每个项目当前在哪里
+2. 【风险预警】哪些项目可能出问题
+3. 【今日必做】廖总今天必须处理的事
+4. 【待确认】需要和客户确认的事项
+5. 【完成情况】已完成的里程碑
+
+格式要求：每个要点一行，用 - 开头，简洁直接，不超过 20 条。`,
+  };
+
+  return await callDeepSeek(prompts[type] || prompts.message, text);
+}
+
+// ---- Document Parser ----
+function parseDocument(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  try {
+    if (ext === '.docx' || ext === '.doc') {
+      return execSync(`textutil -convert txt -stdout "${filePath}"`, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+    } else if (ext === '.pdf') {
+      // Try textutil first (macOS)
+      try {
+        return execSync(`textutil -convert txt -stdout "${filePath}"`, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+      } catch {
+        return '[PDF 解析需要安装 poppler: brew install poppler]';
+      }
+    } else if (ext === '.txt' || ext === '.md') {
+      return fs.readFileSync(filePath, 'utf8');
+    } else if (ext === '.json') {
+      return fs.readFileSync(filePath, 'utf8');
+    } else {
+      return '[不支持的文件格式: ' + ext + ']';
+    }
+  } catch (e) {
+    return '[解析失败: ' + e.message + ']';
+  }
+}
+
+// ---- State ----
+let projectSummary = null;
+let projectSummaryTime = null;
+const UPLOAD_DIR = path.join(ROOT, 'workspace', 'uploads');
+
+let tasks = [];
+let agents = [];
 
 function saveTasks() {
   const data = {
@@ -427,6 +533,60 @@ function createServer() {
         if (!data.raw) { error(res, 'Missing raw text'); return; }
         const msg = parseMessage(data.raw);
         json(res, msg);
+      } else if (route === '/api/analyze/message' && req.method === 'POST') {
+        // AI analyze a message
+        const data = JSON.parse(body);
+        if (!data.raw) { error(res, 'Missing raw text'); return; }
+        log('INFO', 'ai', `Analyzing message with DeepSeek (${data.raw.length} chars)...`);
+        const analysis = await analyzeWithAI(data.raw, 'message');
+        json(res, { analysis });
+      } else if (route === '/api/analyze/document' && req.method === 'POST') {
+        // AI analyze a document file
+        const data = JSON.parse(body);
+        if (!data.path) { error(res, 'Missing path'); return; }
+        const resolvedPath = path.resolve(data.path);
+        if (!resolvedPath.startsWith(ROOT) && !resolvedPath.startsWith('/Users')) {
+          error(res, 'Invalid path', 403); return;
+        }
+        if (!fs.existsSync(resolvedPath)) { error(res, 'File not found', 404); return; }
+        log('INFO', 'ai', `Parsing document: ${resolvedPath}`);
+        const text = parseDocument(resolvedPath);
+        if (text.startsWith('[')) { error(res, text, 400); return; }
+        log('INFO', 'ai', `Analyzing document with DeepSeek (${text.length} chars)...`);
+        const analysis = await analyzeWithAI(text, 'document');
+        const docMsg = {
+          id: 'M' + Date.now().toString(36).toUpperCase(),
+          raw: text.slice(0, 5000),
+          contact: data.contact || path.basename(resolvedPath),
+          time: new Date().toISOString(),
+          lines: text.split('\n').length,
+          keywords: { deadline: [], requirements: [], decisions: [], blockers: [] },
+          source: 'document',
+          project: data.project || '',
+          tags: ['document'],
+          analysis,
+        };
+        messages.push(docMsg);
+        saveMessages();
+        json(res, docMsg);
+      } else if (route === '/api/analyze/summary' && req.method === 'POST') {
+        // AI generate project summary from all messages + tasks
+        let context = '=== 任务列表 ===\n';
+        for (const t of tasks.filter(t => t.status !== 'deleted')) {
+          context += `${t.id} [${t.status}] P${t.priority} ${t.title} (${t.agent})\n`;
+        }
+        context += '\n=== 沟通记录 ===\n';
+        for (const m of messages.slice(-20)) {
+          context += `\n--- ${m.contact || '未知'} (${m.time?.slice(0,10) || ''}) ---\n`;
+          context += m.raw.slice(0, 1000) + '\n';
+        }
+        log('INFO', 'ai', `Generating project summary (${context.length} chars)...`);
+        const summary = await analyzeWithAI(context, 'summary');
+        projectSummary = summary;
+        projectSummaryTime = new Date().toISOString();
+        json(res, { summary, time: projectSummaryTime });
+      } else if (route === '/api/summary' && req.method === 'GET') {
+        json(res, { summary: projectSummary, time: projectSummaryTime });
       } else if (route === '/health' && req.method === 'GET') {
         json(res, { status: 'ok', uptime: process.uptime() });
       } else {
