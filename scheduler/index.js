@@ -265,13 +265,10 @@ function parseDocument(filePath) {
   }
 }
 
-// ---- State ----
+// ---- Extra State ----
 let projectSummary = null;
 let projectSummaryTime = null;
 const UPLOAD_DIR = path.join(ROOT, 'workspace', 'uploads');
-
-let tasks = [];
-let agents = [];
 
 function saveTasks() {
   const data = {
