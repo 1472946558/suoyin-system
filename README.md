@@ -10,6 +10,7 @@
 
 - 后台管理端可通过 Docker 直接启动并登录演示
 - Go API 已打通登录、会员、商品、收银单、回收单主链路
+- 后端已具备 `persistent` 模式，可接 MySQL / Redis 保存会话与主业务订单
 - 小程序保留 mock 演示能力，同时新增“联调模式 / 接口地址”运行时切换
 
 ## 本地启动
@@ -92,6 +93,7 @@ node scripts/smoke-test.mjs
   - `suoyin-system-admin:latest`
 - 对于只能使用老版 `docker-compose` 的服务器，当前 `docker-compose.yml` 也可直接运行
 - 如果服务器公网 `80/443` 已由宿主机 Nginx 接管，可参考 `deploy/nginx/suoyin-system.conf`
+- 如果后端需要脱离容器独立运行，可参考 `deploy/systemd/miniapp-backend.service`
 
 ## 当前可商用前还需要的外部资源
 

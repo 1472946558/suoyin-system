@@ -56,8 +56,8 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]interface{}{
 		"service":    "gold-recycle-miniapp-backend",
-		"version":    "v0-mock-week1",
-		"mode":       "memory",
+		"version":    "v0-persistent-week2",
+		"mode":       a.Config.Mode,
 		"serverTime": time.Now().Format(time.RFC3339),
 	})
 }
@@ -80,7 +80,11 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := a.store.createSession(a.Config.TokenSecret, user)
+	session, err := a.store.createSession(a.Config.TokenSecret, user)
+	if err != nil {
+		a.writeError(w, r, http.StatusInternalServerError, 50006, "failed to create login session")
+		return
+	}
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]interface{}{
 		"token":      session.Token,
 		"expiresAt":  session.ExpiresAt,
@@ -138,7 +142,11 @@ func (a *App) handleMiniAppLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	session := a.store.createSession(a.Config.TokenSecret, user)
+	session, err := a.store.createSession(a.Config.TokenSecret, user)
+	if err != nil {
+		a.writeError(w, r, http.StatusInternalServerError, 50006, "failed to create login session")
+		return
+	}
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]interface{}{
 		"token":       session.Token,
 		"userId":      user.ID,
@@ -170,7 +178,11 @@ func (a *App) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := a.store.createSession(a.Config.TokenSecret, user)
+	session, err := a.store.createSession(a.Config.TokenSecret, user)
+	if err != nil {
+		a.writeError(w, r, http.StatusInternalServerError, 50006, "failed to create login session")
+		return
+	}
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", AdminLoginResult{
 		Token:       session.Token,
 		User:        a.store.adminSessionUser(user),
@@ -400,7 +412,10 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session := currentSession(r.Context())
-	a.store.deleteSession(session.Token)
+	if err := a.store.deleteSession(session.Token); err != nil {
+		a.writeError(w, r, http.StatusInternalServerError, 50007, "failed to clear session")
+		return
+	}
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]bool{"loggedOut": true})
 }
 

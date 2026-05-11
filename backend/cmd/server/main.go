@@ -14,8 +14,8 @@ func main() {
 	}
 	defer server.Close()
 
-	log.Printf("gold recycle mock API listening on :%s (mode=memory, stage=week1)", server.Config.Port)
-	if err := http.ListenAndServe(":"+server.Config.Port, server.Router()); err != nil {
+	log.Printf("gold recycle API listening on %s (mode=%s)", server.Config.ListenAddr(), server.Config.Mode)
+	if err := http.ListenAndServe(server.Config.ListenAddr(), server.Router()); err != nil {
 		log.Fatal(err)
 	}
 }

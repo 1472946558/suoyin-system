@@ -1,12 +1,14 @@
 package app
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +26,7 @@ var (
 
 type MockStore struct {
 	mu                  sync.RWMutex
+	persistence         *Persistence
 	usersByUsername     map[string]UserAccount
 	usersByID           map[string]UserAccount
 	roles               []RoleTemplate
@@ -52,7 +55,7 @@ type MockStore struct {
 	adminTemplateInit   AdminTemplateInitPlan
 }
 
-func newMockStore() *MockStore {
+func newMockStore(persistence *Persistence) (*MockStore, error) {
 	permissions := []PermissionGroup{
 		{
 			Code:        "dashboard",
@@ -445,7 +448,8 @@ func newMockStore() *MockStore {
 
 	adminRoles, adminAbilityGroups, adminStores, adminUsers, adminProducts, adminPaymentConfig, adminPrintTemplate, adminPaymentRecords, adminCashierOrders, adminRecycleOrders, adminSystemProfile, adminAuditLogs, adminTemplateInit := buildAdminFixtures()
 
-	return &MockStore{
+	store := &MockStore{
+		persistence:         persistence,
 		usersByUsername:     usersByUsername,
 		usersByID:           usersByID,
 		roles:               roles,
@@ -473,6 +477,15 @@ func newMockStore() *MockStore {
 		adminAuditLogs:      adminAuditLogs,
 		adminTemplateInit:   adminTemplateInit,
 	}
+
+	if persistence != nil {
+		store.settings.FeatureFlags["mockMode"] = false
+		if err := store.bootstrapPersistence(); err != nil {
+			return nil, err
+		}
+	}
+
+	return store, nil
 }
 
 func flattenPermissions(groups []PermissionGroup) []string {
@@ -496,7 +509,7 @@ func (s *MockStore) authenticate(username, password string) (UserAccount, error)
 	return user, nil
 }
 
-func (s *MockStore) createSession(secret string, user UserAccount) Session {
+func (s *MockStore) createSession(secret string, user UserAccount) (Session, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -514,29 +527,56 @@ func (s *MockStore) createSession(secret string, user UserAccount) Session {
 		ExpiresAt: now.Add(12 * time.Hour),
 	}
 	s.sessions[token] = session
-	return session
+	if s.persistence != nil {
+		if err := s.persistence.saveSession(context.Background(), session); err != nil {
+			delete(s.sessions, token)
+			return Session{}, err
+		}
+	}
+	return session, nil
 }
 
 func (s *MockStore) getUserByToken(token string) (UserAccount, Session, bool) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	session, ok := s.sessions[token]
-	if !ok || session.ExpiresAt.Before(time.Now()) {
-		return UserAccount{}, Session{}, false
+	user := s.usersByID[session.UserID]
+	s.mu.RUnlock()
+
+	if ok && !session.ExpiresAt.Before(time.Now()) {
+		if user.ID != "" {
+			return user, session, true
+		}
 	}
 
-	user, ok := s.usersByID[session.UserID]
-	if !ok {
+	if s.persistence != nil {
+		persisted, found, err := s.persistence.loadSession(context.Background(), token)
+		if err != nil || !found || persisted.ExpiresAt.Before(time.Now()) {
+			return UserAccount{}, Session{}, false
+		}
+
+		s.mu.Lock()
+		s.sessions[token] = persisted
+		user, ok = s.usersByID[persisted.UserID]
+		s.mu.Unlock()
+		if ok {
+			return user, persisted, true
+		}
+	}
+
+	if !ok || user.ID == "" {
 		return UserAccount{}, Session{}, false
 	}
 	return user, session, true
 }
 
-func (s *MockStore) deleteSession(token string) {
+func (s *MockStore) deleteSession(token string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sessions, token)
+	if s.persistence != nil {
+		return s.persistence.deleteSession(context.Background(), token)
+	}
+	return nil
 }
 
 func (s *MockStore) listStoresForUser(user UserAccount) []StoreInfo {
@@ -741,6 +781,11 @@ func (s *MockStore) createCashierOrder(user UserAccount, storeID string, items [
 		CreatedAt:     time.Now(),
 	}
 	s.cashierSeq++
+	if s.persistence != nil {
+		if err := s.persistence.saveCashierOrder(context.Background(), order); err != nil {
+			return CashierOrder{}, err
+		}
+	}
 	s.cashierOrders = append(s.cashierOrders, order)
 	return order, nil
 }
@@ -807,6 +852,11 @@ func (s *MockStore) createRecycleDraft(user UserAccount, storeID, customerName, 
 		CreatedAt:       time.Now(),
 	}
 	s.recycleSeq++
+	if s.persistence != nil {
+		if err := s.persistence.saveRecycleOrder(context.Background(), order); err != nil {
+			return RecycleOrder{}, err
+		}
+	}
 	s.recycleOrders[order.ID] = order
 	return order, nil
 }
@@ -836,6 +886,11 @@ func (s *MockStore) confirmRecycleOrder(user UserAccount, orderID string, confir
 	order.AttachmentURLs = attachments
 	order.Remark = strings.TrimSpace(remark)
 	order.ConfirmedAt = &now
+	if s.persistence != nil {
+		if err := s.persistence.saveRecycleOrder(context.Background(), order); err != nil {
+			return RecycleOrder{}, err
+		}
+	}
 	s.recycleOrders[orderID] = order
 	return order, nil
 }
@@ -937,4 +992,73 @@ func (s *MockStore) dashboardSummary(user UserAccount) DashboardSummary {
 
 func round2(value float64) float64 {
 	return float64(int(value*100+0.5)) / 100
+}
+
+func (s *MockStore) close() error {
+	if s.persistence != nil {
+		return s.persistence.Close()
+	}
+	return nil
+}
+
+func (s *MockStore) bootstrapPersistence() error {
+	ctx := context.Background()
+
+	cashierOrders, err := s.persistence.loadCashierOrders(ctx)
+	if err != nil {
+		return err
+	}
+	if len(cashierOrders) == 0 {
+		for _, order := range s.cashierOrders {
+			if err := s.persistence.saveCashierOrder(ctx, order); err != nil {
+				return err
+			}
+		}
+	} else {
+		s.cashierOrders = cashierOrders
+	}
+
+	recycleOrders, err := s.persistence.loadRecycleOrders(ctx)
+	if err != nil {
+		return err
+	}
+	if len(recycleOrders) == 0 {
+		for _, order := range s.recycleOrders {
+			if err := s.persistence.saveRecycleOrder(ctx, order); err != nil {
+				return err
+			}
+		}
+	} else {
+		s.recycleOrders = recycleOrders
+	}
+
+	s.cashierSeq = nextSequenceFromCashierOrders(s.cashierOrders)
+	s.recycleSeq = nextSequenceFromRecycleOrders(s.recycleOrders)
+	return nil
+}
+
+func nextSequenceFromCashierOrders(orders []CashierOrder) int {
+	maxSeq := 1
+	for _, order := range orders {
+		maxSeq = max(maxSeq, numericSuffix(order.ID)+1)
+	}
+	return maxSeq
+}
+
+func nextSequenceFromRecycleOrders(orders map[string]RecycleOrder) int {
+	maxSeq := 1
+	for _, order := range orders {
+		maxSeq = max(maxSeq, numericSuffix(order.ID)+1)
+	}
+	return maxSeq
+}
+
+func numericSuffix(value string) int {
+	if idx := strings.LastIndex(value, "-"); idx >= 0 && idx < len(value)-1 {
+		parsed, err := strconv.Atoi(value[idx+1:])
+		if err == nil {
+			return parsed
+		}
+	}
+	return 0
 }

@@ -3,9 +3,24 @@ package app
 import "time"
 
 type Config struct {
+	Host        string
 	Port        string
+	Mode        string
 	TokenSecret string
 	CORSOrigin  string
+	MySQLDSN    string
+	RedisAddr   string
+	RedisUser   string
+	RedisPass   string
+	RedisDB     int
+	RedisPrefix string
+}
+
+func (c Config) ListenAddr() string {
+	if c.Host == "" {
+		return ":" + c.Port
+	}
+	return c.Host + ":" + c.Port
 }
 
 type APIResponse struct {

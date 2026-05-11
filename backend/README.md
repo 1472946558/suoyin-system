@@ -22,6 +22,13 @@
 - 重启服务后数据会重置
 - 尚未接入 MySQL / Redis / OSS / 微信支付真实链路
 
+最新进展：
+
+- 已加入 `persistent` 模式配置入口
+- 可通过 `MYSQL_*` 和 `REDIS_*` 环境变量接入持久化
+- 当前优先持久化登录会话、收银单、回收单
+- 可部署为宿主机本地服务，监听 `127.0.0.1:3001` 后由 Nginx 反代
+
 ## 本地运行
 
 ```bash
@@ -34,6 +41,21 @@ go run ./cmd/server
 - `PORT=8080`
 - `TOKEN_SECRET=gold-recycle-dev-secret`
 - `CORS_ORIGIN=*`
+- `APP_MODE=memory`
+
+持久化模式额外环境变量：
+
+- `APP_MODE=persistent`
+- `MYSQL_HOST`
+- `MYSQL_PORT`
+- `MYSQL_DATABASE`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `REDIS_ADDR`
+- `REDIS_USER`
+- `REDIS_PASSWORD`
+- `REDIS_DB`
+- `REDIS_KEY_PREFIX`
 
 健康检查：
 
@@ -95,3 +117,9 @@ docker compose up --build -d
 - 正式域名、HTTPS、灰度与监控
 
 这些外部依赖准备好后，这个目录可以继续按 `internal/platform` 和 `internal/modules` 方向拆分，不需要推翻现有接口口径。
+
+## 初始化 SQL
+
+当前持久化表结构样例在：
+
+- `backend/migrations/001_persistence_core.sql`

@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -27,19 +29,40 @@ type App struct {
 
 func New() (*App, error) {
 	cfg := Config{
+		Host:        env("HOST", ""),
 		Port:        env("PORT", "8080"),
+		Mode:        env("APP_MODE", "memory"),
 		TokenSecret: env("TOKEN_SECRET", "gold-recycle-dev-secret"),
 		CORSOrigin:  env("CORS_ORIGIN", "*"),
+		MySQLDSN:    mysqlDSNFromEnv(),
+		RedisAddr:   env("REDIS_ADDR", ""),
+		RedisUser:   env("REDIS_USER", ""),
+		RedisPass:   env("REDIS_PASSWORD", ""),
+		RedisDB:     envInt("REDIS_DB", 0),
+		RedisPrefix: env("REDIS_KEY_PREFIX", "gold:"),
+	}
+
+	persistence, err := newPersistence(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	store, err := newMockStore(persistence)
+	if err != nil {
+		if persistence != nil {
+			_ = persistence.Close()
+		}
+		return nil, err
 	}
 
 	return &App{
 		Config: cfg,
-		store:  newMockStore(),
+		store:  store,
 	}, nil
 }
 
 func (a *App) Close() error {
-	return nil
+	return a.store.close()
 }
 
 func (a *App) Router() http.Handler {
@@ -175,4 +198,43 @@ func env(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func envInt(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func mysqlDSNFromEnv() string {
+	if dsn := env("MYSQL_DSN", ""); dsn != "" {
+		return dsn
+	}
+
+	host := env("MYSQL_HOST", "")
+	database := env("MYSQL_DATABASE", "")
+	user := env("MYSQL_USER", "")
+	if host == "" || database == "" || user == "" {
+		return ""
+	}
+
+	password := env("MYSQL_PASSWORD", "")
+	port := env("MYSQL_PORT", "3306")
+	charset := env("MYSQL_CHARSET", "utf8mb4")
+	loc := url.QueryEscape("Local")
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=%s&loc=%s",
+		user,
+		password,
+		host,
+		port,
+		database,
+		charset,
+		loc,
+	)
 }
