@@ -25,6 +25,7 @@ docker compose up --build -d
 
 - 后端健康检查：`http://127.0.0.1:18082/health`
 - 后台管理端：`http://127.0.0.1:14176`
+- 如果宿主机已有 Nginx，可把 `80` 端口反代到 `14176`
 
 默认演示账号：
 
@@ -83,6 +84,14 @@ node scripts/smoke-test.mjs
 - 回收单创建与确认
 
 我已经在本机执行通过一轮 `docker compose up --build -d` 和 `node scripts/smoke-test.mjs`。
+
+## 服务器部署备注
+
+- 仓库已固定镜像名：
+  - `suoyin-system-backend:latest`
+  - `suoyin-system-admin:latest`
+- 对于只能使用老版 `docker-compose` 的服务器，当前 `docker-compose.yml` 也可直接运行
+- 如果服务器公网 `80/443` 已由宿主机 Nginx 接管，可参考 `deploy/nginx/suoyin-system.conf`
 
 ## 当前可商用前还需要的外部资源
 
