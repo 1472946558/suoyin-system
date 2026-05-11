@@ -1,0 +1,83 @@
+<view class="page profile">
+  <view class="dark-hero user-hero">
+    <text class="eyebrow">SETTINGS</text>
+    <text class="hero-title">{{profile.loggedIn ? profile.storeName : '未登录门店'}}</text>
+    <text class="hero-subtitle">{{profile.loggedIn ? profile.name + ' · ' + profile.role + ' · ' + profile.shiftName : '请先完成登录，后续真联调时这里会接角色权限和门店组织。'}}</text>
+    <view class="profile-actions">
+      <button class="profile-main-btn" bindtap="goAccount">{{profile.loggedIn ? '编辑登录信息' : '去登录'}}</button>
+      <button wx:if="{{profile.loggedIn}}" class="profile-ghost-btn" bindtap="logout">退出</button>
+    </view>
+  </view>
+
+  <view class="stats-card card">
+    <view class="stat">
+      <image class="stat-icon" src="/assets/ui/list.png" mode="aspectFit" />
+      <text class="stat-num">{{stats.orders}}</text>
+      <text class="muted">订单总数</text>
+    </view>
+    <view class="stat">
+      <image class="stat-icon" src="/assets/ui/enterprise.png" mode="aspectFit" />
+      <text class="stat-num">{{stats.storeCode}}</text>
+      <text class="muted">门店编码</text>
+    </view>
+    <view class="stat">
+      <image class="stat-icon" src="/assets/ui/user.png" mode="aspectFit" />
+      <text class="stat-num">{{stats.role}}</text>
+      <text class="muted">当前岗位</text>
+    </view>
+  </view>
+
+  <view class="stats-card card sub-stats-card">
+    <view class="stat">
+      <image class="stat-icon" src="/assets/ui/user.png" mode="aspectFit" />
+      <text class="stat-num">{{stats.members}}</text>
+      <text class="muted">会员档案</text>
+    </view>
+    <view class="stat">
+      <image class="stat-icon" src="/assets/ui/enterprise.png" mode="aspectFit" />
+      <text class="stat-num">{{stats.products}}</text>
+      <text class="muted">商品模板</text>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>系统环境</text>
+      <text class="section-kicker">先把品牌、模式和服务电话配置出来，便于演示</text>
+    </view>
+  </view>
+  <view class="card profile-card">
+    <view class="profile-row" wx:for="{{envItems}}" wx:key="title">
+      <text class="muted">{{item.title}}</text>
+      <text>{{item.value}}</text>
+    </view>
+  </view>
+  <view class="runtime-tip">
+    <image class="runtime-tip-icon" src="/assets/ui/support.png" mode="aspectFit" />
+    <text>{{runtimeSummary}}</text>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>常用设置</text>
+      <text class="section-kicker">把登录、资源页和联调切换入口都收进这里</text>
+    </view>
+  </view>
+  <view class="card menu">
+    <view class="menu-item" wx:for="{{modules}}" wx:key="title" bindtap="onModuleTap" data-key="{{item.key}}" data-title="{{item.title}}">
+      <view class="menu-icon-wrap">
+        <image class="menu-icon" src="/assets/ui/support.png" mode="aspectFit" />
+      </view>
+      <view class="menu-body">
+        <text class="menu-title">{{item.title}}</text>
+        <text class="menu-desc">{{item.desc}}</text>
+      </view>
+      <text class="muted">›</text>
+    </view>
+  </view>
+
+  <view class="notice">
+    <image class="notice-icon" src="/assets/ui/warning.png" mode="aspectFit" />
+    <text>要进入正式商用，还需要接入总部金价、支付出款、电子秤、影像留档、打印小票和风控审核。</text>
+  </view>
+</view>

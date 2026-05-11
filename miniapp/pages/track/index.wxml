@@ -1,0 +1,92 @@
+<view class="page">
+  <view class="track-card dark-hero">
+    <text class="eyebrow">INTAKE</text>
+    <text class="hero-title">回收录单</text>
+    <text class="hero-subtitle">录入回收品类、成色、毛重、扣减和门店报价，确认页会自动汇总结算。</text>
+    <view class="rider-card">
+      <view>
+        <text class="rider-name">{{form.customerName || '未填写客户'}}</text>
+        <text class="rider-phone">{{form.customerPhone || '请先在收银页登记客户手机号'}}</text>
+      </view>
+      <button class="call-btn" bindtap="goCashier">
+        <image src="/assets/ui/user.png" mode="aspectFit" />
+        <text>回收银页</text>
+      </button>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/document.png" mode="aspectFit" /><text class="label">回收品类</text></view>
+      <picker mode="selector" range="{{itemCategories}}" value="{{itemCategoryIndex}}" bindchange="onCategoryChange">
+        <view class="picker-box">
+          <text>{{form.itemCategory}}</text>
+          <text class="muted">选择</text>
+        </view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/note.png" mode="aspectFit" /><text class="label">品名</text></view>
+      <input class="input" placeholder="例如：足金手镯 / 金条 / 项链" value="{{form.itemName}}" data-key="itemName" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/shield.png" mode="aspectFit" /><text class="label">成色</text></view>
+      <picker mode="selector" range="{{purities}}" value="{{purityIndex}}" bindchange="onPurityChange">
+        <view class="picker-box">
+          <text>{{form.purity}}</text>
+          <text class="muted">选择</text>
+        </view>
+      </picker>
+    </view>
+    <view class="double-grid">
+      <view class="field compact-field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/weight.png" mode="aspectFit" /><text class="label">毛重(g)</text></view>
+        <input class="input" type="digit" placeholder="0.00" value="{{form.grossWeight}}" data-key="grossWeight" bindinput="onInput" />
+      </view>
+      <view class="field compact-field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/cold.png" mode="aspectFit" /><text class="label">扣减(g)</text></view>
+        <input class="input" type="digit" placeholder="0.00" value="{{form.deductionWeight}}" data-key="deductionWeight" bindinput="onInput" />
+      </view>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/price.png" mode="aspectFit" /><text class="label">回收单价(元/g)</text></view>
+      <input class="input" type="digit" placeholder="请输入回收单价" value="{{form.recyclePrice}}" data-key="recyclePrice" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/note.png" mode="aspectFit" /><text class="label">补充说明</text></view>
+      <textarea class="textarea" placeholder="例如：现场火烧、酸洗、复检通过、等待主管复核" value="{{form.remark}}" data-key="remark" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/support.png" mode="aspectFit" /><text class="label">现场照片</text></view>
+      <view class="photo-rule">
+        <text>{{photoRule.requireExactThree ? '确认回收前必须上传 3 张照片' : '至少上传 ' + photoRule.minCount + ' 张，最多 ' + photoRule.maxCount + ' 张'}}</text>
+        <text class="photo-status {{photoValidation.ok ? 'ok' : 'warn'}}">{{photoValidation.message}}</text>
+      </view>
+      <view class="photo-list">
+        <view class="photo-chip" wx:for="{{form.photos}}" wx:key="id">
+          <text class="photo-name">{{item.name}}</text>
+          <button class="photo-remove" data-index="{{index}}" bindtap="removePhoto">移除</button>
+        </view>
+      </view>
+      <button class="ghost-btn upload-btn" bindtap="addPhotos">添加现场照片</button>
+    </view>
+  </view>
+
+  <view class="price-box">
+    <view>
+      <text class="price-label">SETTLEMENT</text>
+      <text class="price">¥{{quote.amountText}}</text>
+      <text class="settle-line">净重 {{quote.netWeightText}}g · 服务费 ¥{{quote.serviceFeeText}}</text>
+    </view>
+    <view class="price-side">
+      <text class="distance-chip">参考价 ¥{{quote.recyclePriceText}}/g</text>
+      <text>毛重 {{quote.grossWeightText}}g</text>
+      <text>扣减 {{quote.deductionWeightText}}g</text>
+    </view>
+  </view>
+
+  <view class="action-grid">
+    <button class="ghost-btn" bindtap="saveOnly">保存录单草稿</button>
+    <button class="primary-btn" bindtap="saveAndConfirm">下一步：回收确认</button>
+  </view>
+</view>

@@ -1,0 +1,21 @@
+.account-hero .hero-title {
+  font-size: 50rpx;
+}
+
+.form-card {
+  padding-top: 12rpx;
+}
+
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  margin-top: 28rpx;
+}
+
+.text-btn {
+  height: 72rpx;
+  color: var(--muted);
+  font-size: 25rpx;
+  font-weight: 800;
+}

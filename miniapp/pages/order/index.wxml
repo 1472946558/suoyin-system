@@ -1,0 +1,77 @@
+<view class="page">
+  <view class="order-head dark-hero">
+    <text class="eyebrow">CASHIER</text>
+    <text class="hero-title">前台收银建单</text>
+    <text class="hero-subtitle">先登记客户、付款方式和来源渠道，再进入回收录单补齐成色与克重。</text>
+    <view class="order-mini-flow">
+      <view><image src="/assets/ui/user.png" mode="aspectFit" /><text>客户</text></view>
+      <view><image src="/assets/ui/price.png" mode="aspectFit" /><text>收银</text></view>
+      <view><image src="/assets/ui/document.png" mode="aspectFit" /><text>录单</text></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/user.png" mode="aspectFit" /><text class="label">客户姓名</text></view>
+      <input class="input" placeholder="请输入客户姓名" value="{{form.customerName}}" data-key="customerName" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/phone.png" mode="aspectFit" /><text class="label">客户手机号</text></view>
+      <input class="input" type="number" placeholder="请输入客户手机号" value="{{form.customerPhone}}" data-key="customerPhone" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/price.png" mode="aspectFit" /><text class="label">打款方式</text></view>
+      <picker mode="selector" range="{{paymentMethods}}" value="{{paymentMethodIndex}}" bindchange="onPaymentMethodChange">
+        <view class="picker-box">
+          <text>{{form.paymentMethod}}</text>
+          <text class="muted">选择</text>
+        </view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/route.png" mode="aspectFit" /><text class="label">来源渠道</text></view>
+      <picker mode="selector" range="{{sourceChannels}}" value="{{sourceChannelIndex}}" bindchange="onSourceChannelChange">
+        <view class="picker-box">
+          <text>{{form.sourceChannel}}</text>
+          <text class="muted">选择</text>
+        </view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/enterprise.png" mode="aspectFit" /><text class="label">门店</text></view>
+      <input class="input" placeholder="请输入门店名称" value="{{form.storeName}}" data-key="storeName" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/support.png" mode="aspectFit" /><text class="label">操作员</text></view>
+      <input class="input" placeholder="请输入操作员姓名" value="{{form.operatorName}}" data-key="operatorName" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/note.png" mode="aspectFit" /><text class="label">收银备注</text></view>
+      <textarea class="textarea" placeholder="例如：客户已验身份证、等待复检、走银行卡打款" value="{{form.remark}}" data-key="remark" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="price-box">
+    <view>
+      <text class="price-label">CURRENT QUOTE</text>
+      <text class="price">¥{{quote.amountText}}</text>
+      <text class="helper">当前草稿若已录入克重，将自动显示预估结算金额。</text>
+    </view>
+    <view class="price-side">
+      <text class="distance-chip">{{form.paymentMethod}}</text>
+      <text>参考金价 ¥{{quote.recyclePriceText}}/g</text>
+    </view>
+  </view>
+
+  <view class="action-grid">
+    <button class="ghost-btn" bindtap="saveDraftOnly">保存草稿</button>
+    <button class="primary-btn" bindtap="goEntry">下一步：回收录单</button>
+  </view>
+
+  <button class="ghost-btn preview-btn" bindtap="goConfirm">查看回收确认</button>
+
+  <view class="notice">
+    <image class="notice-icon" src="/assets/ui/warning.png" mode="aspectFit" />
+    <text>{{demoNotice}}</text>
+  </view>
+</view>

@@ -1,0 +1,95 @@
+<view class="page">
+  <view class="section-title first-title">
+    <view>
+      <view class="title-with-icon"><image src="/assets/ui/list.png" mode="aspectFit" /><text>回收订单</text></view>
+      <text class="section-kicker">查看本地 mock 回收单状态与结算金额</text>
+    </view>
+    <text class="muted small">{{filteredOrders.length}} 单</text>
+  </view>
+
+  <scroll-view class="filter-bar" scroll-x enable-flex>
+    <view
+      class="filter-chip {{filter === item.key ? 'active' : ''}}"
+      wx:for="{{filters}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="changeFilter"
+    >
+      {{item.label}}
+    </view>
+  </scroll-view>
+
+  <view class="card subtle-card search-card">
+    <view class="field">
+      <text class="label">搜索订单</text>
+      <input class="input" placeholder="单号 / 客户 / 手机号 / 品名 / 门店" value="{{keyword}}" bindinput="onKeywordInput" />
+    </view>
+    <view class="summary-grid">
+      <view class="summary-box">
+        <text class="summary-value">{{summary.count}}</text>
+        <text class="summary-label">当前订单</text>
+      </view>
+      <view class="summary-box">
+        <text class="summary-value">{{summary.pendingCount}}</text>
+        <text class="summary-label">待处理</text>
+      </view>
+      <view class="summary-box">
+        <text class="summary-value">¥{{summary.totalAmount}}</text>
+        <text class="summary-label">金额合计</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="card empty-card">
+    <text class="empty-title">正在加载订单</text>
+    <text class="muted">请稍候，系统正在同步回收单列表。</text>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="card empty-card">
+    <text class="empty-title">加载失败</text>
+    <text class="muted">{{errorText}}</text>
+    <button class="primary-btn" bindtap="loadOrders">重新加载</button>
+  </view>
+
+  <view wx:elif="{{filteredOrders.length}}">
+    <view class="order-card card" wx:for="{{filteredOrders}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+      <view class="row between">
+        <view class="order-id-wrap">
+          <image src="/assets/ui/list.png" mode="aspectFit" />
+          <text class="order-id">{{item.id}}</text>
+        </view>
+        <text class="status-pill {{item.status === 'completed' ? 'done' : 'pending'}}">{{item.statusText}}</text>
+      </view>
+      <view class="route">
+        <view class="route-row">
+          <image class="route-icon" src="/assets/ui/user.png" mode="aspectFit" />
+          <text>{{item.customerName}} · {{item.customerPhone}}</text>
+        </view>
+        <view class="route-row">
+          <image class="route-icon" src="/assets/ui/document.png" mode="aspectFit" />
+          <text>{{item.itemCategory}} · {{item.itemName}} · {{item.purity}}</text>
+        </view>
+      </view>
+      <view class="row between meta">
+        <view class="meta-left">
+          <image src="/assets/ui/weight.png" mode="aspectFit" />
+          <text>净重 {{item.netWeightText}}g</text>
+        </view>
+        <view class="fee-wrap">
+          <image src="/assets/ui/price.png" mode="aspectFit" />
+          <text class="fee">¥{{item.amountText}}</text>
+        </view>
+      </view>
+      <view class="row between order-footer">
+        <text class="muted">{{item.storeName}} · {{item.createdAt}}</text>
+        <text class="muted">{{item.photoCount}} 张留痕</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="card empty-card">
+    <text class="empty-title">当前筛选下暂无订单</text>
+    <text class="muted">可以先去收银页创建一张新的回收单。</text>
+    <button class="primary-btn" bindtap="goOrder">去开单</button>
+  </view>
+</view>

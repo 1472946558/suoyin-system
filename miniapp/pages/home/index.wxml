@@ -1,0 +1,126 @@
+<view class="page home">
+  <view class="brand-strip">
+    <view>
+      <text class="brand-name">金秤台</text>
+      <text class="brand-desc">黄金回收收银系统 · {{profile.storeName || '未登录门店'}}</text>
+    </view>
+    <text class="brand-chip">{{profile.loggedIn ? profile.shiftName : 'Mock'}}</text>
+  </view>
+
+  <view wx:if="{{profile.loggedIn}}" class="permission-strip">
+    <text class="permission-role">{{profile.role}}</text>
+    <text class="permission-copy">当前只展示你有权限操作的入口</text>
+  </view>
+
+  <view class="dark-hero">
+    <text class="eyebrow">GOLD RECYCLE POS</text>
+    <text class="hero-title">门店首版骨架已就位</text>
+    <text class="hero-subtitle">先跑通登录、收银、回收录单、回收确认和订单查询，为后续接入称重、支付和风控留好位置。</text>
+    <view class="hero-metrics">
+      <view class="hero-metric">
+        <text class="metric-value">{{stats.todayCount}}</text>
+        <text class="metric-label">今日录单</text>
+      </view>
+      <view class="hero-metric">
+        <text class="metric-value">¥{{stats.todayAmount}}</text>
+        <text class="metric-label">今日回收额</text>
+      </view>
+      <view class="hero-metric">
+        <text class="metric-value">{{stats.pendingCount}}</text>
+        <text class="metric-label">待跟进</text>
+      </view>
+    </view>
+    <view class="hero-actions">
+      <button class="hero-action hero-order" bindtap="goLogin">
+        <view class="hero-action-icon-wrap">
+          <image class="hero-action-icon" src="/assets/ui/user.png" mode="aspectFit" />
+        </view>
+        <view class="hero-action-copy">
+          <text class="hero-action-title">{{profile.loggedIn ? '切换门店账号' : '立即登录'}}</text>
+          <text class="hero-action-desc">店员与门店信息</text>
+        </view>
+      </button>
+      <button class="hero-action hero-service" bindtap="resumeDraft">
+        <view class="hero-action-icon-wrap">
+          <image class="hero-action-icon" src="/assets/ui/document.png" mode="aspectFit" />
+        </view>
+        <view class="hero-action-copy">
+          <text class="hero-action-title">{{draftReady ? '继续草稿' : '开始收银'}}</text>
+          <text class="hero-action-desc">本地 mock 闭环</text>
+        </view>
+      </button>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>今日金价牌</text>
+      <text class="section-kicker">演示数据，可在真联调阶段替换为总部行情接口</text>
+    </view>
+  </view>
+  <view class="card subtle-card price-board">
+    <view class="price-row" wx:for="{{prices}}" wx:key="purity">
+      <view>
+        <text class="price-title">{{item.purity}}</text>
+        <text class="price-desc">{{item.label}}</text>
+      </view>
+      <view class="price-side">
+        <text class="board-price">¥{{item.price}}/g</text>
+        <text class="board-trend">{{item.trend}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>快捷入口</text>
+      <text class="section-kicker">先把常用流程都摆上桌面，方便门店演示</text>
+    </view>
+  </view>
+  <view class="quick card subtle-card">
+    <view class="quick-item" wx:for="{{quickActions}}" wx:key="title" bindtap="goAction" data-type="{{item.type}}" data-url="{{item.url}}">
+      <view class="quick-icon-wrap">
+        <image class="quick-icon" src="{{item.icon}}" mode="aspectFit" />
+      </view>
+      <text class="quick-name">{{item.title}}</text>
+      <text class="quick-desc">{{item.desc}}</text>
+    </view>
+  </view>
+  <view wx:if="{{!quickActions.length}}" class="card empty-card">
+    <text class="empty-title">当前角色暂无可操作入口</text>
+    <text class="muted">请先切换为老板、店长或员工账号。</text>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>门店资源概览</text>
+      <text class="section-kicker">让会员档案和商品模板也进入前台日常操作视野</text>
+    </view>
+  </view>
+  <view class="resource-grid">
+    <view class="resource-card">
+      <text class="resource-value">{{resourceStats.members}}</text>
+      <text class="resource-label">会员总数</text>
+      <text class="resource-desc">其中 VIP {{resourceStats.vipMembers}} 位</text>
+    </view>
+    <view class="resource-card">
+      <text class="resource-value">{{resourceStats.products}}</text>
+      <text class="resource-label">商品模板</text>
+      <text class="resource-desc">上架中 {{resourceStats.activeProducts}} 个</text>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>本周落地范围</text>
+      <text class="section-kicker">第 1 周只做门店前台骨架，不接真实支付和秤</text>
+    </view>
+  </view>
+  <view class="promise-grid">
+    <view class="promise" wx:for="{{checklist}}" wx:key="title">
+      <text class="promise-code">STEP 0{{index + 1}}</text>
+      <text class="promise-title">{{item.title}}</text>
+      <text class="promise-desc">{{item.desc}}</text>
+    </view>
+  </view>
+</view>

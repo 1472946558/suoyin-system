@@ -1,0 +1,118 @@
+<view class="page">
+  <view class="dark-hero">
+    <text class="eyebrow">MEMBERS</text>
+    <text class="hero-title">会员与熟客档案</text>
+    <text class="hero-subtitle">把常来客户、回访进度和偏好带进门店前台流程，减少重复登记。</text>
+    <view class="stats-strip">
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.total}}</text>
+        <text class="stats-label">会员数</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.vipCount}}</text>
+        <text class="stats-label">VIP</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.followUpCount}}</text>
+        <text class="stats-label">待回访</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card subtle-card">
+    <view class="field">
+      <text class="label">搜索会员</text>
+      <input class="input" placeholder="姓名 / 手机号 / 标签 / 成色偏好" value="{{filters.keyword}}" bindinput="onKeywordInput" />
+    </view>
+    <view class="filter-row">
+      <picker mode="selector" range="{{levelOptions}}" bindchange="onLevelChange">
+        <view class="picker-box compact-picker">
+          <text>{{filters.level === 'all' ? '全部等级' : filters.level}}</text>
+          <text class="muted">等级</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{statusOptions}}" bindchange="onStatusChange">
+        <view class="picker-box compact-picker">
+          <text>{{filters.status === 'all' ? '全部状态' : filters.status}}</text>
+          <text class="muted">状态</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>会员列表</text>
+      <text class="section-kicker">{{loading ? '加载中...' : '点击会员卡片查看详情并带入收银'}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{filteredMembers.length}}" class="member-list">
+    <button
+      wx:for="{{filteredMembers}}"
+      wx:key="id"
+      class="card member-card {{selectedId === item.id ? 'member-card-active' : ''}}"
+      bindtap="selectMember"
+      data-id="{{item.id}}"
+    >
+      <view class="row between">
+        <view>
+          <text class="member-name">{{item.name}}</text>
+          <text class="member-phone">{{item.phone}}</text>
+        </view>
+        <text class="tag">{{item.level}}</text>
+      </view>
+      <view class="member-meta">
+        <text>{{item.preferredPurity}} · {{item.sourceChannel}}</text>
+        <text>{{item.lastVisitAt}}</text>
+      </view>
+      <view class="chip-wall">
+        <text wx:for="{{item.tags}}" wx:key="*this" class="mini-chip">{{item}}</text>
+      </view>
+    </button>
+  </view>
+
+  <view wx:else class="card empty-card">
+    <text class="empty-title">暂无匹配会员</text>
+    <text class="muted">可以切换筛选条件或等待真实会员接口接入。</text>
+  </view>
+
+  <view wx:if="{{selectedMember}}" class="card detail-card">
+    <view class="row between">
+      <view>
+        <text class="detail-title">{{selectedMember.name}}</text>
+        <text class="section-kicker">{{selectedMember.managerName}} 跟进 · 最近到店 {{selectedMember.lastVisitAt}}</text>
+      </view>
+      <text class="status-tag {{selectedMember.status}}">{{selectedMember.status}}</text>
+    </view>
+
+    <view class="detail-grid">
+      <view class="detail-item">
+        <text class="muted">累计订单</text>
+        <text>{{selectedMember.totalOrders}} 笔</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">累计回收额</text>
+        <text>{{formatCurrency(selectedMember.totalRecycleAmount)}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">偏好成色</text>
+        <text>{{selectedMember.preferredPurity}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">身份证核验</text>
+        <text>{{selectedMember.idVerified ? '已核验' : '待补录'}}</text>
+      </view>
+    </view>
+
+    <view class="notice">
+      <image class="notice-icon" src="/assets/ui/note.png" mode="aspectFit" />
+      <text>{{selectedMember.notes}}</text>
+    </view>
+
+    <view class="action-grid">
+      <button class="ghost-btn" bindtap="copyPhone">复制手机号</button>
+      <button class="primary-btn" bindtap="useForCashier">带入收银草稿</button>
+    </view>
+  </view>
+</view>
