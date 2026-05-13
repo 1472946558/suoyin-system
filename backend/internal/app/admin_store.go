@@ -476,6 +476,9 @@ func (s *MockStore) buildDynamicRecycleOrderViewsLocked() []AdminRecycleOrderVie
 			CreatedAt:       order.CreatedAt.Format("2006-01-02 15:04"),
 			Remark:          order.Remark,
 		}
+		if len(order.Attachments) > 0 {
+			view.PhotoCount = len(order.Attachments)
+		}
 		if order.ConfirmedAt != nil {
 			view.ConfirmedAt = order.ConfirmedAt.Format("2006-01-02 15:04")
 		}
@@ -488,54 +491,29 @@ func (s *MockStore) buildDynamicRecycleOrderViewsLocked() []AdminRecycleOrderVie
 }
 
 func (s *MockStore) buildDynamicPaymentRecordsLocked() []AdminPaymentRecord {
-	items := make([]AdminPaymentRecord, 0, len(s.cashierOrders)+len(s.recycleOrders))
-	for i := len(s.cashierOrders) - 1; i >= 0; i-- {
-		order := s.cashierOrders[i]
-		items = append(items, AdminPaymentRecord{
-			ID:             "pay-" + order.ID,
-			PaymentNo:      "PAY-" + order.OrderNo,
-			OrderNo:        order.OrderNo,
-			BizType:        "retail",
-			StoreID:        order.StoreID,
-			StoreName:      order.StoreName,
-			Amount:         order.PaidAmount,
-			Method:         normalizePaymentMethod(order.PaymentMethod),
-			Status:         "paid",
-			CallbackStatus: paymentCallbackStatus(order.PaymentMethod),
-			PaidAt:         order.CreatedAt.Format("2006-01-02 15:04"),
-			OperatorName:   order.CreatedBy,
-			CustomerLabel:  fmt.Sprintf("%d 件商品", len(order.Items)),
-			Remark:         order.Remark,
-			Anomaly:        false,
-		})
-	}
-	for _, order := range s.recycleOrders {
-		status := "pending"
-		paidAt := order.CreatedAt.Format("2006-01-02 15:04")
-		callbackStatus := "pending"
-		if order.Status == "confirmed" {
-			status = "paid"
-			callbackStatus = "delivered"
-			if order.ConfirmedAt != nil {
-				paidAt = order.ConfirmedAt.Format("2006-01-02 15:04")
-			}
+	items := make([]AdminPaymentRecord, 0, len(s.paymentTransactions))
+	for i := len(s.paymentTransactions) - 1; i >= 0; i-- {
+		payment := s.paymentTransactions[i]
+		paidAt := payment.CreatedAt.Format("2006-01-02 15:04")
+		if payment.PaidAt != nil {
+			paidAt = payment.PaidAt.Format("2006-01-02 15:04")
 		}
 		items = append(items, AdminPaymentRecord{
-			ID:             "pay-" + order.ID,
-			PaymentNo:      "PAY-" + order.OrderNo,
-			OrderNo:        order.OrderNo,
-			BizType:        "recycle",
-			StoreID:        order.StoreID,
-			StoreName:      order.StoreName,
-			Amount:         maxFloat(order.ConfirmedAmount, order.EstimatedAmount),
-			Method:         "bank_transfer",
-			Status:         status,
-			CallbackStatus: callbackStatus,
+			ID:             payment.ID,
+			PaymentNo:      payment.PaymentNo,
+			OrderNo:        payment.OrderNo,
+			BizType:        payment.BizType,
+			StoreID:        payment.StoreID,
+			StoreName:      payment.StoreName,
+			Amount:         payment.Amount,
+			Method:         payment.Method,
+			Status:         payment.Status,
+			CallbackStatus: payment.CallbackStatus,
 			PaidAt:         paidAt,
-			OperatorName:   order.CreatedBy,
-			CustomerLabel:  order.CustomerName,
-			Remark:         order.Remark,
-			Anomaly:        order.Status != "confirmed",
+			OperatorName:   payment.OperatorName,
+			CustomerLabel:  payment.CustomerLabel,
+			Remark:         payment.Remark,
+			Anomaly:        payment.Anomaly,
 		})
 	}
 	sort.Slice(items, func(i, j int) bool {

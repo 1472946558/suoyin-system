@@ -68,7 +68,7 @@ type UserAccount struct {
 	OrgID       string   `json:"orgId"`
 	Username    string   `json:"username"`
 	DisplayName string   `json:"displayName"`
-	Password    string   `json:"-"`
+	Password    string   `json:"password,omitempty"`
 	RoleCode    string   `json:"roleCode"`
 	RoleName    string   `json:"roleName"`
 	DataScope   string   `json:"dataScope"`
@@ -115,22 +115,65 @@ type RecycleItem struct {
 }
 
 type RecycleOrder struct {
-	ID              string        `json:"id"`
-	OrderNo         string        `json:"orderNo"`
-	OrgID           string        `json:"orgId"`
-	StoreID         string        `json:"storeId"`
-	StoreName       string        `json:"storeName"`
-	Status          string        `json:"status"`
-	CustomerName    string        `json:"customerName"`
-	CustomerPhone   string        `json:"customerPhone"`
-	EstimatedAmount float64       `json:"estimatedAmount"`
-	ConfirmedAmount float64       `json:"confirmedAmount"`
-	Items           []RecycleItem `json:"items"`
-	AttachmentURLs  []string      `json:"attachmentUrls"`
-	Remark          string        `json:"remark"`
-	CreatedBy       string        `json:"createdBy"`
-	CreatedAt       time.Time     `json:"createdAt"`
-	ConfirmedAt     *time.Time    `json:"confirmedAt,omitempty"`
+	ID              string            `json:"id"`
+	OrderNo         string            `json:"orderNo"`
+	OrgID           string            `json:"orgId"`
+	StoreID         string            `json:"storeId"`
+	StoreName       string            `json:"storeName"`
+	Status          string            `json:"status"`
+	CustomerName    string            `json:"customerName"`
+	CustomerPhone   string            `json:"customerPhone"`
+	EstimatedAmount float64           `json:"estimatedAmount"`
+	ConfirmedAmount float64           `json:"confirmedAmount"`
+	Items           []RecycleItem     `json:"items"`
+	AttachmentURLs  []string          `json:"attachmentUrls"`
+	Attachments     []AttachmentAsset `json:"attachments,omitempty"`
+	Remark          string            `json:"remark"`
+	CreatedBy       string            `json:"createdBy"`
+	CreatedAt       time.Time         `json:"createdAt"`
+	ConfirmedAt     *time.Time        `json:"confirmedAt,omitempty"`
+}
+
+type AttachmentAsset struct {
+	ID              string    `json:"id"`
+	OrgID           string    `json:"orgId"`
+	OrderID         string    `json:"orderId"`
+	StoreID         string    `json:"storeId"`
+	Category        string    `json:"category"`
+	StorageProvider string    `json:"storageProvider"`
+	ObjectKey       string    `json:"objectKey"`
+	PublicURL       string    `json:"publicUrl"`
+	ThumbnailURL    string    `json:"thumbnailUrl"`
+	FileName        string    `json:"fileName"`
+	ContentType     string    `json:"contentType"`
+	SizeBytes       int64     `json:"sizeBytes"`
+	Source          string    `json:"source"`
+	Status          string    `json:"status"`
+	UploadedBy      string    `json:"uploadedBy"`
+	UploadedAt      time.Time `json:"uploadedAt"`
+}
+
+type PaymentTransaction struct {
+	ID              string     `json:"id"`
+	PaymentNo       string     `json:"paymentNo"`
+	OrderNo         string     `json:"orderNo"`
+	BizType         string     `json:"bizType"`
+	OrgID           string     `json:"orgId"`
+	StoreID         string     `json:"storeId"`
+	StoreName       string     `json:"storeName"`
+	Amount          float64    `json:"amount"`
+	Method          string     `json:"method"`
+	Status          string     `json:"status"`
+	CallbackStatus  string     `json:"callbackStatus"`
+	ProviderRef     string     `json:"providerRef"`
+	ProviderPayload string     `json:"providerPayload"`
+	OperatorName    string     `json:"operatorName"`
+	CustomerLabel   string     `json:"customerLabel"`
+	Remark          string     `json:"remark"`
+	Anomaly         bool       `json:"anomaly"`
+	PaidAt          *time.Time `json:"paidAt,omitempty"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
 }
 
 type DashboardSummary struct {

@@ -20,6 +20,7 @@ var (
 	errCashierNotFound    = errors.New("cashier order not found")
 	errRecycleNotFound    = errors.New("recycle order not found")
 	errRecycleConflict    = errors.New("recycle order status conflict")
+	errPaymentNotFound    = errors.New("payment transaction not found")
 	errMemberNotFound     = errors.New("member not found")
 	errProductNotFound    = errors.New("product not found")
 )
@@ -50,6 +51,7 @@ type MockStore struct {
 	catalogProducts     []CatalogProduct
 	cashierOrders       []CashierOrder
 	recycleOrders       map[string]RecycleOrder
+	paymentTransactions []PaymentTransaction
 	settings            SystemSettings
 	cashierSeq          int
 	recycleSeq          int
@@ -491,6 +493,9 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 		adminTemplateInit:   adminTemplateInit,
 	}
 
+	store.rebuildRecycleAttachmentsLocked()
+	store.rebuildPaymentTransactionsLocked()
+
 	if persistence != nil {
 		store.settings.FeatureFlags["mockMode"] = false
 		if err := store.bootstrapPersistence(); err != nil {
@@ -640,6 +645,170 @@ func (s *MockStore) listRoles() []RoleTemplate {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return append([]RoleTemplate(nil), s.roles...)
+}
+
+func attachmentFileName(rawURL string, index int) string {
+	cleaned := strings.TrimSpace(rawURL)
+	if cleaned == "" {
+		return fmt.Sprintf("attachment-%02d.jpg", index+1)
+	}
+	if idx := strings.LastIndex(cleaned, "/"); idx >= 0 && idx < len(cleaned)-1 {
+		cleaned = cleaned[idx+1:]
+	}
+	if idx := strings.Index(cleaned, "?"); idx >= 0 {
+		cleaned = cleaned[:idx]
+	}
+	if strings.TrimSpace(cleaned) == "" {
+		return fmt.Sprintf("attachment-%02d.jpg", index+1)
+	}
+	return cleaned
+}
+
+func buildRecycleAttachmentAssets(order RecycleOrder, urls []string, actor string, uploadedAt time.Time) []AttachmentAsset {
+	items := make([]AttachmentAsset, 0, len(urls))
+	for index, rawURL := range urls {
+		fileName := attachmentFileName(rawURL, index)
+		items = append(items, AttachmentAsset{
+			ID:              fmt.Sprintf("att-%s-%02d", order.ID, index+1),
+			OrgID:           order.OrgID,
+			OrderID:         order.ID,
+			StoreID:         order.StoreID,
+			Category:        "recycle_photo",
+			StorageProvider: "external_url",
+			ObjectKey:       fmt.Sprintf("recycle/%s/%s", order.OrderNo, fileName),
+			PublicURL:       rawURL,
+			ThumbnailURL:    rawURL,
+			FileName:        fileName,
+			ContentType:     "image/jpeg",
+			SizeBytes:       0,
+			Source:          "manual",
+			Status:          "archived",
+			UploadedBy:      actor,
+			UploadedAt:      uploadedAt,
+		})
+	}
+	return items
+}
+
+func (s *MockStore) rebuildRecycleAttachmentsLocked() {
+	for orderID, order := range s.recycleOrders {
+		order.Attachments = buildRecycleAttachmentAssets(order, order.AttachmentURLs, order.CreatedBy, order.CreatedAt)
+		s.recycleOrders[orderID] = order
+	}
+}
+
+func newCashierPaymentTransaction(order CashierOrder) PaymentTransaction {
+	paidAt := order.CreatedAt
+	method := normalizePaymentMethod(order.PaymentMethod)
+	return PaymentTransaction{
+		ID:              "payment-" + order.ID,
+		PaymentNo:       "PAY-" + order.OrderNo,
+		OrderNo:         order.OrderNo,
+		BizType:         "retail",
+		OrgID:           order.OrgID,
+		StoreID:         order.StoreID,
+		StoreName:       order.StoreName,
+		Amount:          order.PaidAmount,
+		Method:          method,
+		Status:          "paid",
+		CallbackStatus:  paymentCallbackStatus(order.PaymentMethod),
+		ProviderRef:     "",
+		ProviderPayload: "",
+		OperatorName:    order.CreatedBy,
+		CustomerLabel:   fmt.Sprintf("%d 件商品", len(order.Items)),
+		Remark:          order.Remark,
+		Anomaly:         paymentCallbackStatus(order.PaymentMethod) != "delivered",
+		PaidAt:          &paidAt,
+		CreatedAt:       order.CreatedAt,
+		UpdatedAt:       order.CreatedAt,
+	}
+}
+
+func newRecyclePaymentTransaction(order RecycleOrder) PaymentTransaction {
+	paidAt := order.CreatedAt
+	if order.ConfirmedAt != nil {
+		paidAt = *order.ConfirmedAt
+	}
+	return PaymentTransaction{
+		ID:              "payment-" + order.ID,
+		PaymentNo:       "PAY-" + order.OrderNo,
+		OrderNo:         order.OrderNo,
+		BizType:         "recycle",
+		OrgID:           order.OrgID,
+		StoreID:         order.StoreID,
+		StoreName:       order.StoreName,
+		Amount:          maxFloat(order.ConfirmedAmount, order.EstimatedAmount),
+		Method:          "bank_transfer",
+		Status:          "paid",
+		CallbackStatus:  "delivered",
+		ProviderRef:     "",
+		ProviderPayload: "",
+		OperatorName:    order.CreatedBy,
+		CustomerLabel:   order.CustomerName,
+		Remark:          order.Remark,
+		Anomaly:         false,
+		PaidAt:          &paidAt,
+		CreatedAt:       paidAt,
+		UpdatedAt:       paidAt,
+	}
+}
+
+func (s *MockStore) upsertPaymentTransactionLocked(item PaymentTransaction) {
+	for index, existing := range s.paymentTransactions {
+		if existing.ID == item.ID || existing.PaymentNo == item.PaymentNo {
+			s.paymentTransactions[index] = item
+			return
+		}
+	}
+	s.paymentTransactions = append(s.paymentTransactions, item)
+	sort.Slice(s.paymentTransactions, func(i, j int) bool {
+		return s.paymentTransactions[i].CreatedAt.Before(s.paymentTransactions[j].CreatedAt)
+	})
+}
+
+func (s *MockStore) rebuildPaymentTransactionsLocked() {
+	items := make([]PaymentTransaction, 0, len(s.cashierOrders)+len(s.recycleOrders))
+	for _, order := range s.cashierOrders {
+		items = append(items, newCashierPaymentTransaction(order))
+	}
+	for _, order := range s.recycleOrders {
+		if order.Status == "confirmed" {
+			items = append(items, newRecyclePaymentTransaction(order))
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].CreatedAt.Before(items[j].CreatedAt)
+	})
+	s.paymentTransactions = items
+}
+
+func (s *MockStore) updateWechatPaymentCallback(paymentNo, status, providerRef, providerPayload string) (PaymentTransaction, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for index, item := range s.paymentTransactions {
+		if item.PaymentNo != paymentNo {
+			continue
+		}
+		item.Status = strings.TrimSpace(status)
+		item.CallbackStatus = "delivered"
+		item.ProviderRef = strings.TrimSpace(providerRef)
+		item.ProviderPayload = strings.TrimSpace(providerPayload)
+		item.Anomaly = item.Status != "paid"
+		now := time.Now()
+		item.UpdatedAt = now
+		if item.Status == "paid" && item.PaidAt == nil {
+			item.PaidAt = &now
+		}
+		s.paymentTransactions[index] = item
+		if s.persistence != nil {
+			if err := s.persistence.savePaymentTransaction(context.Background(), item); err != nil {
+				return PaymentTransaction{}, err
+			}
+		}
+		return item, nil
+	}
+	return PaymentTransaction{}, errPaymentNotFound
 }
 
 func (s *MockStore) listMembersForUser(user UserAccount) []MemberProfile {
@@ -793,13 +962,18 @@ func (s *MockStore) createCashierOrder(user UserAccount, storeID string, items [
 		CreatedBy:     user.DisplayName,
 		CreatedAt:     time.Now(),
 	}
+	payment := newCashierPaymentTransaction(order)
 	s.cashierSeq++
 	if s.persistence != nil {
 		if err := s.persistence.saveCashierOrder(context.Background(), order); err != nil {
 			return CashierOrder{}, err
 		}
+		if err := s.persistence.savePaymentTransaction(context.Background(), payment); err != nil {
+			return CashierOrder{}, err
+		}
 	}
 	s.cashierOrders = append(s.cashierOrders, order)
+	s.upsertPaymentTransactionLocked(payment)
 	return order, nil
 }
 
@@ -864,9 +1038,13 @@ func (s *MockStore) createRecycleDraft(user UserAccount, storeID, customerName, 
 		CreatedBy:       user.DisplayName,
 		CreatedAt:       time.Now(),
 	}
+	order.Attachments = buildRecycleAttachmentAssets(order, order.AttachmentURLs, user.DisplayName, order.CreatedAt)
 	s.recycleSeq++
 	if s.persistence != nil {
 		if err := s.persistence.saveRecycleOrder(context.Background(), order); err != nil {
+			return RecycleOrder{}, err
+		}
+		if err := s.persistence.saveRecycleAttachments(context.Background(), order.ID, order.Attachments); err != nil {
 			return RecycleOrder{}, err
 		}
 	}
@@ -897,14 +1075,23 @@ func (s *MockStore) confirmRecycleOrder(user UserAccount, orderID string, confir
 	order.Status = "confirmed"
 	order.ConfirmedAmount = round2(confirmedAmount)
 	order.AttachmentURLs = attachments
+	order.Attachments = buildRecycleAttachmentAssets(order, attachments, user.DisplayName, now)
 	order.Remark = strings.TrimSpace(remark)
 	order.ConfirmedAt = &now
+	payment := newRecyclePaymentTransaction(order)
 	if s.persistence != nil {
 		if err := s.persistence.saveRecycleOrder(context.Background(), order); err != nil {
 			return RecycleOrder{}, err
 		}
+		if err := s.persistence.saveRecycleAttachments(context.Background(), order.ID, order.Attachments); err != nil {
+			return RecycleOrder{}, err
+		}
+		if err := s.persistence.savePaymentTransaction(context.Background(), payment); err != nil {
+			return RecycleOrder{}, err
+		}
 	}
 	s.recycleOrders[orderID] = order
+	s.upsertPaymentTransactionLocked(payment)
 	return order, nil
 }
 
@@ -1049,9 +1236,56 @@ func (s *MockStore) bootstrapPersistence() error {
 			if err := s.persistence.saveRecycleOrder(ctx, order); err != nil {
 				return err
 			}
+			if err := s.persistence.saveRecycleAttachments(ctx, order.ID, order.Attachments); err != nil {
+				return err
+			}
 		}
 	} else {
 		s.recycleOrders = recycleOrders
+	}
+
+	attachmentsByOrder, err := s.persistence.loadRecycleAttachments(ctx)
+	if err != nil {
+		return err
+	}
+	if len(attachmentsByOrder) == 0 {
+		s.rebuildRecycleAttachmentsLocked()
+		for orderID, order := range s.recycleOrders {
+			if err := s.persistence.saveRecycleAttachments(ctx, orderID, order.Attachments); err != nil {
+				return err
+			}
+		}
+	} else {
+		for orderID, assets := range attachmentsByOrder {
+			order, ok := s.recycleOrders[orderID]
+			if !ok {
+				continue
+			}
+			order.Attachments = append([]AttachmentAsset(nil), assets...)
+			if len(order.AttachmentURLs) == 0 {
+				urls := make([]string, 0, len(assets))
+				for _, asset := range assets {
+					urls = append(urls, asset.PublicURL)
+				}
+				order.AttachmentURLs = urls
+			}
+			s.recycleOrders[orderID] = order
+		}
+	}
+
+	paymentTransactions, err := s.persistence.loadPaymentTransactions(ctx)
+	if err != nil {
+		return err
+	}
+	if len(paymentTransactions) == 0 {
+		s.rebuildPaymentTransactionsLocked()
+		for _, item := range s.paymentTransactions {
+			if err := s.persistence.savePaymentTransaction(ctx, item); err != nil {
+				return err
+			}
+		}
+	} else {
+		s.paymentTransactions = paymentTransactions
 	}
 
 	s.cashierSeq = nextSequenceFromCashierOrders(s.cashierOrders)
@@ -1106,7 +1340,14 @@ func (s *MockStore) bootstrapBaseConfigs(ctx context.Context) error {
 		return err
 	}
 	if found {
+		restoredUsers, restored := restoreMissingUserPasswords(users, s.usersByUsername)
+		users = restoredUsers
 		s.rebuildUserMaps(users)
+		if restored {
+			if err := s.persistence.saveConfig(ctx, configKeyBaseUsers, s.usersSliceLocked()); err != nil {
+				return err
+			}
+		}
 	} else if err := s.persistence.saveConfig(ctx, configKeyBaseUsers, s.usersSliceLocked()); err != nil {
 		return err
 	}
@@ -1194,6 +1435,21 @@ func (s *MockStore) rebuildUserMaps(users []UserAccount) {
 		s.usersByID[user.ID] = user
 		s.usersByUsername[user.Username] = user
 	}
+}
+
+func restoreMissingUserPasswords(users []UserAccount, defaults map[string]UserAccount) ([]UserAccount, bool) {
+	restored := false
+	items := make([]UserAccount, 0, len(users))
+	for _, user := range users {
+		if strings.TrimSpace(user.Password) == "" {
+			if fallback, ok := defaults[user.Username]; ok && strings.TrimSpace(fallback.Password) != "" {
+				user.Password = fallback.Password
+				restored = true
+			}
+		}
+		items = append(items, user)
+	}
+	return items, restored
 }
 
 func (s *MockStore) usersSliceLocked() []UserAccount {

@@ -68,6 +68,7 @@ func (a *App) Close() error {
 func (a *App) Router() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", a.handleHealth)
+	mux.HandleFunc("/api/payment/wechat/callback", a.handleWechatPaymentCallback)
 	mux.HandleFunc("/api/v1/auth/login", a.handleLogin)
 	mux.HandleFunc("/api/admin/login", a.handleAdminLogin)
 	mux.Handle("/api/admin/bootstrap", a.withAuth(a.requireAdminAbility("dashboard.view", a.handleAdminBootstrap)))

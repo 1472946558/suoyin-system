@@ -48,6 +48,14 @@ type recycleConfirmRequest struct {
 	Remark          string   `json:"remark"`
 }
 
+type wechatPaymentCallbackRequest struct {
+	PaymentNo       string `json:"paymentNo"`
+	OrderNo         string `json:"orderNo"`
+	Status          string `json:"status"`
+	ProviderRef     string `json:"providerRef"`
+	ProviderPayload string `json:"providerPayload"`
+}
+
 func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
@@ -60,6 +68,47 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"mode":       a.Config.Mode,
 		"serverTime": time.Now().Format(time.RFC3339),
 	})
+}
+
+func (a *App) handleWechatPaymentCallback(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
+		return
+	}
+
+	var req wechatPaymentCallbackRequest
+	if err := decodeJSON(r, &req); err != nil {
+		a.writeError(w, r, http.StatusBadRequest, 40001, "invalid request body")
+		return
+	}
+	req.PaymentNo = strings.TrimSpace(req.PaymentNo)
+	req.OrderNo = strings.TrimSpace(req.OrderNo)
+	req.Status = strings.TrimSpace(req.Status)
+	if req.PaymentNo == "" && req.OrderNo != "" {
+		req.PaymentNo = "PAY-" + req.OrderNo
+	}
+	if req.PaymentNo == "" {
+		a.writeError(w, r, http.StatusBadRequest, 40002, "paymentNo is required")
+		return
+	}
+	if req.Status == "" {
+		req.Status = "paid"
+	}
+
+	transaction, err := a.store.updateWechatPaymentCallback(req.PaymentNo, req.Status, req.ProviderRef, req.ProviderPayload)
+	switch {
+	case errors.Is(err, errPaymentNotFound):
+		a.writeError(w, r, http.StatusNotFound, 40402, "payment transaction not found")
+	case err != nil:
+		a.writeError(w, r, http.StatusInternalServerError, 50008, "failed to process payment callback")
+	default:
+		a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]interface{}{
+			"paymentNo":      transaction.PaymentNo,
+			"status":         transaction.Status,
+			"callbackStatus": transaction.CallbackStatus,
+			"providerRef":    transaction.ProviderRef,
+		})
+	}
 }
 
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
