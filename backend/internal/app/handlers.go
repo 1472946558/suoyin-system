@@ -48,6 +48,20 @@ type recycleConfirmRequest struct {
 	Remark          string   `json:"remark"`
 }
 
+type uploadPrepareRequest struct {
+	StoreID     string `json:"storeId"`
+	FileName    string `json:"fileName"`
+	ContentType string `json:"contentType"`
+	SizeBytes   int64  `json:"sizeBytes"`
+}
+
+type uploadCompleteRequest struct {
+	UploadID     string `json:"uploadId"`
+	OrderID      string `json:"orderId"`
+	PublicURL    string `json:"publicUrl"`
+	ThumbnailURL string `json:"thumbnailUrl"`
+}
+
 type wechatPaymentCallbackRequest struct {
 	PaymentNo       string `json:"paymentNo"`
 	OrderNo         string `json:"orderNo"`
@@ -108,6 +122,64 @@ func (a *App) handleWechatPaymentCallback(w http.ResponseWriter, r *http.Request
 			"callbackStatus": transaction.CallbackStatus,
 			"providerRef":    transaction.ProviderRef,
 		})
+	}
+}
+
+func (a *App) handleRecyclePhotoUploadPrepare(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
+		return
+	}
+	user := currentUser(r.Context())
+	var req uploadPrepareRequest
+	if err := decodeJSON(r, &req); err != nil {
+		a.writeError(w, r, http.StatusBadRequest, 40001, "invalid request body")
+		return
+	}
+	if strings.TrimSpace(req.StoreID) == "" || strings.TrimSpace(req.FileName) == "" {
+		a.writeError(w, r, http.StatusBadRequest, 40002, "storeId and fileName are required")
+		return
+	}
+
+	preparation, err := a.store.prepareRecycleAttachmentUpload(user, req.StoreID, req.FileName, req.ContentType, req.SizeBytes)
+	switch {
+	case errors.Is(err, errUnauthorizedStore):
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+	case err != nil:
+		a.writeError(w, r, http.StatusInternalServerError, 50009, "failed to prepare upload")
+	default:
+		a.writeJSON(w, r, http.StatusOK, 0, "ok", preparation)
+	}
+}
+
+func (a *App) handleRecyclePhotoUploadComplete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
+		return
+	}
+	user := currentUser(r.Context())
+	var req uploadCompleteRequest
+	if err := decodeJSON(r, &req); err != nil {
+		a.writeError(w, r, http.StatusBadRequest, 40001, "invalid request body")
+		return
+	}
+	if strings.TrimSpace(req.UploadID) == "" || strings.TrimSpace(req.OrderID) == "" {
+		a.writeError(w, r, http.StatusBadRequest, 40002, "uploadId and orderId are required")
+		return
+	}
+
+	asset, err := a.store.completeRecycleAttachmentUpload(user, req.UploadID, req.OrderID, req.PublicURL, req.ThumbnailURL)
+	switch {
+	case errors.Is(err, errUnauthorizedStore):
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+	case errors.Is(err, errUploadNotFound):
+		a.writeError(w, r, http.StatusNotFound, 40403, "upload session not found")
+	case errors.Is(err, errRecycleNotFound):
+		a.writeError(w, r, http.StatusNotFound, 40402, "recycle order not found")
+	case err != nil:
+		a.writeError(w, r, http.StatusInternalServerError, 50010, "failed to complete upload")
+	default:
+		a.writeJSON(w, r, http.StatusOK, 0, "ok", asset)
 	}
 }
 

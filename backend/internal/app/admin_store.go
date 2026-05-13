@@ -534,6 +534,9 @@ func (s *MockStore) buildDynamicSystemProfileLocked() AdminSystemProfile {
 	profile.WechatPayEnabled = s.settings.Payments.EnableWechatPay
 	profile.CashEnabled = s.settings.Payments.EnableCash
 	profile.BankTransferEnabled = s.settings.Payments.EnableBankTransfer
+	if strings.TrimSpace(s.settings.Storage.StatusDescription) != "" {
+		profile.OSSStatus = s.settings.Storage.StatusDescription
+	}
 	return profile
 }
 

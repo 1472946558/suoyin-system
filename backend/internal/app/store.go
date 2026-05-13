@@ -21,6 +21,7 @@ var (
 	errRecycleNotFound    = errors.New("recycle order not found")
 	errRecycleConflict    = errors.New("recycle order status conflict")
 	errPaymentNotFound    = errors.New("payment transaction not found")
+	errUploadNotFound     = errors.New("upload session not found")
 	errMemberNotFound     = errors.New("member not found")
 	errProductNotFound    = errors.New("product not found")
 )
@@ -68,6 +69,7 @@ type MockStore struct {
 	adminSystemProfile  AdminSystemProfile
 	adminAuditLogs      []AdminAuditLogRecord
 	adminTemplateInit   AdminTemplateInitPlan
+	uploadSessions      map[string]UploadPreparation
 }
 
 func newMockStore(persistence *Persistence) (*MockStore, error) {
@@ -271,6 +273,17 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 			EnableWechatPay:    true,
 			EnableBankTransfer: true,
 		},
+		Storage: StorageSettings{
+			Enabled:           false,
+			Provider:          "unconfigured",
+			Bucket:            "",
+			Region:            "",
+			PublicBaseURL:     "",
+			PathPrefix:        "recycle-evidence",
+			UploadStrategy:    "manual_url",
+			CallbackEnabled:   false,
+			StatusDescription: "对象存储待配置，当前允许先登记外部图片链接。",
+		},
 		FeatureFlags: map[string]bool{
 			"mockMode":             true,
 			"dataScopePlaceholder": true,
@@ -279,6 +292,7 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 		UpdatedBy: "system",
 		UpdatedAt: now,
 	}
+	applySystemSettingDefaults(&settings)
 
 	cashierOrders := []CashierOrder{
 		{
@@ -491,6 +505,7 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 		adminSystemProfile:  adminSystemProfile,
 		adminAuditLogs:      adminAuditLogs,
 		adminTemplateInit:   adminTemplateInit,
+		uploadSessions:      make(map[string]UploadPreparation),
 	}
 
 	store.rebuildRecycleAttachmentsLocked()
@@ -688,6 +703,206 @@ func buildRecycleAttachmentAssets(order RecycleOrder, urls []string, actor strin
 		})
 	}
 	return items
+}
+
+func sanitizeObjectSegment(value string) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" {
+		return "file"
+	}
+	var builder strings.Builder
+	lastDash := false
+	for _, r := range value {
+		valid := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+		if valid {
+			builder.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash {
+			builder.WriteRune('-')
+			lastDash = true
+		}
+	}
+	cleaned := strings.Trim(builder.String(), "-")
+	if cleaned == "" {
+		return "file"
+	}
+	return cleaned
+}
+
+func applySystemSettingDefaults(settings *SystemSettings) {
+	if settings == nil {
+		return
+	}
+	if settings.FeatureFlags == nil {
+		settings.FeatureFlags = map[string]bool{}
+	}
+	if strings.TrimSpace(settings.Storage.Provider) == "" {
+		settings.Storage.Provider = "unconfigured"
+	}
+	if strings.TrimSpace(settings.Storage.PathPrefix) == "" {
+		settings.Storage.PathPrefix = "recycle-evidence"
+	}
+	if strings.TrimSpace(settings.Storage.UploadStrategy) == "" {
+		settings.Storage.UploadStrategy = "manual_url"
+	}
+	if strings.TrimSpace(settings.Storage.StatusDescription) == "" {
+		settings.Storage.StatusDescription = "对象存储待配置，当前允许先登记外部图片链接。"
+	}
+}
+
+func buildStoragePublicURL(settings StorageSettings, objectKey string) string {
+	base := strings.TrimRight(strings.TrimSpace(settings.PublicBaseURL), "/")
+	if base == "" {
+		return ""
+	}
+	return base + "/" + strings.TrimLeft(objectKey, "/")
+}
+
+func (s *MockStore) prepareRecycleAttachmentUpload(user UserAccount, storeID, fileName, contentType string, sizeBytes int64) (UploadPreparation, error) {
+	if !s.canAccessStore(user, storeID) {
+		return UploadPreparation{}, errUnauthorizedStore
+	}
+	store, ok := s.getStore(storeID)
+	if !ok {
+		return UploadPreparation{}, errUnauthorizedStore
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	uploadID := fmt.Sprintf("upload-%s-%d", store.Code, now.UnixNano())
+	cleanFileName := attachmentFileName(fileName, 0)
+	objectKey := strings.Trim(strings.TrimSpace(s.settings.Storage.PathPrefix), "/")
+	if objectKey == "" {
+		objectKey = "recycle-evidence"
+	}
+	objectKey = fmt.Sprintf("%s/%s/%s/%s-%s", objectKey, store.Code, now.Format("20060102"), uploadID, sanitizeObjectSegment(cleanFileName))
+
+	publicURL := buildStoragePublicURL(s.settings.Storage, objectKey)
+	uploadURL := publicURL
+	storageReady := s.settings.Storage.Enabled && strings.TrimSpace(s.settings.Storage.PublicBaseURL) != ""
+	mode := "manual_url"
+	note := "对象存储未完全配置，可先上传到外部地址后再调用 complete 接口回填。"
+	if storageReady {
+		mode = s.settings.Storage.UploadStrategy
+		if mode == "" {
+			mode = "direct_put"
+		}
+		note = "已生成对象键，可由前端按配置完成直传后回填。"
+	}
+	preparation := UploadPreparation{
+		UploadID:      uploadID,
+		StoreID:       storeID,
+		Category:      "recycle_photo",
+		Provider:      s.settings.Storage.Provider,
+		Bucket:        s.settings.Storage.Bucket,
+		Region:        s.settings.Storage.Region,
+		ObjectKey:     objectKey,
+		FileName:      cleanFileName,
+		ContentType:   strings.TrimSpace(contentType),
+		SizeBytes:     sizeBytes,
+		UploadURL:     uploadURL,
+		PublicURL:     publicURL,
+		Headers:       map[string]string{"content-type": strings.TrimSpace(contentType)},
+		FormFields:    map[string]string{},
+		StorageReady:  storageReady,
+		UploadMode:    mode,
+		ExpiresAt:     now.Add(30 * time.Minute),
+		ReferenceNote: note,
+	}
+	s.uploadSessions[uploadID] = preparation
+	return preparation, nil
+}
+
+func (s *MockStore) completeRecycleAttachmentUpload(user UserAccount, uploadID, orderID, publicURL, thumbnailURL string) (AttachmentAsset, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	preparation, ok := s.uploadSessions[uploadID]
+	if !ok || preparation.ExpiresAt.Before(time.Now()) {
+		return AttachmentAsset{}, errUploadNotFound
+	}
+	if !s.canAccessStore(user, preparation.StoreID) {
+		return AttachmentAsset{}, errUnauthorizedStore
+	}
+	if strings.TrimSpace(orderID) == "" {
+		return AttachmentAsset{}, errRecycleNotFound
+	}
+	order, ok := s.recycleOrders[orderID]
+	if !ok {
+		return AttachmentAsset{}, errRecycleNotFound
+	}
+	if !s.canAccessStore(user, order.StoreID) {
+		return AttachmentAsset{}, errUnauthorizedStore
+	}
+
+	finalPublicURL := strings.TrimSpace(publicURL)
+	if finalPublicURL == "" {
+		finalPublicURL = preparation.PublicURL
+	}
+	if finalPublicURL == "" {
+		finalPublicURL = "https://pending-upload.local/" + strings.TrimLeft(preparation.ObjectKey, "/")
+	}
+	finalThumbURL := strings.TrimSpace(thumbnailURL)
+	if finalThumbURL == "" {
+		finalThumbURL = finalPublicURL
+	}
+	asset := AttachmentAsset{
+		ID:              "att-" + uploadID,
+		OrgID:           order.OrgID,
+		OrderID:         order.ID,
+		StoreID:         order.StoreID,
+		Category:        "recycle_photo",
+		StorageProvider: preparation.Provider,
+		ObjectKey:       preparation.ObjectKey,
+		PublicURL:       finalPublicURL,
+		ThumbnailURL:    finalThumbURL,
+		FileName:        preparation.FileName,
+		ContentType:     preparation.ContentType,
+		SizeBytes:       preparation.SizeBytes,
+		Source:          "prepared_upload",
+		Status:          "archived",
+		UploadedBy:      user.DisplayName,
+		UploadedAt:      time.Now(),
+	}
+
+	replaced := false
+	for index, existing := range order.Attachments {
+		if existing.ID == asset.ID {
+			order.Attachments[index] = asset
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		order.Attachments = append(order.Attachments, asset)
+	}
+	urlExists := false
+	for _, existing := range order.AttachmentURLs {
+		if existing == asset.PublicURL {
+			urlExists = true
+			break
+		}
+	}
+	if !urlExists {
+		order.AttachmentURLs = append(order.AttachmentURLs, asset.PublicURL)
+	}
+
+	if s.persistence != nil {
+		if err := s.persistence.saveRecycleOrder(context.Background(), order); err != nil {
+			return AttachmentAsset{}, err
+		}
+		if err := s.persistence.saveRecycleAttachments(context.Background(), order.ID, order.Attachments); err != nil {
+			return AttachmentAsset{}, err
+		}
+	}
+
+	s.recycleOrders[order.ID] = order
+	delete(s.uploadSessions, uploadID)
+	return asset, nil
 }
 
 func (s *MockStore) rebuildRecycleAttachmentsLocked() {
@@ -1130,12 +1345,36 @@ func (s *MockStore) updateSettings(user UserAccount, update SystemSettings) Syst
 	s.settings.Payments.EnableCash = update.Payments.EnableCash
 	s.settings.Payments.EnableWechatPay = update.Payments.EnableWechatPay
 	s.settings.Payments.EnableBankTransfer = update.Payments.EnableBankTransfer
+	if strings.TrimSpace(update.Storage.Provider) != "" {
+		s.settings.Storage.Provider = strings.TrimSpace(update.Storage.Provider)
+	}
+	if strings.TrimSpace(update.Storage.Bucket) != "" {
+		s.settings.Storage.Bucket = strings.TrimSpace(update.Storage.Bucket)
+	}
+	if strings.TrimSpace(update.Storage.Region) != "" {
+		s.settings.Storage.Region = strings.TrimSpace(update.Storage.Region)
+	}
+	if strings.TrimSpace(update.Storage.PublicBaseURL) != "" {
+		s.settings.Storage.PublicBaseURL = strings.TrimSpace(update.Storage.PublicBaseURL)
+	}
+	if strings.TrimSpace(update.Storage.PathPrefix) != "" {
+		s.settings.Storage.PathPrefix = strings.TrimSpace(update.Storage.PathPrefix)
+	}
+	if strings.TrimSpace(update.Storage.UploadStrategy) != "" {
+		s.settings.Storage.UploadStrategy = strings.TrimSpace(update.Storage.UploadStrategy)
+	}
+	if strings.TrimSpace(update.Storage.StatusDescription) != "" {
+		s.settings.Storage.StatusDescription = strings.TrimSpace(update.Storage.StatusDescription)
+	}
+	s.settings.Storage.Enabled = update.Storage.Enabled
+	s.settings.Storage.CallbackEnabled = update.Storage.CallbackEnabled
 
 	if update.FeatureFlags != nil {
 		for key, value := range update.FeatureFlags {
 			s.settings.FeatureFlags[key] = value
 		}
 	}
+	applySystemSettingDefaults(&s.settings)
 
 	s.settings.UpdatedBy = user.DisplayName
 	s.settings.UpdatedAt = time.Now()
@@ -1308,6 +1547,7 @@ func (s *MockStore) bootstrapBaseConfigs(ctx context.Context) error {
 	}
 	if found {
 		s.settings = settings
+		applySystemSettingDefaults(&s.settings)
 	} else if err := s.persistence.saveConfig(ctx, configKeyBaseSettings, s.settings); err != nil {
 		return err
 	}

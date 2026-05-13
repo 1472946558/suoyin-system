@@ -95,6 +95,8 @@ func (a *App) Router() http.Handler {
 	mux.Handle("/api/v1/products/", a.withAuth(a.requirePermission("catalog.product.read", a.handleCatalogProductDetail)))
 	mux.Handle("/api/v1/cashier/orders", a.withAuth(a.handleCashierOrders))
 	mux.Handle("/api/v1/cashier/orders/", a.withAuth(a.handleCashierOrderDetail))
+	mux.Handle("/api/v1/uploads/recycle-photos/prepare", a.withAuth(a.requirePermission("recycle.order.draft", a.handleRecyclePhotoUploadPrepare)))
+	mux.Handle("/api/v1/uploads/recycle-photos/complete", a.withAuth(a.requirePermission("recycle.order.draft", a.handleRecyclePhotoUploadComplete)))
 	mux.Handle("/api/v1/recycle/orders", a.withAuth(a.handleRecycleOrders))
 	mux.Handle("/api/v1/recycle/orders/", a.withAuth(a.handleRecycleOrderActions))
 	mux.Handle("/api/v1/settings", a.withAuth(a.handleSettings))

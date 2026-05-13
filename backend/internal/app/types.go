@@ -246,12 +246,46 @@ type PaymentSettings struct {
 	EnableBankTransfer bool `json:"enableBankTransfer"`
 }
 
+type StorageSettings struct {
+	Enabled           bool   `json:"enabled"`
+	Provider          string `json:"provider"`
+	Bucket            string `json:"bucket"`
+	Region            string `json:"region"`
+	PublicBaseURL     string `json:"publicBaseUrl"`
+	PathPrefix        string `json:"pathPrefix"`
+	UploadStrategy    string `json:"uploadStrategy"`
+	CallbackEnabled   bool   `json:"callbackEnabled"`
+	StatusDescription string `json:"statusDescription"`
+}
+
 type SystemSettings struct {
 	OrgID        string          `json:"orgId"`
 	Brand        BrandSettings   `json:"brand"`
 	Recycle      RecycleSettings `json:"recycle"`
 	Payments     PaymentSettings `json:"payments"`
+	Storage      StorageSettings `json:"storage"`
 	FeatureFlags map[string]bool `json:"featureFlags"`
 	UpdatedBy    string          `json:"updatedBy"`
 	UpdatedAt    time.Time       `json:"updatedAt"`
+}
+
+type UploadPreparation struct {
+	UploadID      string            `json:"uploadId"`
+	StoreID       string            `json:"storeId"`
+	Category      string            `json:"category"`
+	Provider      string            `json:"provider"`
+	Bucket        string            `json:"bucket"`
+	Region        string            `json:"region"`
+	ObjectKey     string            `json:"objectKey"`
+	FileName      string            `json:"fileName"`
+	ContentType   string            `json:"contentType"`
+	SizeBytes     int64             `json:"sizeBytes"`
+	UploadURL     string            `json:"uploadUrl"`
+	PublicURL     string            `json:"publicUrl"`
+	Headers       map[string]string `json:"headers"`
+	FormFields    map[string]string `json:"formFields"`
+	StorageReady  bool              `json:"storageReady"`
+	UploadMode    string            `json:"uploadMode"`
+	ExpiresAt     time.Time         `json:"expiresAt"`
+	ReferenceNote string            `json:"referenceNote"`
 }

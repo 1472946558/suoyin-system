@@ -25,6 +25,8 @@ const baseAppConfig = {
   ],
   endpoints: {
     login: "/api/v1/auth/wechat-login",
+    prepareRecyclePhotoUpload: "/api/v1/uploads/recycle-photos/prepare",
+    completeRecyclePhotoUpload: "/api/v1/uploads/recycle-photos/complete",
     createRecycleOrder: "/api/v1/recycle/orders",
     listRecycleOrders: "/api/v1/recycle/orders",
     recycleOrderDetail: "/api/v1/recycle/orders/:id",
