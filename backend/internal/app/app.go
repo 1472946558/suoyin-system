@@ -70,17 +70,17 @@ func (a *App) Router() http.Handler {
 	mux.HandleFunc("/health", a.handleHealth)
 	mux.HandleFunc("/api/v1/auth/login", a.handleLogin)
 	mux.HandleFunc("/api/admin/login", a.handleAdminLogin)
-	mux.Handle("/api/admin/bootstrap", a.withAuth(a.handleAdminBootstrap))
-	mux.Handle("/api/admin/payment-config", a.withAuth(a.handleAdminPaymentConfig))
-	mux.Handle("/api/admin/print-template", a.withAuth(a.handleAdminPrintTemplate))
-	mux.Handle("/api/admin/stores", a.withAuth(a.handleAdminStoreCreate))
-	mux.Handle("/api/admin/roles/", a.withAuth(a.handleAdminRoleTemplate))
-	mux.Handle("/api/admin/stores/", a.withAuth(a.handleAdminStore))
-	mux.Handle("/api/admin/users", a.withAuth(a.handleAdminUserCreate))
-	mux.Handle("/api/admin/users/", a.withAuth(a.handleAdminUser))
-	mux.Handle("/api/admin/products", a.withAuth(a.handleAdminProductCreate))
-	mux.Handle("/api/admin/products/", a.withAuth(a.handleAdminProduct))
-	mux.Handle("/api/admin/system-profile", a.withAuth(a.handleAdminSystemProfile))
+	mux.Handle("/api/admin/bootstrap", a.withAuth(a.requireAdminAbility("dashboard.view", a.handleAdminBootstrap)))
+	mux.Handle("/api/admin/payment-config", a.withAuth(a.requireAdminAbility("payment.config.manage", a.handleAdminPaymentConfig)))
+	mux.Handle("/api/admin/print-template", a.withAuth(a.requireAdminAbility("system.config.manage", a.handleAdminPrintTemplate)))
+	mux.Handle("/api/admin/stores", a.withAuth(a.requireAdminAbility("store.manage", a.handleAdminStoreCreate)))
+	mux.Handle("/api/admin/roles/", a.withAuth(a.requireAdminAbility("role.manage", a.handleAdminRoleTemplate)))
+	mux.Handle("/api/admin/stores/", a.withAuth(a.requireAdminAbility("store.manage", a.handleAdminStore)))
+	mux.Handle("/api/admin/users", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminUserCreate)))
+	mux.Handle("/api/admin/users/", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminUser)))
+	mux.Handle("/api/admin/products", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProductCreate)))
+	mux.Handle("/api/admin/products/", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProduct)))
+	mux.Handle("/api/admin/system-profile", a.withAuth(a.requireAdminAbility("system.config.manage", a.handleAdminSystemProfile)))
 	mux.Handle("/api/v1/auth/logout", a.withAuth(a.handleLogout))
 	mux.Handle("/api/v1/me", a.withAuth(a.handleMe))
 	mux.HandleFunc("/api/v1/auth/wechat-login", a.handleMiniAppLogin)
@@ -154,6 +154,20 @@ func (a *App) requirePermission(code string, next http.HandlerFunc) http.Handler
 			}
 		}
 		a.writeError(w, r, http.StatusForbidden, 40301, fmt.Sprintf("missing permission: %s", code))
+	}
+}
+
+func (a *App) requireAdminAbility(code AdminAbilityCode, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := currentUser(r.Context())
+		sessionUser := a.store.adminSessionUser(user)
+		for _, ability := range sessionUser.Abilities {
+			if ability == code {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		a.writeError(w, r, http.StatusForbidden, 40311, fmt.Sprintf("missing admin ability: %s", code))
 	}
 }
 

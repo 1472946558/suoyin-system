@@ -1,8 +1,10 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -210,38 +212,55 @@ func (s *MockStore) buildAdminBootstrap(user UserAccount) AdminBootstrap {
 
 	sessionUser := s.adminSessionUser(user)
 	visibleStoreIDs := s.adminStoreIDsForUser(user)
-	stores := make([]AdminStoreRecord, 0, len(s.adminStores))
-	for _, item := range s.adminStores {
+	stores := s.buildDynamicAdminStoresLocked()
+	scopedStores := make([]AdminStoreRecord, 0, len(stores))
+	for _, item := range stores {
 		if sessionUser.DataScope == "all_stores" || containsID(visibleStoreIDs, item.ID) {
-			stores = append(stores, item)
+			scopedStores = append(scopedStores, item)
 		}
 	}
 
-	users := make([]AdminUserAccount, 0, len(s.adminUsers))
-	for _, item := range s.adminUsers {
+	users := s.buildDynamicAdminUsersLocked()
+	scopedUsers := make([]AdminUserAccount, 0, len(users))
+	for _, item := range users {
 		if sessionUser.DataScope == "all_stores" || item.ID == sessionUser.ID || hasIntersect(item.StoreIDs, visibleStoreIDs) {
-			users = append(users, item)
+			scopedUsers = append(scopedUsers, item)
 		}
 	}
 
-	records := make([]AdminPaymentRecord, 0, len(s.adminPaymentRecords))
-	for _, item := range s.adminPaymentRecords {
+	records := s.buildDynamicPaymentRecordsLocked()
+	scopedRecords := make([]AdminPaymentRecord, 0, len(records))
+	for _, item := range records {
 		if sessionUser.DataScope == "all_stores" || containsID(visibleStoreIDs, item.StoreID) {
-			records = append(records, item)
+			scopedRecords = append(scopedRecords, item)
 		}
 	}
 
-	cashierOrders := make([]AdminCashierOrderView, 0, len(s.adminCashierOrders))
-	for _, item := range s.adminCashierOrders {
+	cashierOrders := s.buildDynamicCashierOrderViewsLocked()
+	scopedCashierOrders := make([]AdminCashierOrderView, 0, len(cashierOrders))
+	for _, item := range cashierOrders {
 		if sessionUser.DataScope == "all_stores" || containsID(visibleStoreIDs, item.StoreID) {
-			cashierOrders = append(cashierOrders, item)
+			scopedCashierOrders = append(scopedCashierOrders, item)
 		}
 	}
 
-	recycleOrders := make([]AdminRecycleOrderView, 0, len(s.adminRecycleOrders))
-	for _, item := range s.adminRecycleOrders {
+	recycleOrders := s.buildDynamicRecycleOrderViewsLocked()
+	scopedRecycleOrders := make([]AdminRecycleOrderView, 0, len(recycleOrders))
+	for _, item := range recycleOrders {
 		if sessionUser.DataScope == "all_stores" || containsID(visibleStoreIDs, item.StoreID) {
-			recycleOrders = append(recycleOrders, item)
+			scopedRecycleOrders = append(scopedRecycleOrders, item)
+		}
+	}
+
+	products := s.buildDynamicAdminProductsLocked()
+	scopedProducts := make([]AdminProductRecord, 0, len(products))
+	visibleStoreNames := make([]string, 0, len(scopedStores))
+	for _, store := range scopedStores {
+		visibleStoreNames = append(visibleStoreNames, store.Name)
+	}
+	for _, item := range products {
+		if sessionUser.DataScope == "all_stores" || productVisibleInStores(item, visibleStoreNames) {
+			scopedProducts = append(scopedProducts, item)
 		}
 	}
 
@@ -254,7 +273,7 @@ func (s *MockStore) buildAdminBootstrap(user UserAccount) AdminBootstrap {
 
 	totalAmount := 0.0
 	pendingCount := 0
-	for _, record := range records {
+	for _, record := range scopedRecords {
 		if record.Status != "failed" {
 			totalAmount += record.Amount
 		}
@@ -285,8 +304,8 @@ func (s *MockStore) buildAdminBootstrap(user UserAccount) AdminBootstrap {
 			Subtitle: subtitle,
 			Metrics: []AdminDashboardMetric{
 				{Key: "gross", Label: "近期开单金额", Value: fmt.Sprintf("¥%.0f", totalAmount), Delta: "按当前可见门店聚合", Tone: "gold"},
-				{Key: "orders", Label: "收银订单", Value: fmt.Sprintf("%d", len(cashierOrders)), Delta: "当前后台已接收订单视图", Tone: "emerald"},
-				{Key: "recycle", Label: "回收单", Value: fmt.Sprintf("%d", len(recycleOrders)), Delta: "拍照留痕规则已纳入", Tone: "slate"},
+				{Key: "orders", Label: "收银订单", Value: fmt.Sprintf("%d", len(scopedCashierOrders)), Delta: "当前后台已接收订单视图", Tone: "emerald"},
+				{Key: "recycle", Label: "回收单", Value: fmt.Sprintf("%d", len(scopedRecycleOrders)), Delta: "拍照留痕规则已纳入", Tone: "slate"},
 				{Key: "pending", Label: "待处理事项", Value: fmt.Sprintf("%d", pendingCount), Delta: "支付回调 / 云资源 / 打印适配", Tone: "danger"},
 			},
 			Todos: todos,
@@ -297,17 +316,17 @@ func (s *MockStore) buildAdminBootstrap(user UserAccount) AdminBootstrap {
 			},
 			Notices: notices,
 		},
-		Stores:         stores,
-		Users:          users,
+		Stores:         scopedStores,
+		Users:          scopedUsers,
 		Roles:          append([]AdminRoleTemplate(nil), s.adminRoles...),
 		AbilityGroups:  append([]AdminAbilityGroup(nil), s.adminAbilityGroups...),
-		Products:       append([]AdminProductRecord(nil), s.adminProducts...),
-		CashierOrders:  cashierOrders,
-		RecycleOrders:  recycleOrders,
+		Products:       scopedProducts,
+		CashierOrders:  scopedCashierOrders,
+		RecycleOrders:  scopedRecycleOrders,
 		PaymentConfig:  s.adminPaymentConfig,
 		PrintTemplate:  s.adminPrintTemplate,
-		PaymentRecords: records,
-		SystemProfile:  s.adminSystemProfile,
+		PaymentRecords: scopedRecords,
+		SystemProfile:  s.buildDynamicSystemProfileLocked(),
 		AuditLogs:      append([]AdminAuditLogRecord(nil), s.adminAuditLogs...),
 		TemplateInit:   s.adminTemplateInit,
 		UpdatedAt:      time.Now().Format("2006-01-02 15:04"),
@@ -323,6 +342,486 @@ func hasIntersect(left, right []string) bool {
 		}
 	}
 	return false
+}
+
+func (s *MockStore) buildDynamicAdminStoresLocked() []AdminStoreRecord {
+	items := make([]AdminStoreRecord, 0, len(s.stores))
+	today := time.Now().Format("2006-01-02")
+	for _, store := range s.stores {
+		record := AdminStoreRecord{
+			ID:               store.ID,
+			Code:             store.Code,
+			Name:             store.Name,
+			ManagerName:      store.Manager,
+			City:             store.City,
+			Address:          store.Address,
+			ContactPhone:     s.settings.Brand.ServicePhone,
+			BusinessHours:    "10:00 - 22:00",
+			Status:           mapStoreStatus(store.Status),
+			CashierDevices:   1,
+			PendingTasks:     0,
+			TodayAmount:      0,
+			TodayOrders:      0,
+			LastSettlementAt: "尚未结算",
+			Tags:             []string{"真实门店", store.Code},
+		}
+		for _, order := range s.cashierOrders {
+			if order.StoreID != store.ID {
+				continue
+			}
+			if order.CreatedAt.Format("2006-01-02") == today {
+				record.TodayOrders++
+				record.TodayAmount += order.TotalAmount
+			}
+			if order.CreatedAt.After(parseAdminTime(record.LastSettlementAt)) {
+				record.LastSettlementAt = order.CreatedAt.Format("2006-01-02 15:04")
+			}
+		}
+		for _, order := range s.recycleOrders {
+			if order.StoreID == store.ID && order.Status == "draft" {
+				record.PendingTasks++
+			}
+		}
+		items = append(items, record)
+	}
+	return items
+}
+
+func (s *MockStore) buildDynamicAdminUsersLocked() []AdminUserAccount {
+	items := make([]AdminUserAccount, 0, len(s.usersByID))
+	for _, user := range s.usersByID {
+		roleKey := normalizeAdminRoleKey(user.RoleCode)
+		role := s.findAdminRoleLocked(roleKey)
+		storeNames := make([]string, 0, len(user.StoreIDs))
+		for _, storeID := range user.StoreIDs {
+			if store, ok := s.getStoreByIDLocked(storeID); ok {
+				storeNames = append(storeNames, store.Name)
+			}
+		}
+		if len(storeNames) == 0 && user.DataScope == "org_all" {
+			storeNames = []string{"全部门店"}
+		}
+		items = append(items, AdminUserAccount{
+			ID:          user.ID,
+			Name:        user.DisplayName,
+			Account:     user.Username,
+			Phone:       "待补充",
+			RoleKey:     roleKey,
+			RoleName:    user.RoleName,
+			DataScope:   mapAdminDataScope(user.DataScope),
+			StoreIDs:    append([]string(nil), user.StoreIDs...),
+			StoreNames:  storeNames,
+			Status:      mapUserStatus(user.Status),
+			LastLoginAt: time.Now().Format("2006-01-02 15:04"),
+			Abilities:   append([]AdminAbilityCode(nil), role.Abilities...),
+		})
+	}
+	return items
+}
+
+func (s *MockStore) buildDynamicAdminProductsLocked() []AdminProductRecord {
+	items := make([]AdminProductRecord, 0, len(s.catalogProducts))
+	for _, product := range s.catalogProducts {
+		items = append(items, AdminProductRecord{
+			ID:         product.ID,
+			Name:       product.Name,
+			SKU:        product.SKU,
+			Category:   product.Category,
+			Price:      product.RetailPrice,
+			GramWeight: product.GramWeight,
+			Status:     product.Status,
+			StoreNames: append([]string(nil), product.Stores...),
+			Tags:       append([]string(nil), product.Tags...),
+		})
+	}
+	return items
+}
+
+func (s *MockStore) buildDynamicCashierOrderViewsLocked() []AdminCashierOrderView {
+	items := make([]AdminCashierOrderView, 0, len(s.cashierOrders))
+	for i := len(s.cashierOrders) - 1; i >= 0; i-- {
+		order := s.cashierOrders[i]
+		items = append(items, AdminCashierOrderView{
+			ID:            order.ID,
+			OrderNo:       order.OrderNo,
+			StoreID:       order.StoreID,
+			StoreName:     order.StoreName,
+			PaymentMethod: normalizePaymentMethod(order.PaymentMethod),
+			Status:        normalizeCashierStatus(order.Status),
+			TotalAmount:   order.TotalAmount,
+			ItemCount:     len(order.Items),
+			CreatedBy:     order.CreatedBy,
+			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04"),
+			Remark:        order.Remark,
+		})
+	}
+	return items
+}
+
+func (s *MockStore) buildDynamicRecycleOrderViewsLocked() []AdminRecycleOrderView {
+	items := make([]AdminRecycleOrderView, 0, len(s.recycleOrders))
+	for _, order := range s.recycleOrders {
+		view := AdminRecycleOrderView{
+			ID:              order.ID,
+			OrderNo:         order.OrderNo,
+			StoreID:         order.StoreID,
+			StoreName:       order.StoreName,
+			Status:          order.Status,
+			CustomerName:    order.CustomerName,
+			CustomerPhone:   order.CustomerPhone,
+			EstimatedAmount: order.EstimatedAmount,
+			ConfirmedAmount: order.ConfirmedAmount,
+			PhotoCount:      len(order.AttachmentURLs),
+			CreatedBy:       order.CreatedBy,
+			CreatedAt:       order.CreatedAt.Format("2006-01-02 15:04"),
+			Remark:          order.Remark,
+		}
+		if order.ConfirmedAt != nil {
+			view.ConfirmedAt = order.ConfirmedAt.Format("2006-01-02 15:04")
+		}
+		items = append(items, view)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	return items
+}
+
+func (s *MockStore) buildDynamicPaymentRecordsLocked() []AdminPaymentRecord {
+	items := make([]AdminPaymentRecord, 0, len(s.cashierOrders)+len(s.recycleOrders))
+	for i := len(s.cashierOrders) - 1; i >= 0; i-- {
+		order := s.cashierOrders[i]
+		items = append(items, AdminPaymentRecord{
+			ID:             "pay-" + order.ID,
+			PaymentNo:      "PAY-" + order.OrderNo,
+			OrderNo:        order.OrderNo,
+			BizType:        "retail",
+			StoreID:        order.StoreID,
+			StoreName:      order.StoreName,
+			Amount:         order.PaidAmount,
+			Method:         normalizePaymentMethod(order.PaymentMethod),
+			Status:         "paid",
+			CallbackStatus: paymentCallbackStatus(order.PaymentMethod),
+			PaidAt:         order.CreatedAt.Format("2006-01-02 15:04"),
+			OperatorName:   order.CreatedBy,
+			CustomerLabel:  fmt.Sprintf("%d 件商品", len(order.Items)),
+			Remark:         order.Remark,
+			Anomaly:        false,
+		})
+	}
+	for _, order := range s.recycleOrders {
+		status := "pending"
+		paidAt := order.CreatedAt.Format("2006-01-02 15:04")
+		callbackStatus := "pending"
+		if order.Status == "confirmed" {
+			status = "paid"
+			callbackStatus = "delivered"
+			if order.ConfirmedAt != nil {
+				paidAt = order.ConfirmedAt.Format("2006-01-02 15:04")
+			}
+		}
+		items = append(items, AdminPaymentRecord{
+			ID:             "pay-" + order.ID,
+			PaymentNo:      "PAY-" + order.OrderNo,
+			OrderNo:        order.OrderNo,
+			BizType:        "recycle",
+			StoreID:        order.StoreID,
+			StoreName:      order.StoreName,
+			Amount:         maxFloat(order.ConfirmedAmount, order.EstimatedAmount),
+			Method:         "bank_transfer",
+			Status:         status,
+			CallbackStatus: callbackStatus,
+			PaidAt:         paidAt,
+			OperatorName:   order.CreatedBy,
+			CustomerLabel:  order.CustomerName,
+			Remark:         order.Remark,
+			Anomaly:        order.Status != "confirmed",
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].PaidAt > items[j].PaidAt
+	})
+	return items
+}
+
+func (s *MockStore) buildDynamicSystemProfileLocked() AdminSystemProfile {
+	profile := s.adminSystemProfile
+	profile.BrandName = s.settings.Brand.Name
+	profile.ServicePhone = s.settings.Brand.ServicePhone
+	profile.ReceiptTitle = s.settings.Brand.ReceiptTitle
+	profile.MinPhotoCount = s.settings.Recycle.MinPhotoCount
+	profile.MaxPhotoCount = s.settings.Recycle.MaxPhotoCount
+	profile.RequireExactThree = s.settings.Recycle.RequireExactThree
+	profile.RequireIDCheck = s.settings.Recycle.RequireIDCheck
+	profile.WechatPayEnabled = s.settings.Payments.EnableWechatPay
+	profile.CashEnabled = s.settings.Payments.EnableCash
+	profile.BankTransferEnabled = s.settings.Payments.EnableBankTransfer
+	return profile
+}
+
+func (s *MockStore) findAdminRoleLocked(roleKey string) AdminRoleTemplate {
+	for _, role := range s.adminRoles {
+		if role.Key == roleKey {
+			return role
+		}
+	}
+	return AdminRoleTemplate{}
+}
+
+func (s *MockStore) getStoreByIDLocked(storeID string) (StoreInfo, bool) {
+	for _, store := range s.stores {
+		if store.ID == storeID {
+			return store, true
+		}
+	}
+	return StoreInfo{}, false
+}
+
+func productVisibleInStores(product AdminProductRecord, visibleStoreNames []string) bool {
+	for _, storeName := range product.StoreNames {
+		for _, visible := range visibleStoreNames {
+			if storeName == visible {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func mapAdminDataScope(scope string) string {
+	switch scope {
+	case "org_all":
+		return "all_stores"
+	case "assigned_stores":
+		return "assigned_store"
+	default:
+		return "self"
+	}
+}
+
+func mapStoreStatus(status string) string {
+	switch status {
+	case "active":
+		return "active"
+	case "disabled":
+		return "disabled"
+	default:
+		return "pending"
+	}
+}
+
+func mapUserStatus(status string) string {
+	switch status {
+	case "active":
+		return "enabled"
+	case "disabled":
+		return "disabled"
+	default:
+		return "invited"
+	}
+}
+
+func normalizeBaseStoreStatus(status string) string {
+	switch strings.TrimSpace(status) {
+	case "active":
+		return "active"
+	case "disabled":
+		return "disabled"
+	default:
+		return "pending"
+	}
+}
+
+func roleNameForKey(roleKey string) string {
+	switch normalizeAdminRoleKey(roleKey) {
+	case "owner":
+		return "老板"
+	case "manager":
+		return "店长"
+	default:
+		return "员工"
+	}
+}
+
+func baseRoleCodeFromAdmin(roleKey string) string {
+	switch normalizeAdminRoleKey(roleKey) {
+	case "owner":
+		return "owner"
+	case "manager":
+		return "manager"
+	default:
+		return "cashier"
+	}
+}
+
+func baseDataScopeForRole(roleKey string) string {
+	switch normalizeAdminRoleKey(roleKey) {
+	case "owner":
+		return "org_all"
+	case "manager":
+		return "assigned_stores"
+	default:
+		return "self"
+	}
+}
+
+func baseDataScopeFromAdmin(scope string) string {
+	switch strings.TrimSpace(scope) {
+	case "all_stores":
+		return "org_all"
+	case "assigned_store":
+		return "assigned_stores"
+	default:
+		return "self"
+	}
+}
+
+func baseUserStatusFromAdmin(status string) string {
+	switch strings.TrimSpace(status) {
+	case "enabled":
+		return "active"
+	case "disabled":
+		return "disabled"
+	default:
+		return "pending"
+	}
+}
+
+func permissionsForRoleLocked(roleKey string, roles []RoleTemplate) []string {
+	baseRoleCode := baseRoleCodeFromAdmin(roleKey)
+	for _, role := range roles {
+		if role.Code == baseRoleCode {
+			return append([]string(nil), role.Permissions...)
+		}
+	}
+	return nil
+}
+
+func (s *MockStore) buildAdminStoreRecordLocked(store StoreInfo) AdminStoreRecord {
+	today := time.Now().Format("2006-01-02")
+	record := AdminStoreRecord{
+		ID:               store.ID,
+		Code:             store.Code,
+		Name:             store.Name,
+		ManagerName:      store.Manager,
+		City:             store.City,
+		Address:          store.Address,
+		ContactPhone:     s.settings.Brand.ServicePhone,
+		BusinessHours:    "10:00 - 22:00",
+		Status:           mapStoreStatus(store.Status),
+		CashierDevices:   1,
+		PendingTasks:     0,
+		TodayAmount:      0,
+		TodayOrders:      0,
+		LastSettlementAt: "尚未结算",
+		Tags:             []string{"真实门店", store.Code},
+	}
+	for _, order := range s.cashierOrders {
+		if order.StoreID != store.ID {
+			continue
+		}
+		if order.CreatedAt.Format("2006-01-02") == today {
+			record.TodayOrders++
+			record.TodayAmount += order.TotalAmount
+		}
+		if order.CreatedAt.After(parseAdminTime(record.LastSettlementAt)) {
+			record.LastSettlementAt = order.CreatedAt.Format("2006-01-02 15:04")
+		}
+	}
+	for _, order := range s.recycleOrders {
+		if order.StoreID == store.ID && order.Status == "draft" {
+			record.PendingTasks++
+		}
+	}
+	return record
+}
+
+func (s *MockStore) buildAdminUserRecordLocked(account UserAccount) AdminUserAccount {
+	roleKey := normalizeAdminRoleKey(account.RoleCode)
+	role := s.findAdminRoleLocked(roleKey)
+	storeNames := make([]string, 0, len(account.StoreIDs))
+	for _, storeID := range account.StoreIDs {
+		if store, ok := s.getStoreByIDLocked(storeID); ok {
+			storeNames = append(storeNames, store.Name)
+		}
+	}
+	if len(storeNames) == 0 && account.DataScope == "org_all" {
+		storeNames = []string{"全部门店"}
+	}
+	return AdminUserAccount{
+		ID:          account.ID,
+		Name:        account.DisplayName,
+		Account:     account.Username,
+		Phone:       "待补充",
+		RoleKey:     roleKey,
+		RoleName:    account.RoleName,
+		DataScope:   mapAdminDataScope(account.DataScope),
+		StoreIDs:    append([]string(nil), account.StoreIDs...),
+		StoreNames:  storeNames,
+		Status:      mapUserStatus(account.Status),
+		LastLoginAt: time.Now().Format("2006-01-02 15:04"),
+		Abilities:   append([]AdminAbilityCode(nil), role.Abilities...),
+	}
+}
+
+func buildAdminProductRecord(product CatalogProduct) AdminProductRecord {
+	return AdminProductRecord{
+		ID:         product.ID,
+		Name:       product.Name,
+		SKU:        product.SKU,
+		Category:   product.Category,
+		Price:      product.RetailPrice,
+		GramWeight: product.GramWeight,
+		Status:     product.Status,
+		StoreNames: append([]string(nil), product.Stores...),
+		Tags:       append([]string(nil), product.Tags...),
+	}
+}
+
+func normalizePaymentMethod(method string) string {
+	switch method {
+	case "wechat_pay":
+		return "wechat"
+	case "cash":
+		return "cash"
+	case "bank_transfer":
+		return "bank_transfer"
+	default:
+		return method
+	}
+}
+
+func normalizeCashierStatus(status string) string {
+	switch status {
+	case "paid":
+		return "paid"
+	case "refunded":
+		return "refunded"
+	default:
+		return "pending"
+	}
+}
+
+func paymentCallbackStatus(method string) string {
+	if normalizePaymentMethod(method) == "wechat" {
+		return "delivered"
+	}
+	return "delivered"
+}
+
+func maxFloat(left, right float64) float64 {
+	if left > right {
+		return left
+	}
+	return right
+}
+
+func parseAdminTime(value string) time.Time {
+	parsed, err := time.Parse("2006-01-02 15:04", value)
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed
 }
 
 func (s *MockStore) updateAdminRoleTemplate(user UserAccount, roleID int, update AdminRoleTemplate) (AdminRoleTemplate, error) {
@@ -344,6 +843,9 @@ func (s *MockStore) updateAdminRoleTemplate(user UserAccount, roleID int, update
 		}
 		item.Abilities = append([]AdminAbilityCode(nil), update.Abilities...)
 		s.adminRoles[index] = item
+		if s.persistence != nil {
+			_ = s.persistAdminRolesLocked()
+		}
 		s.appendAuditLogLocked("角色权限", "保存角色模板", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已更新", item.Name))
 		return item, nil
 	}
@@ -354,6 +856,15 @@ func (s *MockStore) updateAdminPaymentConfig(user UserAccount, update AdminPayme
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.adminPaymentConfig = update
+	s.settings.Payments.EnableWechatPay = update.Wechat.Enabled
+	s.settings.Payments.EnableCash = update.Cash.Enabled
+	s.settings.Payments.EnableBankTransfer = update.BankTransfer.Enabled
+	s.adminSystemProfile = s.buildDynamicSystemProfileLocked()
+	if s.persistence != nil {
+		_ = s.persistSettingsLocked()
+		_ = s.persistence.saveConfig(context.Background(), configKeyAdminPayment, s.adminPaymentConfig)
+		_ = s.persistence.saveConfig(context.Background(), configKeyAdminSystem, s.adminSystemProfile)
+	}
 	s.appendAuditLogLocked("支付中心", "修改支付配置", user.DisplayName, "warning", "high", "支付配置已更新，待真实联调校验。")
 	return s.adminPaymentConfig
 }
@@ -362,55 +873,39 @@ func (s *MockStore) updateAdminStore(user UserAccount, storeID string, update Ad
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for index, item := range s.adminStores {
-		if item.ID != storeID {
+	if !s.canAccessStore(user, storeID) {
+		return AdminStoreRecord{}, errUnauthorizedStore
+	}
+
+	for index, store := range s.stores {
+		if store.ID != storeID {
 			continue
 		}
 		if strings.TrimSpace(update.Code) != "" {
-			item.Code = strings.TrimSpace(update.Code)
+			store.Code = strings.TrimSpace(update.Code)
 		}
 		if strings.TrimSpace(update.Name) != "" {
-			item.Name = strings.TrimSpace(update.Name)
+			store.Name = strings.TrimSpace(update.Name)
 		}
 		if strings.TrimSpace(update.ManagerName) != "" {
-			item.ManagerName = strings.TrimSpace(update.ManagerName)
+			store.Manager = strings.TrimSpace(update.ManagerName)
 		}
 		if strings.TrimSpace(update.City) != "" {
-			item.City = strings.TrimSpace(update.City)
+			store.City = strings.TrimSpace(update.City)
 		}
 		if strings.TrimSpace(update.Address) != "" {
-			item.Address = strings.TrimSpace(update.Address)
-		}
-		if strings.TrimSpace(update.ContactPhone) != "" {
-			item.ContactPhone = strings.TrimSpace(update.ContactPhone)
-		}
-		if strings.TrimSpace(update.BusinessHours) != "" {
-			item.BusinessHours = strings.TrimSpace(update.BusinessHours)
+			store.Address = strings.TrimSpace(update.Address)
 		}
 		if strings.TrimSpace(update.Status) != "" {
-			item.Status = strings.TrimSpace(update.Status)
+			store.Status = normalizeBaseStoreStatus(update.Status)
 		}
-		if update.CashierDevices >= 0 {
-			item.CashierDevices = update.CashierDevices
+		s.stores[index] = store
+		if s.persistence != nil {
+			_ = s.persistStoresLocked()
 		}
-		if update.PendingTasks >= 0 {
-			item.PendingTasks = update.PendingTasks
-		}
-		if update.TodayAmount >= 0 {
-			item.TodayAmount = update.TodayAmount
-		}
-		if update.TodayOrders >= 0 {
-			item.TodayOrders = update.TodayOrders
-		}
-		if strings.TrimSpace(update.LastSettlementAt) != "" {
-			item.LastSettlementAt = strings.TrimSpace(update.LastSettlementAt)
-		}
-		if update.Tags != nil {
-			item.Tags = append([]string(nil), update.Tags...)
-		}
-		s.adminStores[index] = item
-		s.appendAuditLogLocked("门店管理", "更新门店资料", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已更新", item.Name))
-		return item, nil
+		record := s.buildAdminStoreRecordLocked(store)
+		s.appendAuditLogLocked("门店管理", "更新门店资料", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已更新", record.Name))
+		return record, nil
 	}
 	return AdminStoreRecord{}, errAdminStoreNotFound
 }
@@ -419,46 +914,47 @@ func (s *MockStore) updateAdminUser(user UserAccount, userID string, update Admi
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for index, item := range s.adminUsers {
-		if item.ID != userID {
+	for userMapID, account := range s.usersByID {
+		if userMapID != userID {
 			continue
 		}
+		if user.DataScope != "org_all" && account.ID != user.ID && !hasIntersect(account.StoreIDs, user.StoreIDs) {
+			return AdminUserAccount{}, errUnauthorizedStore
+		}
 		if strings.TrimSpace(update.Name) != "" {
-			item.Name = strings.TrimSpace(update.Name)
+			account.DisplayName = strings.TrimSpace(update.Name)
 		}
 		if strings.TrimSpace(update.Account) != "" {
-			item.Account = strings.TrimSpace(update.Account)
-		}
-		if strings.TrimSpace(update.Phone) != "" {
-			item.Phone = strings.TrimSpace(update.Phone)
+			delete(s.usersByUsername, account.Username)
+			account.Username = strings.TrimSpace(update.Account)
 		}
 		if strings.TrimSpace(update.RoleKey) != "" {
-			item.RoleKey = normalizeAdminRoleKey(update.RoleKey)
+			roleKey := normalizeAdminRoleKey(update.RoleKey)
+			account.RoleCode = baseRoleCodeFromAdmin(roleKey)
+			account.RoleName = roleNameForKey(roleKey)
+			account.DataScope = baseDataScopeForRole(roleKey)
+			account.Permissions = permissionsForRoleLocked(roleKey, s.roles)
 		}
 		if strings.TrimSpace(update.RoleName) != "" {
-			item.RoleName = strings.TrimSpace(update.RoleName)
+			account.RoleName = strings.TrimSpace(update.RoleName)
 		}
 		if strings.TrimSpace(update.DataScope) != "" {
-			item.DataScope = strings.TrimSpace(update.DataScope)
+			account.DataScope = baseDataScopeFromAdmin(update.DataScope)
 		}
 		if update.StoreIDs != nil {
-			item.StoreIDs = append([]string(nil), update.StoreIDs...)
-		}
-		if update.StoreNames != nil {
-			item.StoreNames = append([]string(nil), update.StoreNames...)
+			account.StoreIDs = append([]string(nil), update.StoreIDs...)
 		}
 		if strings.TrimSpace(update.Status) != "" {
-			item.Status = strings.TrimSpace(update.Status)
+			account.Status = baseUserStatusFromAdmin(update.Status)
 		}
-		if strings.TrimSpace(update.LastLoginAt) != "" {
-			item.LastLoginAt = strings.TrimSpace(update.LastLoginAt)
+		s.usersByID[userMapID] = account
+		s.usersByUsername[account.Username] = account
+		if s.persistence != nil {
+			_ = s.persistUsersLocked()
 		}
-		if update.Abilities != nil {
-			item.Abilities = append([]AdminAbilityCode(nil), update.Abilities...)
-		}
-		s.adminUsers[index] = item
-		s.appendAuditLogLocked("账号管理", "更新账号资料", user.DisplayName, "warning", "high", fmt.Sprintf("%s 账号资料已更新", item.Name))
-		return item, nil
+		record := s.buildAdminUserRecordLocked(account)
+		s.appendAuditLogLocked("账号管理", "更新账号资料", user.DisplayName, "warning", "high", fmt.Sprintf("%s 账号资料已更新", record.Name))
+		return record, nil
 	}
 	return AdminUserAccount{}, errAdminUserNotFound
 }
@@ -467,37 +963,44 @@ func (s *MockStore) updateAdminProduct(user UserAccount, productID string, updat
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for index, item := range s.adminProducts {
-		if item.ID != productID {
+	for index, product := range s.catalogProducts {
+		if product.ID != productID {
 			continue
 		}
+		if user.DataScope != "org_all" && !hasIntersect(product.StoreIDs, user.StoreIDs) {
+			return AdminProductRecord{}, errUnauthorizedStore
+		}
 		if strings.TrimSpace(update.Name) != "" {
-			item.Name = strings.TrimSpace(update.Name)
+			product.Name = strings.TrimSpace(update.Name)
 		}
 		if strings.TrimSpace(update.SKU) != "" {
-			item.SKU = strings.TrimSpace(update.SKU)
+			product.SKU = strings.TrimSpace(update.SKU)
 		}
 		if strings.TrimSpace(update.Category) != "" {
-			item.Category = strings.TrimSpace(update.Category)
+			product.Category = strings.TrimSpace(update.Category)
 		}
 		if update.Price >= 0 {
-			item.Price = update.Price
+			product.RetailPrice = update.Price
 		}
 		if update.GramWeight >= 0 {
-			item.GramWeight = update.GramWeight
+			product.GramWeight = update.GramWeight
 		}
 		if strings.TrimSpace(update.Status) != "" {
-			item.Status = strings.TrimSpace(update.Status)
+			product.Status = strings.TrimSpace(update.Status)
 		}
 		if update.StoreNames != nil {
-			item.StoreNames = append([]string(nil), update.StoreNames...)
+			product.Stores = append([]string(nil), update.StoreNames...)
 		}
 		if update.Tags != nil {
-			item.Tags = append([]string(nil), update.Tags...)
+			product.Tags = append([]string(nil), update.Tags...)
 		}
-		s.adminProducts[index] = item
-		s.appendAuditLogLocked("商品管理", "更新商品资料", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已更新", item.Name))
-		return item, nil
+		s.catalogProducts[index] = product
+		if s.persistence != nil {
+			_ = s.persistProductsLocked()
+		}
+		record := buildAdminProductRecord(product)
+		s.appendAuditLogLocked("商品管理", "更新商品资料", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已更新", record.Name))
+		return record, nil
 	}
 	return AdminProductRecord{}, errAdminProductNotFound
 }
@@ -544,77 +1047,112 @@ func (s *MockStore) updateAdminSystemProfile(user UserAccount, update AdminSyste
 	if strings.TrimSpace(update.PrinterStatus) != "" {
 		s.adminSystemProfile.PrinterStatus = strings.TrimSpace(update.PrinterStatus)
 	}
+	s.settings.Brand.Name = s.adminSystemProfile.BrandName
+	s.settings.Brand.ServicePhone = s.adminSystemProfile.ServicePhone
+	s.settings.Brand.ReceiptTitle = s.adminSystemProfile.ReceiptTitle
+	s.settings.Recycle.MinPhotoCount = s.adminSystemProfile.MinPhotoCount
+	s.settings.Recycle.MaxPhotoCount = s.adminSystemProfile.MaxPhotoCount
+	s.settings.Recycle.RequireExactThree = s.adminSystemProfile.RequireExactThree
+	s.settings.Recycle.RequireIDCheck = s.adminSystemProfile.RequireIDCheck
+	s.settings.Payments.EnableWechatPay = s.adminSystemProfile.WechatPayEnabled
+	s.settings.Payments.EnableCash = s.adminSystemProfile.CashEnabled
+	s.settings.Payments.EnableBankTransfer = s.adminSystemProfile.BankTransferEnabled
+	s.settings.UpdatedBy = user.DisplayName
+	s.settings.UpdatedAt = time.Now()
+	if s.persistence != nil {
+		_ = s.persistSettingsLocked()
+		_ = s.persistence.saveConfig(context.Background(), configKeyAdminSystem, s.adminSystemProfile)
+	}
 	s.appendAuditLogLocked("系统配置", "更新系统配置", user.DisplayName, "warning", "high", "系统配置与打印准备信息已更新。")
 	return s.adminSystemProfile
 }
 
-func (s *MockStore) createAdminStore(user UserAccount) AdminStoreRecord {
+func (s *MockStore) createAdminStore(user UserAccount) (AdminStoreRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	store := AdminStoreRecord{
-		ID:               fmt.Sprintf("store-new-%03d", len(s.adminStores)+1),
-		Code:             fmt.Sprintf("NEW-%03d", len(s.adminStores)+1),
-		Name:             fmt.Sprintf("新门店 %d", len(s.adminStores)+1),
-		ManagerName:      "待分配",
-		City:             "待填写",
-		Address:          "待填写地址",
-		ContactPhone:     "待填写电话",
-		BusinessHours:    "10:00 - 22:00",
-		Status:           "pending",
-		CashierDevices:   0,
-		PendingTasks:     0,
-		TodayAmount:      0,
-		TodayOrders:      0,
-		LastSettlementAt: "尚未营业",
-		Tags:             []string{"新建门店", "待完善"},
+	if user.DataScope != "org_all" {
+		return AdminStoreRecord{}, errUnauthorizedStore
 	}
-	s.adminStores = append([]AdminStoreRecord{store}, s.adminStores...)
-	s.appendAuditLogLocked("门店管理", "新建门店", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已创建", store.Name))
-	return store
+
+	store := StoreInfo{
+		ID:        fmt.Sprintf("store-new-%03d", len(s.stores)+1),
+		OrgID:     "org-gold-demo",
+		Code:      fmt.Sprintf("NEW-%03d", len(s.stores)+1),
+		Name:      fmt.Sprintf("新门店 %d", len(s.stores)+1),
+		City:      "待填写",
+		Address:   "待填写地址",
+		Manager:   "待分配",
+		Status:    "pending",
+		IsDefault: false,
+	}
+	s.stores = append([]StoreInfo{store}, s.stores...)
+	if s.persistence != nil {
+		_ = s.persistStoresLocked()
+	}
+	record := s.buildAdminStoreRecordLocked(store)
+	s.appendAuditLogLocked("门店管理", "新建门店", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已创建", record.Name))
+	return record, nil
 }
 
-func (s *MockStore) createAdminUser(user UserAccount) AdminUserAccount {
+func (s *MockStore) createAdminUser(user UserAccount) (AdminUserAccount, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	account := AdminUserAccount{
-		ID:          fmt.Sprintf("user-new-%03d", len(s.adminUsers)+1),
-		Name:        fmt.Sprintf("新账号 %d", len(s.adminUsers)+1),
-		Account:     fmt.Sprintf("new.user.%03d", len(s.adminUsers)+1),
-		Phone:       "待填写",
-		RoleKey:     "clerk",
+	if user.DataScope != "org_all" {
+		return AdminUserAccount{}, errUnauthorizedStore
+	}
+
+	account := UserAccount{
+		ID:          fmt.Sprintf("user-new-%03d", len(s.usersByID)+1),
+		OrgID:       "org-gold-demo",
+		Username:    fmt.Sprintf("new.user.%03d", len(s.usersByID)+1),
+		DisplayName: fmt.Sprintf("新账号 %d", len(s.usersByID)+1),
+		Password:    "ChangeMe123!",
+		RoleCode:    "cashier",
 		RoleName:    "员工",
 		DataScope:   "self",
 		StoreIDs:    []string{},
-		StoreNames:  []string{"待绑定门店"},
-		Status:      "invited",
-		LastLoginAt: "未登录",
-		Abilities:   []AdminAbilityCode{},
+		Permissions: permissionsForRoleLocked("cashier", s.roles),
+		Status:      "pending",
 	}
-	s.adminUsers = append([]AdminUserAccount{account}, s.adminUsers...)
-	s.appendAuditLogLocked("账号管理", "新建账号", user.DisplayName, "warning", "high", fmt.Sprintf("%s 已创建，待绑定角色和门店", account.Name))
-	return account
+	s.usersByID[account.ID] = account
+	s.usersByUsername[account.Username] = account
+	if s.persistence != nil {
+		_ = s.persistUsersLocked()
+	}
+	record := s.buildAdminUserRecordLocked(account)
+	s.appendAuditLogLocked("账号管理", "新建账号", user.DisplayName, "warning", "high", fmt.Sprintf("%s 已创建，待绑定角色和门店", record.Name))
+	return record, nil
 }
 
-func (s *MockStore) createAdminProduct(user UserAccount) AdminProductRecord {
+func (s *MockStore) createAdminProduct(user UserAccount) (AdminProductRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	product := AdminProductRecord{
-		ID:         fmt.Sprintf("prd-new-%03d", len(s.adminProducts)+1),
-		Name:       fmt.Sprintf("新商品 %d", len(s.adminProducts)+1),
-		SKU:        fmt.Sprintf("NEW-SKU-%03d", len(s.adminProducts)+1),
-		Category:   "待分类",
-		Price:      0,
-		GramWeight: 0,
-		Status:     "draft",
-		StoreNames: []string{"待分配门店"},
-		Tags:       []string{"新建", "待完善"},
+	if user.DataScope != "org_all" {
+		return AdminProductRecord{}, errUnauthorizedStore
 	}
-	s.adminProducts = append([]AdminProductRecord{product}, s.adminProducts...)
-	s.appendAuditLogLocked("商品管理", "新建商品", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已创建", product.Name))
-	return product
+
+	product := CatalogProduct{
+		ID:               fmt.Sprintf("prd-new-%03d", len(s.catalogProducts)+1),
+		OrgID:            "org-gold-demo",
+		Name:             fmt.Sprintf("新商品 %d", len(s.catalogProducts)+1),
+		SKU:              fmt.Sprintf("NEW-SKU-%03d", len(s.catalogProducts)+1),
+		Category:         "待分类",
+		Status:           "draft",
+		Stores:           []string{"待分配门店"},
+		Tags:             []string{"新建", "待完善"},
+		RecommendedScene: "待完善场景",
+		QuoteLeadTime:    "待设置",
+	}
+	s.catalogProducts = append([]CatalogProduct{product}, s.catalogProducts...)
+	if s.persistence != nil {
+		_ = s.persistProductsLocked()
+	}
+	record := buildAdminProductRecord(product)
+	s.appendAuditLogLocked("商品管理", "新建商品", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已创建", record.Name))
+	return record, nil
 }
 
 func (s *MockStore) updateAdminPrintTemplate(user UserAccount, update AdminPrintTemplate) AdminPrintTemplate {
@@ -622,6 +1160,9 @@ func (s *MockStore) updateAdminPrintTemplate(user UserAccount, update AdminPrint
 	defer s.mu.Unlock()
 
 	s.adminPrintTemplate = update
+	if s.persistence != nil {
+		_ = s.persistence.saveConfig(context.Background(), configKeyAdminPrint, s.adminPrintTemplate)
+	}
 	s.appendAuditLogLocked("打印配置", "更新打印模板", user.DisplayName, "warning", "high", "小票/标签/回收打印模板结构已更新。")
 	return s.adminPrintTemplate
 }

@@ -21,6 +21,11 @@ type Persistence struct {
 }
 
 var persistenceStatements = []string{
+	`CREATE TABLE IF NOT EXISTS app_configs (
+		config_key VARCHAR(64) PRIMARY KEY,
+		config_json JSON NOT NULL,
+		updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 	`CREATE TABLE IF NOT EXISTS cashier_orders (
 		id VARCHAR(64) PRIMARY KEY,
 		order_no VARCHAR(64) NOT NULL UNIQUE,
@@ -138,6 +143,36 @@ func (p *Persistence) sessionKey(token string) string {
 		prefix = "gold:"
 	}
 	return prefix + "session:" + token
+}
+
+func (p *Persistence) loadConfig(ctx context.Context, key string, target interface{}) (bool, error) {
+	var raw []byte
+	err := p.db.QueryRowContext(ctx, `SELECT config_json FROM app_configs WHERE config_key = ?`, key).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if err := json.Unmarshal(raw, target); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (p *Persistence) saveConfig(ctx context.Context, key string, value interface{}) error {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	_, err = p.db.ExecContext(ctx, `
+		INSERT INTO app_configs (config_key, config_json)
+		VALUES (?, ?)
+		ON DUPLICATE KEY UPDATE config_json = VALUES(config_json)`,
+		key,
+		raw,
+	)
+	return err
 }
 
 func (p *Persistence) saveSession(ctx context.Context, session Session) error {

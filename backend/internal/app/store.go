@@ -24,6 +24,19 @@ var (
 	errProductNotFound    = errors.New("product not found")
 )
 
+const (
+	configKeyAdminPayment = "admin_payment_config"
+	configKeyAdminPrint   = "admin_print_template"
+	configKeyAdminSystem  = "admin_system_profile"
+	configKeyBaseStores   = "base_stores"
+	configKeyBaseUsers    = "base_users"
+	configKeyBaseRoles    = "base_roles"
+	configKeyBaseMembers  = "base_members"
+	configKeyBaseProducts = "base_products"
+	configKeyBaseSettings = "base_system_settings"
+	configKeyAdminRoles   = "admin_roles"
+)
+
 type MockStore struct {
 	mu                  sync.RWMutex
 	persistence         *Persistence
@@ -939,6 +952,11 @@ func (s *MockStore) updateSettings(user UserAccount, update SystemSettings) Syst
 
 	s.settings.UpdatedBy = user.DisplayName
 	s.settings.UpdatedAt = time.Now()
+	s.adminSystemProfile = s.buildDynamicSystemProfileLocked()
+	if s.persistence != nil {
+		_ = s.persistSettingsLocked()
+		_ = s.persistence.saveConfig(context.Background(), configKeyAdminSystem, s.adminSystemProfile)
+	}
 	return s.settings
 }
 
@@ -1004,6 +1022,10 @@ func (s *MockStore) close() error {
 func (s *MockStore) bootstrapPersistence() error {
 	ctx := context.Background()
 
+	if err := s.bootstrapBaseConfigs(ctx); err != nil {
+		return err
+	}
+
 	cashierOrders, err := s.persistence.loadCashierOrders(ctx)
 	if err != nil {
 		return err
@@ -1034,7 +1056,175 @@ func (s *MockStore) bootstrapPersistence() error {
 
 	s.cashierSeq = nextSequenceFromCashierOrders(s.cashierOrders)
 	s.recycleSeq = nextSequenceFromRecycleOrders(s.recycleOrders)
+	if err := s.bootstrapAdminConfigs(ctx); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (s *MockStore) bootstrapBaseConfigs(ctx context.Context) error {
+	if s.persistence == nil {
+		return nil
+	}
+
+	var settings SystemSettings
+	found, err := s.persistence.loadConfig(ctx, configKeyBaseSettings, &settings)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.settings = settings
+	} else if err := s.persistence.saveConfig(ctx, configKeyBaseSettings, s.settings); err != nil {
+		return err
+	}
+
+	var stores []StoreInfo
+	found, err = s.persistence.loadConfig(ctx, configKeyBaseStores, &stores)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.stores = stores
+	} else if err := s.persistence.saveConfig(ctx, configKeyBaseStores, s.stores); err != nil {
+		return err
+	}
+
+	var roles []RoleTemplate
+	found, err = s.persistence.loadConfig(ctx, configKeyBaseRoles, &roles)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.roles = roles
+	} else if err := s.persistence.saveConfig(ctx, configKeyBaseRoles, s.roles); err != nil {
+		return err
+	}
+
+	var users []UserAccount
+	found, err = s.persistence.loadConfig(ctx, configKeyBaseUsers, &users)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.rebuildUserMaps(users)
+	} else if err := s.persistence.saveConfig(ctx, configKeyBaseUsers, s.usersSliceLocked()); err != nil {
+		return err
+	}
+
+	var members []MemberProfile
+	found, err = s.persistence.loadConfig(ctx, configKeyBaseMembers, &members)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.members = members
+	} else if err := s.persistence.saveConfig(ctx, configKeyBaseMembers, s.members); err != nil {
+		return err
+	}
+
+	var products []CatalogProduct
+	found, err = s.persistence.loadConfig(ctx, configKeyBaseProducts, &products)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.catalogProducts = products
+	} else if err := s.persistence.saveConfig(ctx, configKeyBaseProducts, s.catalogProducts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *MockStore) bootstrapAdminConfigs(ctx context.Context) error {
+	if s.persistence == nil {
+		return nil
+	}
+
+	var adminRoles []AdminRoleTemplate
+	found, err := s.persistence.loadConfig(ctx, configKeyAdminRoles, &adminRoles)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.adminRoles = adminRoles
+	} else if err := s.persistence.saveConfig(ctx, configKeyAdminRoles, s.adminRoles); err != nil {
+		return err
+	}
+
+	var paymentConfig AdminPaymentConfig
+	found, err = s.persistence.loadConfig(ctx, configKeyAdminPayment, &paymentConfig)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.adminPaymentConfig = paymentConfig
+	} else if err := s.persistence.saveConfig(ctx, configKeyAdminPayment, s.adminPaymentConfig); err != nil {
+		return err
+	}
+
+	var printTemplate AdminPrintTemplate
+	found, err = s.persistence.loadConfig(ctx, configKeyAdminPrint, &printTemplate)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.adminPrintTemplate = printTemplate
+	} else if err := s.persistence.saveConfig(ctx, configKeyAdminPrint, s.adminPrintTemplate); err != nil {
+		return err
+	}
+
+	var systemProfile AdminSystemProfile
+	found, err = s.persistence.loadConfig(ctx, configKeyAdminSystem, &systemProfile)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.adminSystemProfile = systemProfile
+	} else if err := s.persistence.saveConfig(ctx, configKeyAdminSystem, s.adminSystemProfile); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *MockStore) rebuildUserMaps(users []UserAccount) {
+	s.usersByID = make(map[string]UserAccount, len(users))
+	s.usersByUsername = make(map[string]UserAccount, len(users))
+	for _, user := range users {
+		s.usersByID[user.ID] = user
+		s.usersByUsername[user.Username] = user
+	}
+}
+
+func (s *MockStore) usersSliceLocked() []UserAccount {
+	items := make([]UserAccount, 0, len(s.usersByID))
+	for _, user := range s.usersByID {
+		items = append(items, user)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ID < items[j].ID
+	})
+	return items
+}
+
+func (s *MockStore) persistStoresLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyBaseStores, s.stores)
+}
+
+func (s *MockStore) persistUsersLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyBaseUsers, s.usersSliceLocked())
+}
+
+func (s *MockStore) persistProductsLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyBaseProducts, s.catalogProducts)
+}
+
+func (s *MockStore) persistSettingsLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyBaseSettings, s.settings)
+}
+
+func (s *MockStore) persistAdminRolesLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyAdminRoles, s.adminRoles)
 }
 
 func nextSequenceFromCashierOrders(orders []CashierOrder) int {

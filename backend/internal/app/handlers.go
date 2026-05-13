@@ -271,7 +271,15 @@ func (a *App) handleAdminStoreCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := currentUser(r.Context())
-	store := a.store.createAdminStore(user)
+	store, err := a.store.createAdminStore(user)
+	if errors.Is(err, errUnauthorizedStore) {
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+		return
+	}
+	if err != nil {
+		a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to create store")
+		return
+	}
 	a.writeJSON(w, r, http.StatusCreated, 0, "ok", store)
 }
 
@@ -297,6 +305,8 @@ func (a *App) handleAdminStore(w http.ResponseWriter, r *http.Request) {
 
 	store, err := a.store.updateAdminStore(user, storeID, req)
 	switch {
+	case errors.Is(err, errUnauthorizedStore):
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
 	case errors.Is(err, errAdminStoreNotFound):
 		a.writeError(w, r, http.StatusNotFound, 40402, "store not found")
 	case err != nil:
@@ -328,6 +338,8 @@ func (a *App) handleAdminUser(w http.ResponseWriter, r *http.Request) {
 
 	account, err := a.store.updateAdminUser(user, userID, req)
 	switch {
+	case errors.Is(err, errUnauthorizedStore):
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
 	case errors.Is(err, errAdminUserNotFound):
 		a.writeError(w, r, http.StatusNotFound, 40402, "user not found")
 	case err != nil:
@@ -343,7 +355,15 @@ func (a *App) handleAdminUserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := currentUser(r.Context())
-	account := a.store.createAdminUser(user)
+	account, err := a.store.createAdminUser(user)
+	if errors.Is(err, errUnauthorizedStore) {
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+		return
+	}
+	if err != nil {
+		a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to create user")
+		return
+	}
 	a.writeJSON(w, r, http.StatusCreated, 0, "ok", account)
 }
 
@@ -369,6 +389,8 @@ func (a *App) handleAdminProduct(w http.ResponseWriter, r *http.Request) {
 
 	product, err := a.store.updateAdminProduct(user, productID, req)
 	switch {
+	case errors.Is(err, errUnauthorizedStore):
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
 	case errors.Is(err, errAdminProductNotFound):
 		a.writeError(w, r, http.StatusNotFound, 40402, "product not found")
 	case err != nil:
@@ -384,7 +406,15 @@ func (a *App) handleAdminProductCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := currentUser(r.Context())
-	product := a.store.createAdminProduct(user)
+	product, err := a.store.createAdminProduct(user)
+	if errors.Is(err, errUnauthorizedStore) {
+		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+		return
+	}
+	if err != nil {
+		a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to create product")
+		return
+	}
 	a.writeJSON(w, r, http.StatusCreated, 0, "ok", product)
 }
 
