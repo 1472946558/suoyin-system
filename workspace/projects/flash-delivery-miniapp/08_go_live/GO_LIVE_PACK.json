@@ -1,0 +1,72 @@
+{
+  "generatedAt": "2026-05-20T16:05:37.794Z",
+  "project": {
+    "id": "flash-delivery-miniapp",
+    "name": "疾蜂同城急送小程序",
+    "client": "待补充",
+    "summary": "原创同城急送微信小程序 MVP，涵盖下单、预估价格、订单跟踪、订单列表和个人中心。",
+    "progressNote": "前端 MVP 已交付，商用前还需真实后端、地图、支付和客服。",
+    "readiness": 60,
+    "folderPath": "/Users/xiaoliao/Desktop/openclaw/workspace/projects/flash-delivery-miniapp",
+    "active": true
+  },
+  "kind": "miniapp-frontend",
+  "deployMode": "wechat-release",
+  "commands": [
+    "npm run validate:delivery"
+  ],
+  "evidence": [
+    "docs/CUSTOMER_INTEGRATION_GUIDE.md",
+    "docs/CURRENT_STATUS_2026-05-29.md",
+    "docs/DELIVERY_STATUS_2026-05-09.md",
+    "docs/DELIVERY_SUMMARY.md",
+    "docs/OWNER_TEST_GUIDE.md",
+    "docs/QA_CHECKLIST.md",
+    "08_go_live/CUSTOMER_LAUNCH_INPUTS.md"
+  ],
+  "evidenceCount": 7,
+  "deployment": {
+    "sources": [
+      "README.md",
+      "docs/CUSTOMER_INTEGRATION_GUIDE.md",
+      "08_go_live/CUSTOMER_LAUNCH_INPUTS.md"
+    ],
+    "notes": [
+      "当前仅支持 Demo，不支持直接商用上线",
+      "正式 AppID、正式 API 域名和 HTTPS 证书信息尚未提供"
+    ],
+    "serverPurchased": false,
+    "serverVendor": "",
+    "serverRegion": "",
+    "testAddress": "",
+    "prodAddress": "",
+    "domain": "",
+    "domainStatus": "",
+    "apiDomain": "",
+    "adminDomain": "",
+    "staticDomain": "",
+    "uploadDomain": "",
+    "httpsStatus": "依赖客户正式 HTTPS API 域名",
+    "certExpiry": "",
+    "ports": [],
+    "envSource": "待补齐",
+    "database": "待补齐",
+    "redis": "待补齐",
+    "thirdParty": "微信小程序 AppID：待补齐",
+    "objectStorageStatus": ""
+  },
+  "blockers": [
+    "正式域名未提供",
+    "HTTPS 正式 API 域名未提供",
+    "微信小程序 AppID 未提供",
+    "真实后端未接",
+    "地图、支付、客服未接"
+  ],
+  "files": {
+    "sop": "/Users/xiaoliao/Desktop/openclaw/workspace/projects/flash-delivery-miniapp/08_go_live/GO_LIVE_SOP.md",
+    "checklist": "/Users/xiaoliao/Desktop/openclaw/workspace/projects/flash-delivery-miniapp/08_go_live/GO_LIVE_CHECKLIST.md",
+    "profile": "/Users/xiaoliao/Desktop/openclaw/workspace/projects/flash-delivery-miniapp/08_go_live/DEPLOYMENT_PROFILE.md",
+    "pack": "/Users/xiaoliao/Desktop/openclaw/workspace/projects/flash-delivery-miniapp/08_go_live/GO_LIVE_PACK.json",
+    "launchInputs": "/Users/xiaoliao/Desktop/openclaw/workspace/projects/flash-delivery-miniapp/08_go_live/CUSTOMER_LAUNCH_INPUTS.md"
+  }
+}

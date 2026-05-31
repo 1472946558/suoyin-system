@@ -1,0 +1,15 @@
+{
+  "name": "flash-delivery-miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native WeChat mini program MVP for same-city express delivery.",
+  "scripts": {
+    "icons": "node scripts/generate-brand-icons.mjs",
+    "validate": "node scripts/validate-miniapp.mjs",
+    "validate:delivery": "npm run validate"
+  },
+  "devDependencies": {
+    "lucide-static": "^1.14.0",
+    "sharp": "^0.34.5"
+  }
+}

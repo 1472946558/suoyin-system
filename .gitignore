@@ -1,8 +1,17 @@
 .DS_Store
 *.log
 update-check.json
+openclaw.json
 openclaw.json.bak
 openclaw.json.save
+.env
+.env.*
+!workspace/projects/flash-delivery-miniapp/backend/.env.example
 workspace/.git/
 workspace/.openclaw/
+workspace/config/feishu-agent-channels.json
+workspace/config/*secret*.json
+workspace/config/*.local.json
+workspace/config/*.local.md
+workspace/config/private/
 node_modules/

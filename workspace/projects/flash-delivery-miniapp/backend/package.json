@@ -1,0 +1,21 @@
+{
+  "name": "flash-delivery-miniapp-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node + Fastify backend scaffold for the flash-delivery miniapp template.",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/app.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.3",
+    "nanoid": "^5.0.7",
+    "zod": "^3.23.8"
+  }
+}

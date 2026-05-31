@@ -1,0 +1,28 @@
+[Unit]
+Description=Flash Delivery Miniapp Backend
+After=network.target
+
+[Service]
+Type=simple
+User=flash-delivery
+Group=flash-delivery
+WorkingDirectory=/opt/flash-delivery-miniapp/app
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=18092
+EnvironmentFile=-/opt/flash-delivery-miniapp/app/.env
+ExecStart=/usr/bin/env node src/server.js
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=20
+SyslogIdentifier=flash-delivery-miniapp-backend
+StandardOutput=append:/opt/flash-delivery-miniapp/logs/backend.stdout.log
+StandardError=append:/opt/flash-delivery-miniapp/logs/backend.stderr.log
+
+# 首次部署前至少执行：
+# mkdir -p /opt/flash-delivery-miniapp/logs
+# chown -R flash-delivery:flash-delivery /opt/flash-delivery-miniapp
+
+[Install]
+WantedBy=multi-user.target
