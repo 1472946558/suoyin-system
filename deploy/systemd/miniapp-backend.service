@@ -1,0 +1,19 @@
+[Unit]
+Description=Miniapp Persistent Backend
+After=network.target mysql.service redis-server.service
+Wants=mysql.service redis-server.service
+
+[Service]
+Type=simple
+User=miniapp
+Group=miniapp
+WorkingDirectory=/srv/miniapp/backend
+EnvironmentFile=/srv/miniapp/config/.env.production
+ExecStart=/srv/miniapp/backend/gold-recycle-backend
+Restart=always
+RestartSec=3
+StandardOutput=append:/srv/miniapp/logs/backend.out.log
+StandardError=append:/srv/miniapp/logs/backend.err.log
+
+[Install]
+WantedBy=multi-user.target

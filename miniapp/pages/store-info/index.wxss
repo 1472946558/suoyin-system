@@ -1,0 +1,50 @@
+.store-info-hero .hero-title {
+  font-size: 52.8rpx;
+}
+
+.profile-main-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280rpx;
+  height: 78rpx;
+  margin-top: 28rpx;
+  border: 0.8rpx solid var(--line);
+  border-radius: 12rpx;
+  color: #ffffff;
+  font-size: 28.6rpx;
+  font-weight: 900;
+  line-height: 78rpx;
+  background: #866e23;
+  background-color: #866e23;
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid var(--line);
+  font-size: 28.6rpx;
+  font-weight: 800;
+}
+
+.profile-row:last-child {
+  border-bottom: 0;
+}
+
+.profile-row text:last-child {
+  max-width: 430rpx;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.profile-row-app-name {
+  font-size: 26rpx;
+}

@@ -1,0 +1,64 @@
+{
+  "pages": [
+    "pages/account/index",
+    "pages/home/index",
+    "pages/order/index",
+    "pages/track/index",
+    "pages/orders/index",
+    "pages/members/index",
+    "pages/products/index",
+    "pages/profile/index",
+    "pages/store-info/index",
+    "pages/order-detail/index",
+    "pages/legal/privacy",
+    "pages/legal/terms"
+  ],
+  "window": {
+    "navigationBarTitleText": "黄金收银",
+    "navigationBarBackgroundColor": "#333333",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#FDFBE7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#8A8F99",
+    "selectedColor": "#866E23",
+    "backgroundColor": "#333333",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "assets/tabbar/home-normal.png",
+        "selectedIconPath": "assets/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/order/index",
+        "text": "收银",
+        "iconPath": "assets/tabbar/order-normal.png",
+        "selectedIconPath": "assets/tabbar/order-active.png"
+      },
+      {
+        "pagePath": "pages/track/index",
+        "text": "录单",
+        "iconPath": "assets/tabbar/track-normal.png",
+        "selectedIconPath": "assets/tabbar/track-active.png"
+      },
+      {
+        "pagePath": "pages/orders/index",
+        "text": "订单",
+        "iconPath": "assets/tabbar/orders-normal.png",
+        "selectedIconPath": "assets/tabbar/orders-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "设置",
+        "iconPath": "assets/tabbar/profile-normal.png",
+        "selectedIconPath": "assets/tabbar/profile-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

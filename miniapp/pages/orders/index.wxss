@@ -1,0 +1,170 @@
+.first-title {
+  margin-top: 8rpx;
+}
+
+.small {
+  font-size: 26.4rpx;
+  font-weight: 500;
+}
+
+.title-with-icon,
+.order-id-wrap,
+.order-id-copy,
+.meta-left,
+.fee-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.order-card .order-id-wrap,
+.order-card .route-row,
+.order-card .meta-left {
+  display: grid;
+  grid-template-columns: 34rpx minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12rpx;
+  justify-content: start;
+}
+
+.order-card .order-id-wrap image,
+.order-card .route-icon,
+.order-card .meta-left image {
+  justify-self: start;
+  width: 34rpx;
+  height: 34rpx;
+}
+
+.order-id-copy {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
+}
+
+.title-with-icon image {
+  width: 42rpx;
+  height: 42rpx;
+}
+
+.order-id-wrap image,
+.meta-left image,
+.fee-wrap image {
+  width: 34rpx;
+  height: 34rpx;
+}
+
+.filter-bar {
+  white-space: nowrap;
+  margin-bottom: 10rpx;
+}
+
+.search-card {
+  margin-top: 18rpx;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18rpx 24rpx;
+  margin-right: 12rpx;
+  border-radius: 999rpx;
+  color: var(--muted);
+  font-size: 26.4rpx;
+  font-weight: 800;
+  background: #fff;
+  box-shadow: inset 0 0 0 1rpx var(--line);
+}
+
+.filter-chip.active {
+  color: var(--ink);
+  background: var(--gold-soft);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 206, 53, 0.24);
+}
+
+.order-card {
+  margin-top: 18rpx;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.summary-box {
+  padding: 22rpx;
+  border-radius: 24rpx;
+  background: #fff;
+  box-shadow: inset 0 0 0 1rpx rgba(255, 206, 53, 0.18);
+}
+
+.summary-value,
+.summary-label {
+  display: block;
+}
+
+.summary-value {
+  font-size: 33rpx;
+  font-weight: 900;
+}
+
+.summary-label {
+  margin-top: 10rpx;
+  color: var(--muted);
+  font-size: 24.2rpx;
+}
+
+.order-id {
+  color: var(--muted);
+  font-size: 24.2rpx;
+  font-weight: 700;
+}
+
+.order-type {
+  padding: 6rpx 12rpx;
+  border-radius: 999rpx;
+  color: var(--brand-strong);
+  font-size: 22rpx;
+  font-weight: 800;
+  background: rgba(255, 206, 53, 0.14);
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  margin: 26rpx 0;
+}
+
+.route-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  font-size: 30.8rpx;
+  font-weight: 800;
+}
+
+.route-icon {
+  width: 42rpx;
+  height: 42rpx;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 26.4rpx;
+}
+
+.order-footer {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid var(--line);
+  font-size: 24.2rpx;
+}
+
+.fee {
+  color: var(--ink);
+  font-size: 37.4rpx;
+  font-weight: 900;
+}

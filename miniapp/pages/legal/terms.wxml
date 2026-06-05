@@ -1,0 +1,14 @@
+<view class="page legal-page">
+  <view class="dark-hero">
+    <text class="eyebrow">服务协议</text>
+    <text class="hero-title">用户协议</text>
+    <text class="hero-subtitle">使用{{appName}}前，请确认已了解账号权限、订单录入、照片留档和门店服务规则。</text>
+  </view>
+
+  <view class="card legal-card" wx:for="{{sections}}" wx:key="title">
+    <text class="legal-title">{{item.title}}</text>
+    <view class="legal-item" wx:for="{{item.items}}" wx:key="*this" wx:for-item="line">
+      <text>{{line}}</text>
+    </view>
+  </view>
+</view>

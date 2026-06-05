@@ -1,0 +1,14 @@
+<view class="page legal-page">
+  <view class="dark-hero">
+    <text class="eyebrow">隐私说明</text>
+    <text class="hero-title">隐私协议</text>
+    <text class="hero-subtitle">{{appName}}用于门店收银与黄金回收留档，以下说明我们如何处理用户信息和现场照片。</text>
+  </view>
+
+  <view class="card legal-card" wx:for="{{sections}}" wx:key="title">
+    <text class="legal-title">{{item.title}}</text>
+    <view class="legal-item" wx:for="{{item.items}}" wx:key="*this" wx:for-item="line">
+      <text>{{line}}</text>
+    </view>
+  </view>
+</view>

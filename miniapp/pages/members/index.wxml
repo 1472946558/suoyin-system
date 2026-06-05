@@ -1,0 +1,208 @@
+<view class="page">
+  <view class="dark-hero">
+    <text class="eyebrow">会员管理</text>
+    <text class="hero-title">会员档案</text>
+    <text class="hero-subtitle">维护常客资料、手机号、偏好和回收记录，收银时可快速带入。</text>
+    <view class="stats-strip">
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.total}}</text>
+        <text class="stats-label">会员数</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.vipCount}}</text>
+        <text class="stats-label">VIP</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.followUpCount}}</text>
+        <text class="stats-label">待回访</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card subtle-card">
+    <view class="field">
+      <text class="label">搜索会员</text>
+      <input class="input" placeholder="姓名 / 手机号 / 标签 / 成色偏好" value="{{filters.keyword}}" bindinput="onKeywordInput" />
+    </view>
+    <view class="filter-row">
+      <picker mode="selector" range="{{levelFilterLabels}}" bindchange="onLevelChange">
+        <view class="picker-box compact-picker">
+          <text>{{levelFilterLabels[levelFilterIndex]}}</text>
+          <text class="muted">等级</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{statusFilterLabels}}" bindchange="onStatusChange">
+        <view class="picker-box compact-picker">
+          <text>{{statusFilterLabels[statusFilterIndex]}}</text>
+          <text class="muted">状态</text>
+        </view>
+      </picker>
+    </view>
+    <view class="inline-actions filter-actions">
+      <button class="small-btn gold" bindtap="openCreateMember">新增会员</button>
+      <button class="small-btn" bindtap="reloadMembers" loading="{{loading}}">刷新</button>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>会员列表</text>
+      <text class="section-kicker">{{loading ? '加载中...' : '点击会员卡片查看详情'}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{filteredMembers.length}}" class="member-list">
+    <button
+      wx:for="{{filteredMembers}}"
+      wx:key="id"
+      class="card member-card {{selectedId === item.id ? 'member-card-active' : ''}}"
+      bindtap="selectMember"
+      data-id="{{item.id}}"
+    >
+      <view class="row between">
+        <view>
+          <text class="member-name">{{item.name}}</text>
+          <text class="member-phone">{{item.phone}}</text>
+        </view>
+        <text class="tag">{{item.level}}</text>
+      </view>
+      <view class="member-meta">
+        <text>{{item.preferredPurity}} · {{item.sourceChannel}}</text>
+        <text>{{item.lastVisitAt}}</text>
+      </view>
+      <view class="chip-wall">
+        <text wx:for="{{item.tags}}" wx:key="*this" class="mini-chip">{{item}}</text>
+      </view>
+    </button>
+  </view>
+
+  <view wx:else class="card empty-card">
+    <text class="empty-title">暂无匹配会员</text>
+    <text class="muted">请新增会员或调整筛选条件。</text>
+  </view>
+
+  <view wx:if="{{selectedMember}}" class="card detail-card">
+    <view class="row between">
+      <view>
+        <text class="detail-title">{{selectedMember.name}}</text>
+        <text class="section-kicker">{{selectedMember.managerNameText}} 跟进 · 最近到店 {{selectedMember.lastVisitAt}}</text>
+      </view>
+      <text class="status-tag {{selectedMember.status}}">{{selectedMember.statusText}}</text>
+    </view>
+
+    <view class="detail-grid">
+      <view class="detail-item">
+        <text class="muted">累计订单</text>
+        <text>{{selectedMember.totalOrders}} 笔</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">累计回收额</text>
+        <text>{{selectedMember.totalRecycleAmountText}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">偏好成色</text>
+        <text>{{selectedMember.preferredPurity}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">手机号</text>
+        <text>{{selectedMember.phone}}</text>
+      </view>
+    </view>
+
+    <view class="section-title compact-title">
+      <view>
+        <text>消费 / 回收记录</text>
+        <text class="section-kicker">用于回访和带入收银</text>
+      </view>
+    </view>
+    <view class="record-list">
+      <view class="record-item" wx:for="{{selectedMember.records}}" wx:key="title">
+        <view>
+          <text class="record-title">{{item.title}}</text>
+          <text class="record-desc">{{item.desc}}</text>
+        </view>
+        <view class="record-side">
+          <text>{{item.amount}}</text>
+          <text>{{item.time}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="notice">
+      <image class="notice-icon" src="/assets/ui/note.png" mode="aspectFit" />
+      <text>{{selectedMember.notes}}</text>
+    </view>
+
+    <view class="action-grid">
+      <button class="ghost-btn" bindtap="copyPhone">复制手机号</button>
+      <button class="ghost-btn" bindtap="openEditMember">编辑会员</button>
+      <button class="primary-btn" bindtap="useForCashier">带入收银草稿</button>
+    </view>
+  </view>
+
+  <view wx:if="{{memberEditorVisible}}" class="drawer-mask" bindtap="closeMemberEditor">
+    <view class="editor-drawer" catchtap="noop">
+      <view class="editor-head">
+        <view>
+          <text class="editor-title">{{memberEditorTitle}}</text>
+          <text class="editor-subtitle">维护会员资料、手机号和回访备注</text>
+        </view>
+        <button class="editor-close" bindtap="closeMemberEditor">×</button>
+      </view>
+
+      <view class="card form-card">
+        <view class="editor-grid">
+          <view class="field">
+            <text class="label">会员姓名</text>
+            <input class="input" placeholder="请输入姓名" value="{{memberEditor.name}}" data-key="name" bindinput="onMemberEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">手机号</text>
+            <input class="input" type="number" placeholder="请输入手机号" value="{{memberEditor.phone}}" data-key="phone" bindinput="onMemberEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">会员等级</text>
+            <picker mode="selector" range="{{memberLevelOptions}}" value="{{memberLevelIndex}}" bindchange="onMemberLevelChange">
+              <view class="picker-box">{{memberEditor.level}}</view>
+            </picker>
+          </view>
+          <view class="field">
+            <text class="label">状态</text>
+            <picker mode="selector" range="{{statusLabels}}" value="{{memberStatusIndex}}" bindchange="onMemberStatusChange">
+              <view class="picker-box">{{statusLabels[memberStatusIndex]}}</view>
+            </picker>
+          </view>
+          <view class="field">
+            <text class="label">偏好成色</text>
+            <input class="input" placeholder="足金999" value="{{memberEditor.preferredPurity}}" data-key="preferredPurity" bindinput="onMemberEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">来源</text>
+            <input class="input" placeholder="门店登记" value="{{memberEditor.sourceChannel}}" data-key="sourceChannel" bindinput="onMemberEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">累计订单</text>
+            <input class="input" type="number" placeholder="0" value="{{memberEditor.totalOrders}}" data-key="totalOrders" bindinput="onMemberEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">累计回收额</text>
+            <input class="input" type="digit" placeholder="0" value="{{memberEditor.totalRecycleAmount}}" data-key="totalRecycleAmount" bindinput="onMemberEditorInput" />
+          </view>
+        </view>
+        <view class="field">
+          <text class="label">标签</text>
+          <input class="input" placeholder="例如：高净值，待回访" value="{{memberEditor.tagsText}}" data-key="tagsText" bindinput="onMemberEditorInput" />
+        </view>
+        <view class="field">
+          <text class="label">备注</text>
+          <textarea class="textarea" placeholder="填写回访偏好或注意事项" value="{{memberEditor.notes}}" data-key="notes" bindinput="onMemberEditorInput" />
+        </view>
+      </view>
+
+      <view class="editor-actions">
+        <button class="ghost-btn" bindtap="closeMemberEditor">取消</button>
+        <button class="primary-btn" bindtap="saveMemberEditor">保存会员</button>
+      </view>
+    </view>
+  </view>
+</view>

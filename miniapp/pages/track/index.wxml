@@ -1,0 +1,101 @@
+<view class="page track-page">
+  <view class="page-header">
+    <view>
+      <text class="page-title">回收录单</text>
+      <text class="page-sub">{{form.customerName || '未填写客户'}} · {{form.customerPhone || '待补手机号'}}</text>
+    </view>
+    <button class="header-btn" bindtap="goCashier">返回收银</button>
+  </view>
+
+  <view class="step-card">
+    <view class="step-item active"><text>1</text><text>客户</text></view>
+    <view class="step-line"></view>
+    <view class="step-item active"><text>2</text><text>称重</text></view>
+    <view class="step-line"></view>
+    <view class="step-item active"><text>3</text><text>留档</text></view>
+  </view>
+
+  <view class="card form-card">
+    <view class="section-head">
+      <text class="block-title">回收信息</text>
+      <text class="section-note">{{form.purity}}</text>
+    </view>
+    <view class="two-col">
+      <view class="field compact-field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/document.png" mode="aspectFit" /><text class="label">回收品类</text></view>
+        <picker mode="selector" range="{{itemCategories}}" value="{{itemCategoryIndex}}" bindchange="onCategoryChange">
+          <view class="picker-box">
+            <text>{{form.itemCategory}}</text>
+          </view>
+        </picker>
+      </view>
+      <view class="field compact-field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/shield.png" mode="aspectFit" /><text class="label">成色</text></view>
+        <picker mode="selector" range="{{purities}}" value="{{purityIndex}}" bindchange="onPurityChange">
+          <view class="picker-box">
+            <text>{{form.purity}}</text>
+          </view>
+        </picker>
+      </view>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/note.png" mode="aspectFit" /><text class="label">品名</text></view>
+      <input class="input" placeholder="例如：足金手镯 / 金条 / 项链" value="{{form.itemName}}" data-key="itemName" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+    <view class="two-col">
+      <view class="field compact-field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/weight.png" mode="aspectFit" /><text class="label">毛重(g)</text></view>
+        <input class="input" type="digit" placeholder="0.00" value="{{form.grossWeight}}" data-key="grossWeight" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+      </view>
+      <view class="field compact-field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/cold.png" mode="aspectFit" /><text class="label">扣减(g)</text></view>
+        <input class="input" type="digit" placeholder="0.00" value="{{form.deductionWeight}}" data-key="deductionWeight" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+      </view>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/price.png" mode="aspectFit" /><text class="label">回收单价(元/g)</text></view>
+      <input class="input" type="digit" placeholder="请输入回收单价" value="{{form.recyclePrice}}" data-key="recyclePrice" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/note.png" mode="aspectFit" /><text class="label">补充说明</text></view>
+      <textarea class="textarea" placeholder="例如：现场火烧、酸洗、复检通过、等待主管复核" value="{{form.remark}}" data-key="remark" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="card photo-card">
+    <view class="section-head">
+      <view>
+        <text class="block-title">现场照片</text>
+      </view>
+      <text class="required-badge">必填</text>
+    </view>
+    <view class="photo-state {{photoValidation.ok ? 'ok' : 'warn'}}">
+      <text>{{photoValidation.message}}</text>
+    </view>
+    <view class="photo-list">
+      <view class="photo-chip" wx:for="{{form.photos}}" wx:key="id">
+        <text class="photo-index">0{{index + 1}}</text>
+        <text class="photo-name">{{item.name}}</text>
+        <button class="photo-remove" data-index="{{index}}" bindtap="removePhoto">移除</button>
+      </view>
+    </view>
+    <button class="ghost-btn upload-btn" bindtap="addPhotos">添加现场照片</button>
+  </view>
+
+  <view class="summary-card">
+    <view>
+      <text class="summary-label">预计回收</text>
+      <text class="summary-amount">¥{{quote.amountText}}</text>
+    </view>
+    <view class="summary-side">
+      <text>净重 {{quote.netWeightText}}g</text>
+      <text>参考价 ¥{{quote.recyclePriceText}}/g</text>
+      <text>服务费 ¥{{quote.serviceFeeText}}</text>
+    </view>
+  </view>
+
+  <view class="action-grid">
+    <button class="ghost-btn" bindtap="saveOnly">保存录单草稿</button>
+    <button class="primary-btn" bindtap="saveAndConfirm">下一步：回收确认</button>
+  </view>
+</view>

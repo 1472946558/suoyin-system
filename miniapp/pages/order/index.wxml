@@ -1,0 +1,105 @@
+<view class="page order-page">
+  <view class="page-header">
+    <view>
+      <text class="page-title">前台收银</text>
+      <text class="page-sub">{{form.storeName || '未选择门店'}}</text>
+    </view>
+    <text class="header-badge">门店收银</text>
+  </view>
+
+  <view class="step-card">
+    <view class="step-item active"><text>1</text><text>客户</text></view>
+    <view class="step-line"></view>
+    <view class="step-item active"><text>2</text><text>商品</text></view>
+    <view class="step-line"></view>
+    <view class="step-item"><text>3</text><text>回收</text></view>
+  </view>
+
+  <view class="card form-card">
+    <view class="section-head">
+      <text class="block-title">客户信息</text>
+      <text class="section-note">必填</text>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/user.png" mode="aspectFit" /><text class="label">客户姓名</text></view>
+      <input class="input" placeholder="请输入客户姓名" value="{{form.customerName}}" data-key="customerName" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/phone.png" mode="aspectFit" /><text class="label">客户手机号</text></view>
+      <input class="input" type="number" placeholder="请输入客户手机号" value="{{form.customerPhone}}" data-key="customerPhone" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="card form-card">
+    <view class="section-head">
+      <text class="block-title">结算信息</text>
+      <text class="section-note">门店</text>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/route.png" mode="aspectFit" /><text class="label">来源渠道</text></view>
+      <picker mode="selector" range="{{sourceChannels}}" value="{{sourceChannelIndex}}" bindchange="onSourceChannelChange">
+        <view class="picker-box">
+          <text>{{form.sourceChannel}}</text>
+        </view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/enterprise.png" mode="aspectFit" /><text class="label">门店</text></view>
+      <input class="input" placeholder="请输入门店名称" value="{{form.storeName}}" data-key="storeName" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/support.png" mode="aspectFit" /><text class="label">操作员</text></view>
+      <input class="input" placeholder="请输入操作员姓名" value="{{form.operatorName}}" data-key="operatorName" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <view class="field-head"><image class="field-icon" src="/assets/ui/note.png" mode="aspectFit" /><text class="label">备注</text></view>
+      <textarea class="textarea" placeholder="例如：客户已验身份证、等待复检、走银行卡打款" value="{{form.remark}}" data-key="remark" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="card cashier-items-card">
+    <view class="section-head">
+      <text class="block-title">商品明细</text>
+      <button class="mini-add-btn" bindtap="addCashierItem">新增</button>
+    </view>
+    <view class="cashier-item" wx:for="{{cashierSummary.items}}" wx:key="id">
+      <view class="field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/document.png" mode="aspectFit" /><text class="label">商品名称</text></view>
+        <input class="input" placeholder="例如：足金项链 / 古法手镯" value="{{item.name}}" data-index="{{index}}" data-key="name" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onCashierItemInput" />
+      </view>
+      <view class="cashier-inline-grid">
+        <view class="field compact-field">
+          <view class="field-head"><image class="field-icon" src="/assets/ui/list.png" mode="aspectFit" /><text class="label">数量</text></view>
+          <input class="input" type="number" placeholder="1" value="{{item.quantity}}" data-index="{{index}}" data-key="quantity" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onCashierItemInput" />
+        </view>
+        <view class="field compact-field">
+          <view class="field-head"><image class="field-icon" src="/assets/ui/price.png" mode="aspectFit" /><text class="label">单价</text></view>
+          <input class="input" type="digit" placeholder="0.00" value="{{item.unitPrice}}" data-index="{{index}}" data-key="unitPrice" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onCashierItemInput" />
+        </view>
+      </view>
+      <view class="cashier-item-footer">
+        <text class="item-amount">小计 ¥{{item.amountText}}</text>
+        <button wx:if="{{cashierSummary.items.length > 1}}" class="text-btn remove-item-btn" data-index="{{index}}" bindtap="removeCashierItem">删除</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="summary-card">
+    <view>
+      <text class="summary-label">收银合计</text>
+      <text class="summary-amount">¥{{cashierSummary.totalAmountText}}</text>
+    </view>
+    <view class="summary-side">
+      <text>{{cashierSummary.itemCount}} 件</text>
+      <text>{{cashierSummary.items.length}} 行</text>
+    </view>
+  </view>
+
+  <view class="action-grid">
+    <button class="ghost-btn" bindtap="saveDraftOnly">保存草稿</button>
+    <button class="primary-btn" bindtap="goEntry">下一步：回收录单</button>
+  </view>
+  <button class="primary-btn full-btn" loading="{{cashierSubmitting}}" disabled="{{cashierSubmitting}}" bindtap="submitCashierOrder">直接生成收银单</button>
+  <button class="ghost-btn full-btn" bindtap="goConfirm">查看回收确认</button>
+
+</view>

@@ -1,0 +1,14 @@
+{
+  "name": "gold-recycle-miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native WeChat mini program for gold recycle and cashier workflows.",
+  "scripts": {
+    "icons": "node scripts/generate-brand-icons.mjs",
+    "validate": "node scripts/validate-miniapp.mjs"
+  },
+  "devDependencies": {
+    "lucide-static": "^1.14.0",
+    "sharp": "^0.34.5"
+  }
+}

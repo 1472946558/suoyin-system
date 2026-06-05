@@ -1,0 +1,15 @@
+<view class="page store-info-page">
+  <view class="dark-hero store-info-hero">
+    <text class="eyebrow">门店资料</text>
+    <text class="hero-title">{{profile.storeName || '示例门店1'}}</text>
+    <text class="hero-subtitle">用于客户服务、协议展示和门店识别。</text>
+    <button class="profile-main-btn" bindtap="goAccount">返回门店登录</button>
+  </view>
+
+  <view class="card profile-card">
+    <view class="profile-row {{item.className || ''}}" wx:for="{{businessItems}}" wx:key="title">
+      <text class="muted">{{item.title}}</text>
+      <text>{{item.value}}</text>
+    </view>
+  </view>
+</view>

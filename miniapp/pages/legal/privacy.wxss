@@ -1,0 +1,21 @@
+.legal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.legal-title {
+  display: block;
+  color: var(--ink);
+  font-size: 33rpx;
+  font-weight: 900;
+}
+
+.legal-item {
+  padding: 18rpx 20rpx;
+  border-radius: 12rpx;
+  color: var(--ink-2);
+  font-size: 27.5rpx;
+  line-height: 1.65;
+  background: #fffdf8;
+}

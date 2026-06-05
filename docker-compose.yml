@@ -1,0 +1,65 @@
+services:
+  backend:
+    image: suoyin-system-backend:latest
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      HOST: ${HOST:-}
+      PORT: "8080"
+      APP_MODE: ${APP_MODE:-memory}
+      TOKEN_SECRET: ${TOKEN_SECRET:-gold-recycle-dev-secret}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      WECHAT_MINIAPP_APP_ID: ${WECHAT_MINIAPP_APP_ID:-}
+      WECHAT_MINIAPP_APP_SECRET: ${WECHAT_MINIAPP_APP_SECRET:-}
+      WECHAT_API_BASE_URL: ${WECHAT_API_BASE_URL:-https://api.weixin.qq.com}
+      MINIAPP_ALLOW_MOCK_LOGIN: ${MINIAPP_ALLOW_MOCK_LOGIN:-true}
+      STORAGE_ENABLED: ${STORAGE_ENABLED:-}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+      STORAGE_REGION: ${STORAGE_REGION:-}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
+      STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-}
+      STORAGE_PATH_PREFIX: ${STORAGE_PATH_PREFIX:-}
+      STORAGE_UPLOAD_STRATEGY: ${STORAGE_UPLOAD_STRATEGY:-}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
+      STORAGE_ACCESS_KEY_SECRET: ${STORAGE_ACCESS_KEY_SECRET:-}
+      STORAGE_UPLOAD_URL_TTL_SECONDS: ${STORAGE_UPLOAD_URL_TTL_SECONDS:-1800}
+      STORAGE_CALLBACK_ENABLED: ${STORAGE_CALLBACK_ENABLED:-}
+      STORAGE_STATUS_DESCRIPTION: ${STORAGE_STATUS_DESCRIPTION:-}
+      MYSQL_DSN: ${MYSQL_DSN:-}
+      MYSQL_HOST: ${MYSQL_HOST:-mysql}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-miniapp_prod}
+      MYSQL_USER: ${MYSQL_USER:-miniapp_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+      MYSQL_CHARSET: ${MYSQL_CHARSET:-utf8mb4}
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+      REDIS_USER: ${REDIS_USER:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me}
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-miniapp:}
+    ports:
+      - "127.0.0.1:${API_PORT:-18082}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  admin:
+    image: suoyin-system-admin:latest
+    build:
+      context: ./admin
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-14176}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 5s

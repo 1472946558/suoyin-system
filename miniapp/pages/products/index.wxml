@@ -1,0 +1,211 @@
+<view class="page">
+  <view class="dark-hero">
+    <text class="eyebrow">商品管理</text>
+    <text class="hero-title">商品目录</text>
+    <text class="hero-subtitle">维护商品图片、分类、库存和状态，收银或回收录单时可直接带入。</text>
+    <view class="stats-strip">
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.total}}</text>
+        <text class="stats-label">商品数</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.activeCount}}</text>
+        <text class="stats-label">上架中</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.lowStockCount}}</text>
+        <text class="stats-label">低库存</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card subtle-card">
+    <view class="category-tab-row">
+      <view
+        wx:for="{{categoryOptions}}"
+        wx:key="*this"
+        class="category-tab {{filters.category === item ? 'category-tab-active' : ''}}"
+        data-category="{{item}}"
+        bindtap="onCategoryTap"
+      >
+        <text>{{item === 'all' ? '全部' : item}}</text>
+      </view>
+    </view>
+    <view class="field">
+      <text class="label">搜索商品</text>
+      <input class="input" placeholder="商品名 / SKU / 分类 / 标签" value="{{filters.keyword}}" bindinput="onKeywordInput" />
+    </view>
+    <view class="filter-row">
+      <picker mode="selector" range="{{categoryOptions}}" bindchange="onCategoryChange">
+        <view class="picker-box compact-picker">
+          <text>{{filters.category === 'all' ? '全部分类' : filters.category}}</text>
+          <text class="muted">分类</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{statusFilterLabels}}" bindchange="onStatusChange">
+        <view class="picker-box compact-picker">
+          <text>{{statusFilterLabels[statusFilterIndex]}}</text>
+          <text class="muted">状态</text>
+        </view>
+      </picker>
+    </view>
+    <view class="inline-actions filter-actions">
+      <button class="small-btn gold" bindtap="openCreateProduct">新增商品</button>
+      <button class="small-btn" bindtap="reloadProducts" loading="{{loading}}">刷新</button>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>商品宫格</text>
+      <text class="section-kicker">{{loading ? '加载中...' : '点击商品查看详情'}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{filteredProducts.length}}" class="product-list">
+    <button
+      wx:for="{{filteredProducts}}"
+      wx:key="id"
+      class="card product-card {{selectedId === item.id ? 'product-card-active' : ''}}"
+      bindtap="selectProduct"
+      data-id="{{item.id}}"
+    >
+      <view class="product-visual">
+        <image class="product-thumb" src="{{item.imageUrl}}" mode="aspectFit" />
+        <text class="product-stock {{item.stockStatus}}">{{item.stockText}}</text>
+      </view>
+      <view class="product-body">
+        <view>
+          <text class="product-name">{{item.name}}</text>
+          <text class="product-code">{{item.sku}} · {{item.purity}}</text>
+        </view>
+        <view class="product-prices">
+          <text>{{item.benchPriceText}}</text>
+          <text>{{item.categoryLabel}}</text>
+        </view>
+        <view class="chip-wall">
+          <text wx:for="{{item.tags}}" wx:key="*this" class="mini-chip">{{item}}</text>
+        </view>
+      </view>
+    </button>
+  </view>
+
+  <view wx:else class="card empty-card">
+    <text class="empty-title">暂无匹配商品</text>
+    <text class="muted">请新增商品或调整筛选条件。</text>
+  </view>
+
+  <view wx:if="{{selectedProduct}}" class="card detail-card">
+    <view class="row between">
+      <view>
+        <text class="detail-title">{{selectedProduct.name}}</text>
+        <text class="section-kicker">{{selectedProduct.quoteLeadTime}} · 可见门店 {{selectedProduct.storesText}}</text>
+      </view>
+      <text class="status-tag {{selectedProduct.status}}">{{selectedProduct.statusText}}</text>
+    </view>
+
+    <view class="detail-grid">
+      <view class="detail-item">
+        <text class="muted">SKU</text>
+        <text>{{selectedProduct.sku}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">克重模板</text>
+        <text>{{selectedProduct.gramWeight > 0 ? selectedProduct.gramWeight + 'g' : '按实秤录入'}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">参考回收价</text>
+        <text>{{selectedProduct.benchPriceText}}</text>
+      </view>
+      <view class="detail-item">
+        <text class="muted">库存</text>
+        <text>{{selectedProduct.inventory}}</text>
+      </view>
+    </view>
+
+    <view class="notice">
+      <image class="notice-icon" src="/assets/ui/document.png" mode="aspectFit" />
+      <text>{{selectedProduct.recommendedScene}}</text>
+    </view>
+
+    <view class="action-grid">
+      <button class="ghost-btn" bindtap="copySku">复制 SKU</button>
+      <button class="ghost-btn" bindtap="openEditProduct">编辑商品</button>
+      <button class="primary-btn action-primary" bindtap="useForRecycle">带入录单草稿</button>
+    </view>
+  </view>
+
+  <view wx:if="{{productEditorVisible}}" class="drawer-mask" bindtap="closeProductEditor">
+    <view class="editor-drawer" catchtap="noop">
+      <view class="editor-head">
+        <view>
+          <text class="editor-title">{{productEditorTitle}}</text>
+          <text class="editor-subtitle">维护商品展示、库存和回收报价参数</text>
+        </view>
+        <button class="editor-close" bindtap="closeProductEditor">×</button>
+      </view>
+
+      <view class="card form-card">
+        <view class="field">
+          <text class="label">商品名称</text>
+          <input class="input" placeholder="请输入商品名称" value="{{productEditor.name}}" data-key="name" bindinput="onProductEditorInput" />
+        </view>
+        <view class="editor-grid">
+          <view class="field">
+            <text class="label">SKU</text>
+            <input class="input" placeholder="商品编码" value="{{productEditor.sku}}" data-key="sku" bindinput="onProductEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">成色</text>
+            <input class="input" placeholder="足金999" value="{{productEditor.purity}}" data-key="purity" bindinput="onProductEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">分类</text>
+            <picker mode="selector" range="{{productCategoryOptions}}" value="{{productEditorCategoryIndex}}" bindchange="onProductEditorCategory">
+              <view class="picker-box">{{productEditor.category}}</view>
+            </picker>
+          </view>
+          <view class="field">
+            <text class="label">状态</text>
+            <picker mode="selector" range="{{statusLabels}}" value="{{productEditorStatusIndex}}" bindchange="onProductEditorStatus">
+              <view class="picker-box">{{statusLabels[productEditorStatusIndex]}}</view>
+            </picker>
+          </view>
+          <view class="field">
+            <text class="label">库存</text>
+            <input class="input" type="number" placeholder="0" value="{{productEditor.inventory}}" data-key="inventory" bindinput="onProductEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">克重模板</text>
+            <input class="input" type="digit" placeholder="按实秤可填 0" value="{{productEditor.gramWeight}}" data-key="gramWeight" bindinput="onProductEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">参考回收价</text>
+            <input class="input" type="digit" placeholder="元/g" value="{{productEditor.benchPrice}}" data-key="benchPrice" bindinput="onProductEditorInput" />
+          </view>
+          <view class="field">
+            <text class="label">销售参考价</text>
+            <input class="input" type="digit" placeholder="元/g" value="{{productEditor.retailPrice}}" data-key="retailPrice" bindinput="onProductEditorInput" />
+          </view>
+        </view>
+        <view class="field">
+          <text class="label">商品图片</text>
+          <input class="input" placeholder="图片路径或图片链接" value="{{productEditor.imageUrl}}" data-key="imageUrl" bindinput="onProductEditorInput" />
+        </view>
+        <view class="field">
+          <text class="label">标签</text>
+          <input class="input" placeholder="例如：主推，高转化" value="{{productEditor.tagsText}}" data-key="tagsText" bindinput="onProductEditorInput" />
+        </view>
+        <view class="field">
+          <text class="label">使用说明</text>
+          <textarea class="textarea" placeholder="录单时给操作员看的提示" value="{{productEditor.recommendedScene}}" data-key="recommendedScene" bindinput="onProductEditorInput" />
+        </view>
+      </view>
+
+      <view class="editor-actions">
+        <button class="ghost-btn" bindtap="closeProductEditor">取消</button>
+        <button class="primary-btn" bindtap="saveProductEditor">保存商品</button>
+      </view>
+    </view>
+  </view>
+</view>
