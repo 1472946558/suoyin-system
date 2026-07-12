@@ -1,8 +1,21 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-03
+-->
+
 <view class="page">
   <view class="dark-hero">
     <text class="eyebrow">商品管理</text>
     <text class="hero-title">商品目录</text>
-    <text class="hero-subtitle">维护商品图片、分类、库存和状态，收银或回收录单时可直接带入。</text>
+    <text class="hero-subtitle">维护商品图片、分类、报价和展示状态；这里不代表门店经营总库存。</text>
     <view class="stats-strip">
       <view class="stats-pill">
         <text class="stats-value">{{stats.total}}</text>
@@ -14,7 +27,7 @@
       </view>
       <view class="stats-pill">
         <text class="stats-value">{{stats.lowStockCount}}</text>
-        <text class="stats-label">低库存</text>
+        <text class="stats-label">低数量</text>
       </view>
     </view>
   </view>
@@ -58,7 +71,7 @@
   <view class="section-title">
     <view>
       <text>商品宫格</text>
-      <text class="section-kicker">{{loading ? '加载中...' : '点击商品查看详情'}}</text>
+      <text class="section-kicker">{{loading ? '加载中...' : '点击商品进入详情'}}</text>
     </view>
   </view>
 
@@ -118,7 +131,7 @@
         <text>{{selectedProduct.benchPriceText}}</text>
       </view>
       <view class="detail-item">
-        <text class="muted">库存</text>
+        <text class="muted">商品数量</text>
         <text>{{selectedProduct.inventory}}</text>
       </view>
     </view>
@@ -135,77 +148,4 @@
     </view>
   </view>
 
-  <view wx:if="{{productEditorVisible}}" class="drawer-mask" bindtap="closeProductEditor">
-    <view class="editor-drawer" catchtap="noop">
-      <view class="editor-head">
-        <view>
-          <text class="editor-title">{{productEditorTitle}}</text>
-          <text class="editor-subtitle">维护商品展示、库存和回收报价参数</text>
-        </view>
-        <button class="editor-close" bindtap="closeProductEditor">×</button>
-      </view>
-
-      <view class="card form-card">
-        <view class="field">
-          <text class="label">商品名称</text>
-          <input class="input" placeholder="请输入商品名称" value="{{productEditor.name}}" data-key="name" bindinput="onProductEditorInput" />
-        </view>
-        <view class="editor-grid">
-          <view class="field">
-            <text class="label">SKU</text>
-            <input class="input" placeholder="商品编码" value="{{productEditor.sku}}" data-key="sku" bindinput="onProductEditorInput" />
-          </view>
-          <view class="field">
-            <text class="label">成色</text>
-            <input class="input" placeholder="足金999" value="{{productEditor.purity}}" data-key="purity" bindinput="onProductEditorInput" />
-          </view>
-          <view class="field">
-            <text class="label">分类</text>
-            <picker mode="selector" range="{{productCategoryOptions}}" value="{{productEditorCategoryIndex}}" bindchange="onProductEditorCategory">
-              <view class="picker-box">{{productEditor.category}}</view>
-            </picker>
-          </view>
-          <view class="field">
-            <text class="label">状态</text>
-            <picker mode="selector" range="{{statusLabels}}" value="{{productEditorStatusIndex}}" bindchange="onProductEditorStatus">
-              <view class="picker-box">{{statusLabels[productEditorStatusIndex]}}</view>
-            </picker>
-          </view>
-          <view class="field">
-            <text class="label">库存</text>
-            <input class="input" type="number" placeholder="0" value="{{productEditor.inventory}}" data-key="inventory" bindinput="onProductEditorInput" />
-          </view>
-          <view class="field">
-            <text class="label">克重模板</text>
-            <input class="input" type="digit" placeholder="按实秤可填 0" value="{{productEditor.gramWeight}}" data-key="gramWeight" bindinput="onProductEditorInput" />
-          </view>
-          <view class="field">
-            <text class="label">参考回收价</text>
-            <input class="input" type="digit" placeholder="元/g" value="{{productEditor.benchPrice}}" data-key="benchPrice" bindinput="onProductEditorInput" />
-          </view>
-          <view class="field">
-            <text class="label">销售参考价</text>
-            <input class="input" type="digit" placeholder="元/g" value="{{productEditor.retailPrice}}" data-key="retailPrice" bindinput="onProductEditorInput" />
-          </view>
-        </view>
-        <view class="field">
-          <text class="label">商品图片</text>
-          <input class="input" placeholder="图片路径或图片链接" value="{{productEditor.imageUrl}}" data-key="imageUrl" bindinput="onProductEditorInput" />
-        </view>
-        <view class="field">
-          <text class="label">标签</text>
-          <input class="input" placeholder="例如：主推，高转化" value="{{productEditor.tagsText}}" data-key="tagsText" bindinput="onProductEditorInput" />
-        </view>
-        <view class="field">
-          <text class="label">使用说明</text>
-          <textarea class="textarea" placeholder="录单时给操作员看的提示" value="{{productEditor.recommendedScene}}" data-key="recommendedScene" bindinput="onProductEditorInput" />
-        </view>
-      </view>
-
-      <view class="editor-actions">
-        <button class="ghost-btn" bindtap="closeProductEditor">取消</button>
-        <button class="primary-btn" bindtap="saveProductEditor">保存商品</button>
-      </view>
-    </view>
-  </view>
 </view>

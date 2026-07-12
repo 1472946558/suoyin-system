@@ -1,7 +1,20 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-05
+-->
+
 <view class="page store-info-page">
   <view class="dark-hero store-info-hero">
     <text class="eyebrow">门店资料</text>
-    <text class="hero-title">{{profile.storeName || '示例门店1'}}</text>
+    <text class="hero-title">{{profile.storeName || '待同步门店'}}</text>
     <text class="hero-subtitle">用于客户服务、协议展示和门店识别。</text>
     <button class="profile-main-btn" bindtap="goAccount">返回门店登录</button>
   </view>

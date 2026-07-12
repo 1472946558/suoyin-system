@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: persistence.go
+ * 功能描述: 业务模块实现
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-11
+ */
+
 package app
 
 import (
@@ -35,12 +48,16 @@ var persistenceStatements = []string{
 			status VARCHAR(32) NOT NULL,
 			customer_name VARCHAR(128) NOT NULL DEFAULT '',
 			customer_phone VARCHAR(32) NOT NULL DEFAULT '',
+			payment_method VARCHAR(32) NOT NULL DEFAULT '',
 			total_amount DECIMAL(12,2) NOT NULL,
 		paid_amount DECIMAL(12,2) NOT NULL,
 		remark TEXT NOT NULL,
 		items_json JSON NOT NULL,
 		created_by VARCHAR(128) NOT NULL,
 		created_at DATETIME(6) NOT NULL,
+		void_reason TEXT NOT NULL,
+		voided_by VARCHAR(128) NOT NULL DEFAULT '',
+		voided_at DATETIME(6) NULL,
 		updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 	`CREATE TABLE IF NOT EXISTS recycle_orders (
@@ -83,6 +100,32 @@ var persistenceStatements = []string{
 		INDEX idx_recycle_attachments_order_id (order_id)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 }
+
+const saveCashierOrderStatement = `
+		INSERT INTO cashier_orders (
+			id, order_no, org_id, store_id, store_name, status,
+			customer_name, customer_phone, payment_method,
+			total_amount, paid_amount, remark, items_json, created_by, created_at,
+			void_reason, voided_by, voided_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON DUPLICATE KEY UPDATE
+			order_no = VALUES(order_no),
+			org_id = VALUES(org_id),
+			store_id = VALUES(store_id),
+			store_name = VALUES(store_name),
+			status = VALUES(status),
+			customer_name = VALUES(customer_name),
+			customer_phone = VALUES(customer_phone),
+			payment_method = VALUES(payment_method),
+			total_amount = VALUES(total_amount),
+			paid_amount = VALUES(paid_amount),
+			remark = VALUES(remark),
+			items_json = VALUES(items_json),
+			created_by = VALUES(created_by),
+			created_at = VALUES(created_at),
+			void_reason = VALUES(void_reason),
+			voided_by = VALUES(voided_by),
+			voided_at = VALUES(voided_at)`
 
 func newPersistence(cfg Config) (*Persistence, error) {
 	if strings.ToLower(strings.TrimSpace(cfg.Mode)) != "persistent" {
@@ -160,6 +203,18 @@ func (p *Persistence) ensureSchema(ctx context.Context) error {
 	}
 	if err := p.ensureColumn(ctx, "cashier_orders", "customer_phone", "VARCHAR(32) NOT NULL DEFAULT ''"); err != nil {
 		return fmt.Errorf("ensure cashier customer_phone column: %w", err)
+	}
+	if err := p.ensureColumn(ctx, "cashier_orders", "payment_method", "VARCHAR(32) NOT NULL DEFAULT ''"); err != nil {
+		return fmt.Errorf("ensure cashier payment_method column: %w", err)
+	}
+	if err := p.ensureColumn(ctx, "cashier_orders", "void_reason", "TEXT NOT NULL"); err != nil {
+		return fmt.Errorf("ensure cashier void_reason column: %w", err)
+	}
+	if err := p.ensureColumn(ctx, "cashier_orders", "voided_by", "VARCHAR(128) NOT NULL DEFAULT ''"); err != nil {
+		return fmt.Errorf("ensure cashier voided_by column: %w", err)
+	}
+	if err := p.ensureColumn(ctx, "cashier_orders", "voided_at", "DATETIME(6) NULL"); err != nil {
+		return fmt.Errorf("ensure cashier voided_at column: %w", err)
 	}
 	return nil
 }
@@ -341,7 +396,9 @@ func (p *Persistence) deleteSession(ctx context.Context, token string) error {
 func (p *Persistence) loadCashierOrders(ctx context.Context) ([]CashierOrder, error) {
 	rows, err := p.db.QueryContext(ctx, `
 		SELECT id, order_no, org_id, store_id, store_name, status,
-		       customer_name, customer_phone, total_amount, paid_amount, remark, items_json, created_by, created_at
+		       customer_name, customer_phone, payment_method,
+		       total_amount, paid_amount, remark, items_json, created_by, created_at,
+		       void_reason, voided_by, voided_at
 		FROM cashier_orders
 		ORDER BY created_at ASC`)
 	if err != nil {
@@ -353,6 +410,7 @@ func (p *Persistence) loadCashierOrders(ctx context.Context) ([]CashierOrder, er
 	for rows.Next() {
 		var order CashierOrder
 		var itemsJSON []byte
+		var voidedAt sql.NullTime
 		if err := rows.Scan(
 			&order.ID,
 			&order.OrderNo,
@@ -362,17 +420,24 @@ func (p *Persistence) loadCashierOrders(ctx context.Context) ([]CashierOrder, er
 			&order.Status,
 			&order.CustomerName,
 			&order.CustomerPhone,
+			&order.PaymentMethod,
 			&order.TotalAmount,
 			&order.PaidAmount,
 			&order.Remark,
 			&itemsJSON,
 			&order.CreatedBy,
 			&order.CreatedAt,
+			&order.VoidReason,
+			&order.VoidedBy,
+			&voidedAt,
 		); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(itemsJSON, &order.Items); err != nil {
 			return nil, err
+		}
+		if voidedAt.Valid {
+			order.VoidedAt = &voidedAt.Time
 		}
 		orders = append(orders, order)
 	}
@@ -385,25 +450,7 @@ func (p *Persistence) saveCashierOrder(ctx context.Context, order CashierOrder) 
 		return err
 	}
 
-	_, err = p.db.ExecContext(ctx, `
-		INSERT INTO cashier_orders (
-			id, order_no, org_id, store_id, store_name, status,
-			customer_name, customer_phone, total_amount, paid_amount, remark, items_json, created_by, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE
-			order_no = VALUES(order_no),
-			org_id = VALUES(org_id),
-			store_id = VALUES(store_id),
-			store_name = VALUES(store_name),
-			status = VALUES(status),
-			customer_name = VALUES(customer_name),
-			customer_phone = VALUES(customer_phone),
-			total_amount = VALUES(total_amount),
-			paid_amount = VALUES(paid_amount),
-			remark = VALUES(remark),
-			items_json = VALUES(items_json),
-			created_by = VALUES(created_by),
-			created_at = VALUES(created_at)`,
+	_, err = p.db.ExecContext(ctx, saveCashierOrderStatement,
 		order.ID,
 		order.OrderNo,
 		order.OrgID,
@@ -412,12 +459,16 @@ func (p *Persistence) saveCashierOrder(ctx context.Context, order CashierOrder) 
 		order.Status,
 		order.CustomerName,
 		order.CustomerPhone,
+		order.PaymentMethod,
 		order.TotalAmount,
 		order.PaidAmount,
 		order.Remark,
 		itemsJSON,
 		order.CreatedBy,
 		order.CreatedAt,
+		order.VoidReason,
+		order.VoidedBy,
+		order.VoidedAt,
 	)
 	return err
 }

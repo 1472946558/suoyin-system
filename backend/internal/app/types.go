@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: types.go
+ * 功能描述: 业务模块实现
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-10
+ */
+
 package app
 
 import "time"
@@ -33,6 +46,15 @@ type Config struct {
 	StorageCallbackEnabled bool
 	StorageCallbackSet     bool
 	StorageStatus          string
+	GoldPriceLiveEnabled   bool
+	GoldPriceAPIURL        string
+	GoldFXAPIURL           string
+	GoldPriceCacheTTL      int
+	GoldPriceHTTPTimeout   int
+	GoldPriceCNYPerGram    float64
+	GoldPriceXAUUSD        float64
+	GoldPriceUSDCNY        float64
+	GoldPriceUpdatedAt     string
 }
 
 func (c Config) ListenAddr() string {
@@ -107,6 +129,8 @@ type Session struct {
 }
 
 type CashierOrderLine struct {
+	ProductID string  `json:"productId,omitempty"`
+	SKU       string  `json:"sku,omitempty"`
 	Name      string  `json:"name"`
 	Quantity  int     `json:"quantity"`
 	UnitPrice float64 `json:"unitPrice"`
@@ -129,6 +153,9 @@ type CashierOrder struct {
 	Items         []CashierOrderLine `json:"items"`
 	CreatedBy     string             `json:"createdBy"`
 	CreatedAt     time.Time          `json:"createdAt"`
+	VoidReason    string             `json:"voidReason,omitempty"`
+	VoidedBy      string             `json:"voidedBy,omitempty"`
+	VoidedAt      *time.Time         `json:"voidedAt,omitempty"`
 }
 
 type RecycleItem struct {
@@ -155,6 +182,9 @@ type RecycleOrder struct {
 	CreatedBy       string            `json:"createdBy"`
 	CreatedAt       time.Time         `json:"createdAt"`
 	ConfirmedAt     *time.Time        `json:"confirmedAt,omitempty"`
+	CancelReason    string            `json:"cancelReason,omitempty"`
+	CancelledBy     string            `json:"cancelledBy,omitempty"`
+	CancelledAt     *time.Time        `json:"cancelledAt,omitempty"`
 }
 
 type AttachmentAsset struct {
@@ -174,6 +204,8 @@ type AttachmentAsset struct {
 	Status          string    `json:"status"`
 	UploadedBy      string    `json:"uploadedBy"`
 	UploadedAt      time.Time `json:"uploadedAt"`
+	HasPreview      bool      `json:"hasPreview"`
+	PreviewURL      string    `json:"previewUrl"`
 }
 
 type DashboardSummary struct {
@@ -213,6 +245,98 @@ type InventorySummary struct {
 	TotalInventory       int             `json:"totalInventory"`
 	EstimatedRetailValue float64         `json:"estimatedRetailValue"`
 	Items                []InventoryItem `json:"items"`
+}
+
+type InventoryLedgerItem struct {
+	ID         string    `json:"id"`
+	OrgID      string    `json:"orgId"`
+	StoreID    string    `json:"storeId"`
+	StoreName  string    `json:"storeName"`
+	StyleNo    string    `json:"styleNo"`
+	Name       string    `json:"name"`
+	Category   string    `json:"category"`
+	Purity     string    `json:"purity"`
+	PieceCount int       `json:"pieceCount"`
+	WeightGram float64   `json:"weightGram"`
+	CostAmount float64   `json:"costAmount"`
+	Status     string    `json:"status"`
+	Source     string    `json:"source"`
+	Remark     string    `json:"remark"`
+	CreatedBy  string    `json:"createdBy"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
+type InventoryLedgerSummary struct {
+	OrgID             string                `json:"orgId"`
+	VisibleStoreCount int                   `json:"visibleStoreCount"`
+	TotalStyleCount   int                   `json:"totalStyleCount"`
+	TotalPieceCount   int                   `json:"totalPieceCount"`
+	TotalWeightGram   float64               `json:"totalWeightGram"`
+	TotalCostAmount   float64               `json:"totalCostAmount"`
+	Items             []InventoryLedgerItem `json:"items"`
+}
+
+type MaterialLedgerItem struct {
+	ID                  string     `json:"id"`
+	OrgID               string     `json:"orgId"`
+	StoreID             string     `json:"storeId"`
+	StoreName           string     `json:"storeName"`
+	Type                string     `json:"type"`
+	OrderNo             string     `json:"orderNo"`
+	CustomerName        string     `json:"customerName"`
+	Category            string     `json:"category"`
+	Purity              string     `json:"purity"`
+	WeightGram          float64    `json:"weightGram"`
+	Amount              float64    `json:"amount"`
+	RemainingWeightGram float64    `json:"remainingWeightGram"`
+	Status              string     `json:"status"`
+	DueDate             string     `json:"dueDate"`
+	Remark              string     `json:"remark"`
+	Source              string     `json:"source"`
+	CreatedBy           string     `json:"createdBy"`
+	CreatedAt           time.Time  `json:"createdAt"`
+	OutboundAt          *time.Time `json:"outboundAt,omitempty"`
+	OutboundBy          string     `json:"outboundBy,omitempty"`
+	OutboundRemark      string     `json:"outboundRemark,omitempty"`
+}
+
+type MaterialPurityStat struct {
+	Purity     string  `json:"purity"`
+	Count      int     `json:"count"`
+	WeightGram float64 `json:"weightGram"`
+	Amount     float64 `json:"amount"`
+}
+
+type MaterialLedgerSummary struct {
+	OrgID               string               `json:"orgId"`
+	VisibleStoreCount   int                  `json:"visibleStoreCount"`
+	TodayWeightGram     float64              `json:"todayWeightGram"`
+	TodayAmount         float64              `json:"todayAmount"`
+	MonthWeightGram     float64              `json:"monthWeightGram"`
+	MonthAmount         float64              `json:"monthAmount"`
+	RemainingWeightGram float64              `json:"remainingWeightGram"`
+	PledgeCount         int                  `json:"pledgeCount"`
+	PledgeAmount        float64              `json:"pledgeAmount"`
+	Items               []MaterialLedgerItem `json:"items"`
+	PurityStats         []MaterialPurityStat `json:"purityStats"`
+}
+
+type GoldReferencePriceItem struct {
+	Purity string  `json:"purity"`
+	Price  float64 `json:"price"`
+	Trend  string  `json:"trend"`
+	Label  string  `json:"label"`
+}
+
+type GoldReferencePriceSnapshot struct {
+	Source          string                   `json:"source"`
+	SourceText      string                   `json:"sourceText"`
+	BaseCNYPerGram  float64                  `json:"baseCnyPerGram"`
+	XAUUSD          float64                  `json:"xauUsd,omitempty"`
+	USDCNY          float64                  `json:"usdCny,omitempty"`
+	UpdatedAt       string                   `json:"updatedAt"`
+	ReferenceNote   string                   `json:"referenceNote"`
+	ReferencePrices []GoldReferencePriceItem `json:"referencePrices"`
 }
 
 type DailyReportStoreMetric struct {

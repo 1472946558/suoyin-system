@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: catalogStore.js
+ * 功能描述: 工具函数
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-10
+ */
+
 const MEMBER_KEY = "gr_member_records";
 const MEMBER_META_KEY = "gr_member_records_meta";
 const PRODUCT_KEY = "gr_product_records";
@@ -14,16 +27,8 @@ function canUseStorage() {
   return typeof wx !== "undefined" && typeof wx.getStorageSync === "function";
 }
 
-function hasOperatorToken() {
-  if (!canUseStorage()) {
-    return false;
-  }
-  const profile = wx.getStorageSync("gr_operator_profile") || {};
-  return Boolean(profile.token);
-}
-
 function shouldUseLocalCatalogData() {
-  return appConfig.mode === "offline" || !hasOperatorToken();
+  return appConfig.mode === "offline";
 }
 
 function pad(value) {
@@ -120,7 +125,7 @@ function buildMemberSeed() {
       lastVisitAt: "2026-05-10 16:20",
       preferredPurity: "足金999",
       sourceChannel: "熟客复购",
-      managerName: "示例店长",
+      managerName: "本地测试店长",
       idVerified: true,
       tags: ["高净值", "可回访", "到店复秤"],
       notes: "偏好工作日下午到店，成交前会要求复秤拍照。"
@@ -136,7 +141,7 @@ function buildMemberSeed() {
       lastVisitAt: "2026-05-08 11:15",
       preferredPurity: "18K",
       sourceChannel: "企业回访",
-      managerName: "示例店长",
+      managerName: "本地测试店长",
       idVerified: true,
       tags: ["银行卡结算", "待回访"],
       notes: "对到账时效敏感，偏好银行卡。"
@@ -176,14 +181,14 @@ function buildProductSeed() {
       status: "active",
       inventory: 9,
       stockStatus: "normal",
-      stores: ["示例门店1", "示例门店2"],
+      stores: ["本地测试门店1", "本地测试门店2"],
       tags: ["主推", "高转化"],
       recommendedScene: "适合门店当面议价、快速复秤录单。",
       quoteLeadTime: "30 秒内可完成报价"
     },
     {
       id: "product-002",
-      name: "18K 项链回收模板",
+      name: "18K 项链",
       sku: "GJG-KG-018",
       category: "K金",
       categoryTab: "K金",
@@ -195,9 +200,9 @@ function buildProductSeed() {
       status: "active",
       inventory: 4,
       stockStatus: "low",
-      stores: ["示例门店1"],
+      stores: ["本地测试门店1"],
       tags: ["K金", "常见回收"],
-      recommendedScene: "适合员工快速带入常见 K 金参数。",
+      recommendedScene: "适合门店快速带入常见 K 金参数。",
       quoteLeadTime: "60 秒内完成复检"
     },
     {
@@ -214,7 +219,7 @@ function buildProductSeed() {
       status: "draft",
       inventory: 2,
       stockStatus: "review",
-      stores: ["示例门店2"],
+      stores: ["本地测试门店2"],
       tags: ["大额", "待复核"],
       recommendedScene: "大额回收建议店长复核并走双人确认。",
       quoteLeadTime: "需二次审批"
@@ -233,7 +238,7 @@ function buildProductSeed() {
       status: "disabled",
       inventory: 0,
       stockStatus: "disabled",
-      stores: ["示例门店1"],
+      stores: ["本地测试门店1"],
       tags: ["临时下架"],
       recommendedScene: "等待总部调整损耗规则后重新启用。",
       quoteLeadTime: "暂不建议使用"
@@ -244,157 +249,27 @@ function buildProductSeed() {
 function seedCatalog() {
   if (!getMembers().length) {
     const members = buildMemberSeed();
-    const seededAt = formatTimestamp();
     saveMembers(members);
     saveMembersMeta({
       sourceType: "local",
-      updatedAt: seededAt,
+      updatedAt: formatTimestamp(),
       itemCount: members.length,
       lastError: "",
       lastErrorAt: ""
     });
-  } else if (!getMembersMeta().sourceType) {
-    saveMembersMeta(Object.assign({}, getMembersMeta(), {
-      sourceType: "local",
-      updatedAt: formatTimestamp(),
-      itemCount: getMembers().length
-    }));
-  } else {
-    const members = getMembers();
-    const migratedMembers = members.map(function(item) {
-      return Object.assign({}, item, {
-        managerName: item.managerName === "示例店长" ? "示例店长" : item.managerName
-      });
-    });
-    if (JSON.stringify(members) !== JSON.stringify(migratedMembers)) {
-      saveMembers(migratedMembers);
-    }
   }
 
   if (!getProducts().length) {
     const products = buildProductSeed();
-    const seededAt = formatTimestamp();
     saveProducts(products);
     saveProductsMeta({
       sourceType: "local",
-      updatedAt: seededAt,
+      updatedAt: formatTimestamp(),
       itemCount: products.length,
       lastError: "",
       lastErrorAt: ""
     });
-  } else if (!getProductsMeta().sourceType) {
-    saveProductsMeta(Object.assign({}, getProductsMeta(), {
-      sourceType: "local",
-      updatedAt: formatTimestamp(),
-      itemCount: getProducts().length
-    }));
-  } else {
-    const products = getProducts();
-    const migratedProducts = products.map(function(item) {
-      const stores = Array.isArray(item.stores) ? item.stores.map(function(storeName) {
-        if (storeName === "示例门店1") return "示例门店1";
-        if (storeName === "示例门店2") return "示例门店2";
-        return storeName;
-      }) : item.stores;
-      return Object.assign({}, item, { stores });
-    });
-    if (JSON.stringify(products) !== JSON.stringify(migratedProducts)) {
-      saveProducts(migratedProducts);
-    }
   }
-}
-
-function saveMemberRecord(member) {
-  const current = getMembers();
-  const id = member.id || createCatalogId("member");
-  const nextMember = Object.assign({
-    id,
-    name: "",
-    phone: "",
-    level: "普通会员",
-    status: "active",
-    totalOrders: 0,
-    totalRecycleAmount: 0,
-    lastVisitAt: formatTimestamp(),
-    preferredPurity: "足金999",
-    sourceChannel: "门店登记",
-    managerName: "",
-    idVerified: false,
-    tags: [],
-    notes: ""
-  }, member, {
-    id,
-    tags: Array.isArray(member.tags)
-      ? member.tags
-      : String(member.tagsText || member.tags || "")
-        .split(/[,\s，、]+/)
-        .map(function(item) { return item.trim(); })
-        .filter(Boolean)
-  });
-  const list = [nextMember].concat(current.filter(function(item) {
-    return item.id !== id;
-  }));
-  saveMembers(list);
-  saveMembersMeta({
-    sourceType: "local",
-    updatedAt: formatTimestamp(),
-    itemCount: list.length,
-    lastError: "",
-    lastErrorAt: ""
-  });
-  return deepCopy(nextMember);
-}
-
-function saveProductRecord(product) {
-  const current = getProducts();
-  const id = product.id || createCatalogId("product");
-  const inventory = Number(product.inventory || 0);
-  const status = product.status || "active";
-  const nextProduct = Object.assign({
-    id,
-    name: "",
-    sku: "",
-    category: "金饰",
-    categoryTab: "黄金饰品",
-    imageUrl: "/assets/ui/price.png",
-    purity: "足金999",
-    benchPrice: 0,
-    retailPrice: 0,
-    gramWeight: 0,
-    status,
-    inventory,
-    stockStatus: status === "disabled" ? "disabled" : (inventory > 0 && inventory <= 4 ? "low" : "normal"),
-    stores: [appConfig.storeName],
-    tags: [],
-    recommendedScene: "适合门店快速带入录单。",
-    quoteLeadTime: "当场可报价"
-  }, product, {
-    id,
-    benchPrice: Number(product.benchPrice || 0),
-    retailPrice: Number(product.retailPrice || 0),
-    gramWeight: Number(product.gramWeight || 0),
-    inventory,
-    stockStatus: status === "disabled" ? "disabled" : (inventory > 0 && inventory <= 4 ? "low" : "normal"),
-    stores: Array.isArray(product.stores) && product.stores.length ? product.stores : [appConfig.storeName],
-    tags: Array.isArray(product.tags)
-      ? product.tags
-      : String(product.tagsText || product.tags || "")
-        .split(/[,\s，、]+/)
-        .map(function(item) { return item.trim(); })
-        .filter(Boolean)
-  });
-  const list = [nextProduct].concat(current.filter(function(item) {
-    return item.id !== id;
-  }));
-  saveProducts(list);
-  saveProductsMeta({
-    sourceType: "local",
-    updatedAt: formatTimestamp(),
-    itemCount: list.length,
-    lastError: "",
-    lastErrorAt: ""
-  });
-  return deepCopy(nextProduct);
 }
 
 function getMemberStats(members) {
@@ -434,16 +309,14 @@ function normalizeCatalogList(payload) {
   if (Array.isArray(data)) {
     return data;
   }
-
   if (data && Array.isArray(data.items)) {
     return data.items;
   }
-
   return [];
 }
 
-function isTrustedApiCache(meta, list) {
-  return !!(meta && meta.sourceType === "api" && Array.isArray(list));
+function normalizeDetailPayload(payload) {
+  return payload && payload.data ? payload.data : payload;
 }
 
 function buildSourceMeta(sourceType, extra) {
@@ -457,6 +330,21 @@ function buildSourceMeta(sourceType, extra) {
     itemCount: 0,
     legacyDataBlocked: false
   }, extra || {});
+}
+
+function isTrustedApiCache(meta, list) {
+  return !!(meta && meta.sourceType === "api" && Array.isArray(list));
+}
+
+function saveApiCatalogSnapshot(list, saveList, saveMeta) {
+  saveList(list);
+  saveMeta({
+    sourceType: "api",
+    updatedAt: formatTimestamp(),
+    itemCount: list.length,
+    lastError: "",
+    lastErrorAt: ""
+  });
 }
 
 function createCatalogLoader(options) {
@@ -478,10 +366,10 @@ function createCatalogLoader(options) {
       const localMeta = getMeta();
       return Promise.resolve({
         items: deepCopy(localItems),
-        meta: buildSourceMeta(localMeta.sourceType === "api" ? "cache" : "local", {
-          updatedAt: localMeta.updatedAt || "",
-          lastError: localMeta.lastError || "",
-          lastErrorAt: localMeta.lastErrorAt || "",
+        meta: buildSourceMeta("local", {
+          updatedAt: localMeta.updatedAt || formatTimestamp(),
+          lastError: "",
+          lastErrorAt: "",
           itemCount: localItems.length
         })
       });
@@ -489,28 +377,21 @@ function createCatalogLoader(options) {
 
     return request({ endpoint }).then(function(payload) {
       const list = normalizeCatalogList(payload);
-      const nextMeta = {
-        sourceType: "api",
-        updatedAt: formatTimestamp(),
-        itemCount: list.length,
-        lastError: "",
-        lastErrorAt: ""
-      };
-      saveList(list);
-      saveMeta(nextMeta);
+      saveApiCatalogSnapshot(list, saveList, saveMeta);
       return {
         items: deepCopy(list),
-        meta: buildSourceMeta("api", nextMeta)
+        meta: buildSourceMeta("api", {
+          updatedAt: formatTimestamp(),
+          itemCount: list.length
+        })
       };
     }).catch(function(error) {
       const errorMessage = formatRequestError(error);
       const errorTime = formatTimestamp();
-      const persistedMeta = Object.assign({}, cachedMeta, {
+      saveMeta(Object.assign({}, cachedMeta, {
         lastError: errorMessage,
         lastErrorAt: errorTime
-      });
-
-      saveMeta(persistedMeta);
+      }));
 
       if (isTrustedApiCache(cachedMeta, cachedItems)) {
         return {
@@ -524,23 +405,10 @@ function createCatalogLoader(options) {
         };
       }
 
-      seedCatalog();
-      const localItems = getList();
-      if (localItems.length) {
-        return {
-          items: deepCopy(localItems),
-          meta: buildSourceMeta("local", {
-            updatedAt: formatTimestamp(),
-            lastError: errorMessage,
-            lastErrorAt: errorTime,
-            itemCount: localItems.length
-          })
-        };
-      }
-
       return {
         items: [],
         meta: buildSourceMeta("error", {
+          updatedAt: "",
           lastError: errorMessage,
           lastErrorAt: errorTime,
           itemCount: 0,
@@ -549,6 +417,207 @@ function createCatalogLoader(options) {
       };
     });
   };
+}
+
+function getMemberByIdOnline(id) {
+  if (shouldUseLocalCatalogData()) {
+    seedCatalog();
+    return Promise.resolve(deepCopy(getMembers().find(function(item) {
+      return item.id === id;
+    }) || null));
+  }
+
+  return request({
+    endpoint: appConfig.endpoints.memberDetail,
+    params: { id }
+  }).then(function(payload) {
+    const member = normalizeDetailPayload(payload);
+    if (!member || !member.id) {
+      return null;
+    }
+    const list = [member].concat(getMembers().filter(function(item) {
+      return item.id !== member.id;
+    }));
+    saveApiCatalogSnapshot(list, saveMembers, saveMembersMeta);
+    return deepCopy(member);
+  });
+}
+
+function getProductByIdOnline(id) {
+  if (shouldUseLocalCatalogData()) {
+    seedCatalog();
+    return Promise.resolve(deepCopy(getProducts().find(function(item) {
+      return item.id === id;
+    }) || null));
+  }
+
+  return request({
+    endpoint: appConfig.endpoints.productDetail,
+    params: { id }
+  }).then(function(payload) {
+    const product = normalizeDetailPayload(payload);
+    if (!product || !product.id) {
+      return null;
+    }
+    const list = [product].concat(getProducts().filter(function(item) {
+      return item.id !== product.id;
+    }));
+    saveApiCatalogSnapshot(list, saveProducts, saveProductsMeta);
+    return deepCopy(product);
+  });
+}
+
+function normalizeTags(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+  return String(value || "")
+    .split(/[,\s，、]+/)
+    .map(function(item) { return item.trim(); })
+    .filter(Boolean);
+}
+
+function saveMemberRecord(member) {
+  if (shouldUseLocalCatalogData()) {
+    const current = getMembers();
+    const id = member.id || createCatalogId("member");
+    const nextMember = Object.assign({
+      id,
+      name: "",
+      phone: "",
+      level: "普通会员",
+      status: "active",
+      totalOrders: 0,
+      totalRecycleAmount: 0,
+      lastVisitAt: formatTimestamp(),
+      preferredPurity: "足金999",
+      sourceChannel: "门店登记",
+      managerName: "",
+      idVerified: false,
+      tags: [],
+      notes: ""
+    }, member, {
+      id,
+      tags: normalizeTags(member.tags || member.tagsText)
+    });
+    const list = [nextMember].concat(current.filter(function(item) {
+      return item.id !== id;
+    }));
+    saveMembers(list);
+    saveMembersMeta({
+      sourceType: "local",
+      updatedAt: formatTimestamp(),
+      itemCount: list.length,
+      lastError: "",
+      lastErrorAt: ""
+    });
+    return Promise.resolve(deepCopy(nextMember));
+  }
+
+  return request({
+    endpoint: member.id ? appConfig.endpoints.memberDetail : appConfig.endpoints.createMember,
+    method: member.id ? "PUT" : "POST",
+    params: member.id ? { id: member.id } : {},
+    data: {
+      name: String(member.name || "").trim(),
+      phone: String(member.phone || "").trim(),
+      level: String(member.level || "普通会员").trim(),
+      status: String(member.status || "active").trim(),
+      preferredPurity: String(member.preferredPurity || "").trim(),
+      sourceChannel: String(member.sourceChannel || "").trim(),
+      managerName: String(member.managerName || "").trim(),
+      idVerified: !!member.idVerified,
+      tags: normalizeTags(member.tags || member.tagsText),
+      notes: String(member.notes || "").trim()
+    }
+  }).then(function(payload) {
+    const savedMember = normalizeDetailPayload(payload);
+    const list = [savedMember].concat(getMembers().filter(function(item) {
+      return item.id !== savedMember.id;
+    }));
+    saveApiCatalogSnapshot(list, saveMembers, saveMembersMeta);
+    return deepCopy(savedMember);
+  });
+}
+
+function saveProductRecord(product) {
+  const inventory = Number(product.inventory || 0);
+  const status = String(product.status || "active").trim();
+  const stockStatus = status === "disabled" ? "disabled" : (inventory > 0 && inventory <= 4 ? "low" : "normal");
+
+  if (shouldUseLocalCatalogData()) {
+    const current = getProducts();
+    const id = product.id || createCatalogId("product");
+    const nextProduct = Object.assign({
+      id,
+      name: "",
+      sku: "",
+      category: "金饰",
+      categoryTab: "黄金饰品",
+      imageUrl: "/assets/ui/price.png",
+      purity: "足金999",
+      benchPrice: 0,
+      retailPrice: 0,
+      gramWeight: 0,
+      status,
+      inventory,
+      stockStatus,
+      stores: [appConfig.storeName],
+      tags: [],
+      recommendedScene: "适合门店快速带入录单。",
+      quoteLeadTime: "当场可报价"
+    }, product, {
+      id,
+      benchPrice: Number(product.benchPrice || 0),
+      retailPrice: Number(product.retailPrice || 0),
+      gramWeight: Number(product.gramWeight || 0),
+      inventory,
+      stockStatus,
+      tags: normalizeTags(product.tags || product.tagsText)
+    });
+    const list = [nextProduct].concat(current.filter(function(item) {
+      return item.id !== id;
+    }));
+    saveProducts(list);
+    saveProductsMeta({
+      sourceType: "local",
+      updatedAt: formatTimestamp(),
+      itemCount: list.length,
+      lastError: "",
+      lastErrorAt: ""
+    });
+    return Promise.resolve(deepCopy(nextProduct));
+  }
+
+  return request({
+    endpoint: product.id ? appConfig.endpoints.productDetail : appConfig.endpoints.createProduct,
+    method: product.id ? "PUT" : "POST",
+    params: product.id ? { id: product.id } : {},
+    data: {
+      name: String(product.name || "").trim(),
+      sku: String(product.sku || "").trim(),
+      category: String(product.category || "").trim(),
+      categoryTab: String(product.categoryTab || product.category || "").trim(),
+      imageUrl: String(product.imageUrl || "").trim(),
+      purity: String(product.purity || "").trim(),
+      benchPrice: Number(product.benchPrice || 0),
+      retailPrice: Number(product.retailPrice || 0),
+      gramWeight: Number(product.gramWeight || 0),
+      status,
+      inventory,
+      stockStatus,
+      tags: normalizeTags(product.tags || product.tagsText),
+      recommendedScene: String(product.recommendedScene || "").trim(),
+      quoteLeadTime: String(product.quoteLeadTime || "").trim()
+    }
+  }).then(function(payload) {
+    const savedProduct = normalizeDetailPayload(payload);
+    const list = [savedProduct].concat(getProducts().filter(function(item) {
+      return item.id !== savedProduct.id;
+    }));
+    saveApiCatalogSnapshot(list, saveProducts, saveProductsMeta);
+    return deepCopy(savedProduct);
+  });
 }
 
 const listMembersOnline = createCatalogLoader({
@@ -571,6 +640,8 @@ module.exports = {
   seedCatalog,
   getMembers,
   getProducts,
+  getMemberByIdOnline,
+  getProductByIdOnline,
   saveMemberRecord,
   saveProductRecord,
   getMemberStats,

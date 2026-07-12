@@ -62,6 +62,14 @@ go run ./cmd/server
 - `WECHAT_MINIAPP_APP_SECRET`
 - `WECHAT_API_BASE_URL`
 - `MINIAPP_ALLOW_MOCK_LOGIN=false`
+- `GOLD_PRICE_LIVE_ENABLED=true`：默认启用实时拉取国际盘金价
+- `GOLD_PRICE_API_URL=https://api.gold-api.com/price/XAU`：实时 XAU/USD 金价接口
+- `GOLD_PRICE_FX_API_URL=https://api.frankfurter.dev/v1/latest?base=USD&symbols=CNY`：USD/CNY 汇率接口
+- `GOLD_PRICE_CACHE_TTL_SECONDS=60`：金价快照缓存时间，避免每次报价都打外部接口
+- `GOLD_PRICE_HTTP_TIMEOUT_SECONDS=5`：外部行情接口请求超时
+- `GOLD_PRICE_CNY_PER_GRAM`：实时接口不可用时，可直接填国际金价折算后的人民币/克兜底基准价
+- `GOLD_PRICE_XAU_USD` / `GOLD_PRICE_USD_CNY`：实时接口不可用时，可由后端按 `XAU/USD × USD/CNY ÷ 31.1034768` 换算兜底人民币/克
+- `GOLD_PRICE_UPDATED_AT`：可选，记录手动兜底金价快照更新时间
 - `STORAGE_ENABLED=true`
 - `STORAGE_PROVIDER=oss`
 - `STORAGE_BUCKET`

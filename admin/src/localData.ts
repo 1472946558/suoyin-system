@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: localData.ts
+ * 功能描述: 业务模块实现
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-05
+ */
+
 import type {
   AbilityCode,
   AbilityGroup,
@@ -9,6 +22,7 @@ import type {
   DashboardTodo,
   DataScope,
   LoginResult,
+  MemberProfile,
   PrintTemplate,
   ProductRecord,
   RecycleOrderView,
@@ -21,6 +35,7 @@ import type {
 } from "./api";
 
 function deepCopy<T>(value: T): T {
+  if (value === undefined || value === null) return value;
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
@@ -54,7 +69,7 @@ const ownerUser: SessionUser = {
   id: "user-owner-001",
   name: "廖总",
   account: "boss",
-  roleKey: "owner",
+  roleKey: "boss",
   roleName: "老板",
   dataScope: "all_stores",
   storeIds: [],
@@ -66,7 +81,7 @@ const managerUser: SessionUser = {
   id: "user-manager-001",
   name: "李店长",
   account: "manager.sz",
-  roleKey: "manager",
+  roleKey: "shop_manager",
   roleName: "店长",
   dataScope: "assigned_store",
   storeIds: ["store-sz-luohu"],
@@ -148,7 +163,7 @@ const stores: StoreRecord[] = [
     todayAmount: 0,
     todayOrders: 0,
     lastSettlementAt: "待开业",
-    tags: ["模板初始化", "设备待配置"],
+    tags: ["基础资料", "设备待配置"],
   },
   {
     id: "store-gz-tianhe",
@@ -169,13 +184,54 @@ const stores: StoreRecord[] = [
   },
 ];
 
+const members: MemberProfile[] = [
+  {
+    id: "member-001",
+    orgId: "org-gold-v1",
+    storeId: "store-sz-luohu",
+    storeName: "罗湖旗舰店",
+    name: "林女士",
+    phone: "138****6628",
+    level: "VIP",
+    status: "active",
+    totalOrders: 8,
+    totalRecycleAmount: 42800,
+    lastVisitAt: "2026-05-10T10:30:00+08:00",
+    preferredPurity: "足金999",
+    sourceChannel: "门店登记",
+    managerName: "李店长",
+    idVerified: true,
+    tags: ["常客", "高净值"],
+    notes: "偏好古法金饰，回收报价后需要电话确认。",
+  },
+  {
+    id: "member-002",
+    orgId: "org-gold-v1",
+    storeId: "store-sz-nanshan",
+    storeName: "南山体验店",
+    name: "周先生",
+    phone: "139****2910",
+    level: "普通会员",
+    status: "active",
+    totalOrders: 3,
+    totalRecycleAmount: 12600,
+    lastVisitAt: "2026-05-08T16:15:00+08:00",
+    preferredPurity: "足金9999",
+    sourceChannel: "收银登记",
+    managerName: "王店长",
+    idVerified: false,
+    tags: ["回收客户"],
+    notes: "关注每日金价，建议回收前主动告知参考价。",
+  },
+];
+
 const accounts: UserAccount[] = [
   {
     id: "user-owner-001",
     name: "廖总",
     account: "boss",
     phone: "151****5083",
-    roleKey: "owner",
+    roleKey: "boss",
     roleName: "老板",
     dataScope: "all_stores",
     storeIds: [],
@@ -189,7 +245,7 @@ const accounts: UserAccount[] = [
     name: "示例老板",
     account: "boss.demo",
     phone: "134****4944",
-    roleKey: "owner",
+    roleKey: "boss",
     roleName: "老板",
     dataScope: "all_stores",
     storeIds: [],
@@ -203,7 +259,7 @@ const accounts: UserAccount[] = [
     name: "李店长",
     account: "manager.sz",
     phone: "138****2108",
-    roleKey: "manager",
+    roleKey: "shop_manager",
     roleName: "店长",
     dataScope: "assigned_store",
     storeIds: ["store-sz-luohu"],
@@ -217,7 +273,7 @@ const accounts: UserAccount[] = [
     name: "王店长",
     account: "manager.sz02",
     phone: "138****2109",
-    roleKey: "manager",
+    roleKey: "shop_manager",
     roleName: "店长",
     dataScope: "assigned_store",
     storeIds: ["store-sz-nanshan"],
@@ -228,45 +284,26 @@ const accounts: UserAccount[] = [
   },
   {
     id: "account-004",
-    name: "陈财务",
-    account: "finance.ops",
+    name: "陈店长",
+    account: "manager.ba",
     phone: "138****3311",
-    roleKey: "manager",
-    roleName: "店长（受限）",
+    roleKey: "shop_manager",
+    roleName: "店长",
     dataScope: "assigned_store",
-    storeIds: ["store-sz-luohu", "store-sz-nanshan"],
-    storeNames: ["罗湖旗舰店", "南山体验店"],
+    storeIds: ["store-sz-baoan"],
+    storeNames: ["宝安社区店"],
     status: "invited",
     lastLoginAt: "未登录",
-    abilities: [
-      "auth.login",
-      "dashboard.view",
-      "store.view",
-      "user.view",
-    ],
-  },
-  {
-    id: "account-005",
-    name: "赵店员",
-    account: "staff.sz01",
-    phone: "138****4410",
-    roleKey: "staff",
-    roleName: "员工",
-    dataScope: "self",
-    storeIds: ["store-sz-luohu"],
-    storeNames: ["罗湖旗舰店"],
-    status: "disabled",
-    lastLoginAt: "2026-05-05 18:20",
-    abilities: ["auth.login"],
+    abilities: managerUser.abilities,
   },
 ];
 
 const roleTemplates: RoleTemplate[] = [
   {
     id: 1,
-    key: "owner",
-    name: "老板模板",
-    description: "全局主控权限，覆盖组织、商品、订单、系统与模板初始化。",
+    key: "boss",
+    name: "老板",
+    description: "老板可查看门店日常业务、商品、订单和基础设置。",
     dataScope: "all_stores",
     memberCount: 1,
     locked: true,
@@ -274,9 +311,9 @@ const roleTemplates: RoleTemplate[] = [
   },
   {
     id: 2,
-    key: "manager",
-    name: "店长模板",
-    description: "本门店运营台，可管理门店资料、账号并查看业务订单。",
+    key: "shop_manager",
+    name: "店长",
+    description: "本门店运营台，可查看门店资料、账号并查看业务订单。",
     dataScope: "assigned_store",
     memberCount: 3,
     locked: true,
@@ -292,16 +329,6 @@ const roleTemplates: RoleTemplate[] = [
       "recycle.view",
     ],
   },
-  {
-    id: 3,
-    key: "staff",
-    name: "员工模板",
-    description: "第一版默认不开放后台入口，仅保留模板位用于后续扩展。",
-    dataScope: "self",
-    memberCount: 1,
-    locked: true,
-    abilities: [],
-  },
 ];
 
 const abilityGroups: AbilityGroup[] = [
@@ -314,14 +341,14 @@ const abilityGroups: AbilityGroup[] = [
   {
     key: "organization",
     label: "组织与权限",
-    description: "门店、账号和角色模板相关能力。",
+    description: "门店、账号和数据范围相关能力。",
     items: [
       { code: "store.view", label: "查看门店", description: "查看门店资料、状态和营业信息。" },
-      { code: "store.manage", label: "管理门店", description: "编辑门店资料、负责人和启停用入口。" },
-      { code: "user.view", label: "查看账号", description: "查看后台账号、角色绑定和登录状态。" },
-      { code: "user.manage", label: "管理账号", description: "启停用账号、重置密码和绑定门店。" },
-      { code: "role.view", label: "查看角色权限", description: "查看固定角色模板和数据范围。" },
-      { code: "role.manage", label: "管理角色权限", description: "调整能力项和数据范围配置。" },
+      { code: "store.manage", label: "管理门店", description: "新增、编辑、删除门店资料和负责人。" },
+      { code: "user.view", label: "查看账号", description: "查看后台账号、门店绑定和登录状态。" },
+      { code: "user.manage", label: "管理账号", description: "删除账号、重置密码和绑定门店。" },
+      { code: "role.view", label: "查看身份范围", description: "查看老板和店长的数据范围。" },
+      { code: "role.manage", label: "管理身份范围", description: "调整可见范围配置。" },
     ],
   },
   {
@@ -337,8 +364,8 @@ const abilityGroups: AbilityGroup[] = [
   },
   {
     key: "system",
-    label: "系统与模板",
-    description: "全局配置、模板化初始化和审计留痕。",
+    label: "基础设置",
+    description: "品牌、拍照和门店基础配置。",
     items: [
       {
         code: "system.config.view",
@@ -350,8 +377,8 @@ const abilityGroups: AbilityGroup[] = [
         label: "管理系统配置",
         description: "修改全局业务规则和基础配置。",
       },
-      { code: "template.init", label: "模板初始化", description: "执行新客户初始化向导。" },
-      { code: "audit.view", label: "查看操作日志", description: "查看权限变更、系统配置等审计记录。" },
+      { code: "template.init", label: "基础资料", description: "查看客户开通所需基础资料。" },
+      { code: "audit.view", label: "查看业务记录", description: "查看基础配置调整记录。" },
     ],
   },
 ];
@@ -365,6 +392,7 @@ const products: ProductRecord[] = [
     price: 3298,
     gramWeight: 8.6,
     status: "active",
+    storeIds: ["store-sz-luohu", "store-sz-nanshan"],
     storeNames: ["罗湖旗舰店", "南山体验店"],
     tags: ["热卖", "足金"],
   },
@@ -376,6 +404,7 @@ const products: ProductRecord[] = [
     price: 5680,
     gramWeight: 15.2,
     status: "active",
+    storeIds: ["store-sz-luohu"],
     storeNames: ["罗湖旗舰店"],
     tags: ["回购高", "礼盒装"],
   },
@@ -387,6 +416,7 @@ const products: ProductRecord[] = [
     price: 0,
     gramWeight: 0,
     status: "draft",
+    storeIds: ["store-sz-luohu", "store-sz-nanshan", "store-gz-tianhe"],
     storeNames: ["罗湖旗舰店", "南山体验店", "广州天河店"],
     tags: ["系统单据", "非销售商品"],
   },
@@ -399,8 +429,11 @@ const cashierOrders: CashierOrderView[] = [
     storeId: "store-sz-luohu",
     storeName: "罗湖旗舰店",
     status: "paid",
+    customerName: "林女士",
+    customerPhone: "138****6628",
     totalAmount: 3298,
     itemCount: 2,
+    itemSummary: "足金项链、黄金耳饰",
     createdBy: "李店长",
     createdAt: "2026-05-10 10:08",
     remark: "足金项链成交",
@@ -411,8 +444,11 @@ const cashierOrders: CashierOrderView[] = [
     storeId: "store-sz-nanshan",
     storeName: "南山体验店",
     status: "pending",
+    customerName: "周先生",
+    customerPhone: "139****2910",
     totalAmount: 2680,
     itemCount: 1,
+    itemSummary: "古法手镯",
     createdBy: "王店长",
     createdAt: "2026-05-09 19:42",
     remark: "待主管复核",
@@ -423,8 +459,11 @@ const cashierOrders: CashierOrderView[] = [
     storeId: "store-gz-tianhe",
     storeName: "广州天河店",
     status: "refunded",
+    customerName: "门店顾客",
+    customerPhone: "",
     totalAmount: 980,
     itemCount: 1,
+    itemSummary: "转运珠",
     createdBy: "系统迁移",
     createdAt: "2026-05-07 20:20",
     remark: "停店前历史订单",
@@ -443,6 +482,7 @@ const recycleOrders: RecycleOrderView[] = [
     estimatedAmount: 5800,
     confirmedAmount: 5680,
     photoCount: 3,
+    itemSummary: "金饰 · 足金999 · 8.60g",
     createdBy: "李店长",
     createdAt: "2026-05-10 09:18",
     confirmedAt: "2026-05-10 09:32",
@@ -459,6 +499,7 @@ const recycleOrders: RecycleOrderView[] = [
     estimatedAmount: 4320,
     confirmedAmount: 0,
     photoCount: 2,
+    itemSummary: "金饰 · 足金9999 · 6.20g",
     createdBy: "王店长",
     createdAt: "2026-05-09 16:18",
     remark: "待复核回收价",
@@ -466,25 +507,25 @@ const recycleOrders: RecycleOrderView[] = [
 ];
 
 const systemProfile: SystemProfile = {
-  brandName: "金匠馆回收",
+  brandName: "金匠倌收银",
   servicePhone: "400-888-2026",
-  receiptTitle: "黄金回收收银系统",
+  receiptTitle: "金匠倌收银门店小票",
   minPhotoCount: 2,
   maxPhotoCount: 3,
   requireExactThree: false,
   requireIdCheck: true,
-  domainName: "example.com",
-  domainStatus: "已购买，实名认证审核中",
-  ossStatus: "对象存储待配置",
-  appIdStatus: "使用占位 AppID，正式 AppID 请通过私有环境配置",
-  printerStatus: "待确定小票机 / 标签机型号，可按门店需求配置打印设备",
+  domainName: "jinjiangguan.com",
+  domainStatus: "已启用",
+  ossStatus: "回收留档图片已接入云端存储",
+  appIdStatus: "小程序已接入",
+  printerStatus: "可按门店设备配置小票打印",
 };
 
 const printTemplate: PrintTemplate = {
   receipt: {
     enabled: true,
     paperWidth: "80mm",
-    headerTitle: "黄金回收收银系统",
+    headerTitle: "金匠倌收银",
     footerNote: "请当面核对金额与留痕信息",
     showStoreName: true,
     showOperatorName: true,
@@ -510,70 +551,70 @@ const printTemplate: PrintTemplate = {
 const auditLogs: AuditLogRecord[] = [
   {
     id: "log-001",
-    module: "系统配置",
-    action: "确认业务范围",
+    module: "基础设置",
+    action: "更新门店资料",
     operatorName: "周老板",
-    result: "warning",
-    riskLevel: "high",
-    summary: "小程序仅保留业务订单和回收留档。",
+    result: "success",
+    riskLevel: "low",
+    summary: "已更新品牌信息和客服电话。",
     createdAt: "2026-05-10 11:05",
   },
   {
     id: "log-002",
-    module: "角色权限",
-    action: "冻结店长模板",
+    module: "商品资料",
+    action: "调整商品价格",
     operatorName: "周老板",
     result: "success",
     riskLevel: "medium",
-    summary: "已确认店长默认只能看所属门店数据。",
+    summary: "已更新重点商品价格和库存状态。",
     createdAt: "2026-05-10 10:26",
   },
   {
     id: "log-003",
-    module: "系统配置",
+    module: "回收规则",
     action: "调整拍照规则",
     operatorName: "系统",
     result: "info",
     riskLevel: "low",
-    summary: "当前规则为至少 2 张最多 3 张，保留切换为必须 3 张的能力。",
+    summary: "当前要求至少上传 3 张现场照片。",
     createdAt: "2026-05-10 09:40",
   },
 ];
 
 const templatePlan: TemplateInitPlan = {
-  title: "模板初始化入口",
-  description: "用于新客户开通时一次性落默认门店、角色模板、拍照规则和品牌基础配置。",
+  title: "基础资料清单",
+  description: "用于查看当前门店已准备好的品牌信息、门店资料、账号和打印配置。",
   steps: [
     {
       id: "step-1",
       title: "品牌基础信息",
-      description: "品牌名、客服电话、小票抬头和 Logo 资料。",
+      description: "品牌名、客服电话和小票抬头。",
       status: "done",
     },
     {
       id: "step-2",
-      title: "默认门店模板",
-      description: "创建默认门店、营业时间、负责人和设备位。",
-      status: "current",
+      title: "门店资料",
+      description: "门店名称、营业时间、负责人和联系方式。",
+      status: "done",
     },
     {
       id: "step-3",
-      title: "固定角色模板",
-      description: "下发老板、店长、员工模板与初始能力组。",
-      status: "planned",
+      title: "账号资料",
+      description: "老板和店长账号已配置。",
+      status: "done",
     },
     {
       id: "step-4",
-      title: "系统规则",
-      description: "拍照规则、编号规则、对象存储和打印模板。",
-      status: "planned",
+      title: "业务规则",
+      description: "回收拍照规则和打印设置。",
+      status: "current",
     },
   ],
   outputs: [
-    "默认门店模板 1 套",
-    "固定角色模板 3 套",
-    "拍照留档规则预设 1 组",
-    "品牌基础配置包 1 份",
+    "品牌资料 1 份",
+    "门店资料 1 组",
+    "账号资料 1 组",
+    "打印与拍照规则 1 组",
   ],
 };
 
@@ -632,16 +673,6 @@ function buildDashboardTodos(user: SessionUser, scopedStores: StoreRecord[]): Da
     });
   }
 
-  if (user.roleKey === "owner") {
-    todos.push({
-      id: "task-role",
-      title: "固定角色模板待老板确认",
-      description: "建议冻结店长模板的数据范围和业务查看能力。",
-      level: "medium",
-      page: "roles",
-    });
-  }
-
   return todos;
 }
 
@@ -656,22 +687,12 @@ function buildDashboardShortcuts(user: SessionUser): DashboardShortcut[] {
     },
     {
       id: "shortcut-user",
-      label: "账号启停用",
-      hint: "处理离岗账号和邀请中的账号",
+      label: "账号管理",
+      hint: "处理新账号和多余账号",
       page: "users",
       ability: "user.view",
     },
   ];
-
-  if (user.roleKey === "owner") {
-    shortcuts.unshift({
-      id: "shortcut-role",
-      label: "角色模板冻结",
-      hint: "调整能力项和数据范围骨架",
-      page: "roles",
-      ability: "role.view",
-    });
-  }
 
   return shortcuts;
 }
@@ -682,26 +703,29 @@ function buildDashboardNotices(user: SessionUser): string[] {
     "当前版本聚焦门店收银、回收留档和权限管理。",
   ];
 
-  if (user.roleKey === "manager") {
+  if (user.roleKey === "shop_manager") {
     notices.unshift("店长默认仅查看所属门店数据，菜单和默认筛选已按数据范围收敛。");
   }
 
-  if (user.roleKey === "owner") {
-    notices.unshift("老板模板拥有全门店主控权限，后续联调应由后端继续做真实鉴权和审计留痕。");
+  if (user.roleKey === "boss") {
+    notices.unshift("老板账号拥有全门店主控权限，系统会按登录身份和门店范围校验操作。");
   }
 
   return notices;
 }
 
-export function getLocalSessionByCredentials(username: string, password: string) {
-  const allowed = localSessions.find((item) => item.user.account === username);
+export function getLocalSessionByCredentials(phone: string, password: string, roleKey: "boss" | "shop_manager") {
+  const normalizedPhone = phone.trim();
+  const allowed = localSessions.find((item) =>
+    item.user.roleKey === roleKey && (item.user.account === normalizedPhone || item.user.id === normalizedPhone),
+  );
   if (!allowed) return null;
   const passwordMap: Record<string, string> = {
     boss: "Boss123!",
     "manager.sz": "Manager123!",
   };
-  if (password !== passwordMap[username]) return null;
-  const session = localSessions.find((item) => item.user.account === username);
+  if (password !== passwordMap[allowed.user.account]) return null;
+  const session = localSessions.find((item) => item.user.account === allowed.user.account);
   return session ? deepCopy(session) : null;
 }
 
@@ -712,22 +736,26 @@ export function getLocalSessionByToken(token: string) {
 
 export function buildLocalConsoleBootstrap(user: SessionUser): ConsoleBootstrap {
   const scopedStoreIds = getScopeStoreIds(user);
+  const visibleStores = stores.filter((store) => store.status !== "disabled");
+  const visibleAccounts = accounts.filter((account) => account.status !== "disabled");
+  const visibleProducts = products.filter((product) => product.status !== "disabled");
+  const visibleMembers = members.filter((member) => member.status !== "disabled");
   const scopedStores =
     user.dataScope === "all_stores"
-      ? stores
-      : stores.filter((store) => scopedStoreIds.includes(store.id));
+      ? visibleStores
+      : visibleStores.filter((store) => scopedStoreIds.includes(store.id));
   const scopedUsers =
     user.dataScope === "all_stores"
-      ? accounts
-      : accounts.filter((account) => includesStore(account.storeIds, scopedStoreIds) || account.id === user.id);
+      ? visibleAccounts
+      : visibleAccounts.filter((account) => includesStore(account.storeIds, scopedStoreIds) || account.id === user.id);
   return {
     currentUser: deepCopy(user),
     dashboard: {
-      title: user.roleKey === "owner" ? "老板主控台" : "门店运营台",
+      title: user.roleKey === "boss" ? "老板主控台" : "门店运营台",
       subtitle:
-        user.roleKey === "owner"
-          ? "覆盖门店、账号、角色权限、商品订单和模板初始化的首版后台骨架。"
-          : "已按本门店视角收敛数据与可见菜单，可直接作为店长受限后台演示。",
+        user.roleKey === "boss"
+          ? "覆盖门店日常业务、商品订单和基础设置。"
+          : "已按本门店视角展示数据与可见菜单。",
       metrics: buildDashboardMetrics(user, scopedStores),
       todos: buildDashboardTodos(user, scopedStores),
       shortcuts: buildDashboardShortcuts(user),
@@ -737,7 +765,12 @@ export function buildLocalConsoleBootstrap(user: SessionUser): ConsoleBootstrap 
     users: deepCopy(scopedUsers),
     roles: deepCopy(roleTemplates),
     abilityGroups: deepCopy(abilityGroups),
-    products: deepCopy(products),
+    products: deepCopy(
+      user.dataScope === "all_stores"
+        ? visibleProducts
+        : visibleProducts.filter((product) => includesStore(product.storeIds, scopedStoreIds)),
+    ),
+    members: deepCopy(visibleMembers.filter((member) => user.dataScope === "all_stores" || scopedStoreIds.includes(member.storeId))),
     cashierOrders: deepCopy(
       user.dataScope === "all_stores"
         ? cashierOrders
@@ -751,6 +784,7 @@ export function buildLocalConsoleBootstrap(user: SessionUser): ConsoleBootstrap 
     printTemplate: deepCopy(printTemplate),
     systemProfile: deepCopy(systemProfile),
     auditLogs: deepCopy(auditLogs),
+    importLogs: [],
     templateInit: deepCopy(templatePlan),
     updatedAt: "2026-05-10 11:30",
   };

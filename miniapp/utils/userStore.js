@@ -1,67 +1,65 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: userStore.js
+ * 功能描述: 工具函数
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-05
+ */
+
 const USER_KEY = "gr_operator_profile";
 const { appConfig, request } = require("./apiClient");
-const { clearScopedBusinessData, clearLegacyBusinessData } = require("./sessionStorage");
+const { clearAllSessionData } = require("./sessionStorage");
 
 const rolePresets = [
   {
-    key: "owner",
+    key: "boss",
     label: "老板",
     permissions: ["dashboard.view", "cashier.use", "recycle.use", "orders.view", "members.view", "products.view", "settings.view", "settings.manage"]
   },
   {
-    key: "manager",
+    key: "shop_manager",
     label: "店长",
     permissions: ["dashboard.view", "cashier.use", "recycle.use", "orders.view", "members.view", "products.view", "settings.view"]
-  },
-  {
-    key: "staff",
-    label: "员工",
-    permissions: ["cashier.use", "recycle.use", "orders.view", "members.view", "products.view"]
   }
 ];
 
 const devtoolAccounts = {
-  owner: { username: "boss", password: "Boss123!" },
-  manager: { username: "manager.sz", password: "Manager123!" },
-  staff: { username: "cashier.sz", password: "Cashier123!" }
+  boss: { username: "boss", password: "Boss123!" },
+  shop_manager: { username: "manager.sz", password: "Manager123!" }
 };
 
 const quickLoginProfiles = {
-  owner: {
+  boss: {
     name: "廖总",
     phone: "13800000001",
-    roleKey: "owner",
+    roleKey: "boss",
     role: "老板",
-    storeName: "示例门店1",
-    storeCode: "DEMO-01",
+    storeName: "",
+    storeCode: "",
     shiftName: "总部巡店"
   },
-  manager: {
+  shop_manager: {
     name: "李店长",
     phone: "13800002001",
-    roleKey: "manager",
+    roleKey: "shop_manager",
     role: "店长",
-    storeName: "示例门店1",
-    storeCode: "DEMO-01",
+    storeName: "",
+    storeCode: "",
     shiftName: "门店早班"
   },
-  staff: {
-    name: "张收银",
-    phone: "13800003001",
-    roleKey: "staff",
-    role: "员工",
-    storeName: "示例门店1",
-    storeCode: "DEMO-01",
-    shiftName: "早班"
-  },
   customerOwner: {
-    name: "示例老板",
-    phone: "13800000000",
-    roleKey: "owner",
+    name: "客户负责人",
+    phone: "",
+    roleKey: "boss",
     role: "老板",
-    storeName: "示例门店1",
-    storeCode: "DEMO-01",
-    shiftName: "模板演示"
+    storeName: "",
+    storeCode: "",
+    shiftName: "总部巡店"
   }
 };
 
@@ -73,21 +71,22 @@ function getRolePreset(roleKey) {
   roleKey = normalizeRoleKey(roleKey);
   return rolePresets.find(function(item) {
     return item.key === roleKey;
-  }) || rolePresets[2];
+  }) || rolePresets[1];
 }
 
 function normalizeRoleKey(roleKey) {
   switch (String(roleKey || "").trim().toLowerCase()) {
+    case "boss":
     case "owner":
-      return "owner";
+      return "boss";
+    case "shop_manager":
     case "manager":
-      return "manager";
     case "cashier":
     case "clerk":
     case "staff":
-      return "staff";
+      return "shop_manager";
     default:
-      return "staff";
+      return "shop_manager";
   }
 }
 
@@ -97,8 +96,8 @@ function getDefaultProfile() {
     name: "",
     phone: "",
     username: "",
-    roleKey: "staff",
-    role: "员工",
+    roleKey: "shop_manager",
+    role: "店长",
     permissions: [],
     storeId: "",
     storeName: "",
@@ -129,11 +128,7 @@ function saveProfile(profile) {
 }
 
 function clearProfile() {
-  const profile = getProfile();
-  clearScopedBusinessData(profile);
-  clearScopedBusinessData({});
-  clearLegacyBusinessData();
-  wx.removeStorageSync(USER_KEY);
+  clearAllSessionData();
 }
 
 function isDevtoolsRuntime() {
@@ -147,8 +142,44 @@ function isDevtoolsRuntime() {
   }
 }
 
+function isNonReleaseRuntime() {
+  try {
+    if (typeof __wxConfig !== "undefined" && __wxConfig && __wxConfig.envVersion) {
+      return __wxConfig.envVersion !== "release";
+    }
+  } catch (error) {
+    return isDevtoolsRuntime();
+  }
+  return isDevtoolsRuntime();
+}
+
 function pickDevtoolAccount(roleKey) {
-  return devtoolAccounts[normalizeRoleKey(roleKey)] || devtoolAccounts.staff;
+  return devtoolAccounts[normalizeRoleKey(roleKey)] || devtoolAccounts.shop_manager;
+}
+
+function findDevtoolAccount(username, password) {
+  const trimmedUsername = String(username || "").trim();
+  const rawPassword = String(password || "");
+  const roleKey = Object.keys(devtoolAccounts).find(function(key) {
+    const account = devtoolAccounts[key];
+    return account.username === trimmedUsername && account.password === rawPassword;
+  });
+  return roleKey ? { roleKey, account: devtoolAccounts[roleKey] } : null;
+}
+
+function loginWithDebugPassword(username, password) {
+  const matchedAccount = findDevtoolAccount(username, password);
+  if (!isNonReleaseRuntime() || !matchedAccount) {
+    return null;
+  }
+
+  const profile = Object.assign({}, getDefaultProfile(), quickLoginProfiles[matchedAccount.roleKey], {
+    username: matchedAccount.account.username,
+    storeId: "",
+    token: "",
+    permissions: cloneArray(getRolePreset(matchedAccount.roleKey).permissions)
+  });
+  return Promise.resolve(saveProfile(profile));
 }
 
 function loginDevtoolsAccount(profile) {
@@ -157,7 +188,7 @@ function loginDevtoolsAccount(profile) {
   }
 
   const devtoolsProfile = profile && profile.name ? profile : getDevtoolsOwnerProfile();
-  const account = pickDevtoolAccount(devtoolsProfile.roleKey || "owner");
+  const account = pickDevtoolAccount(devtoolsProfile.roleKey || "boss");
   return loginWithPassword(account.username, account.password);
 }
 
@@ -170,9 +201,9 @@ function resolveStoreForProfile(baseProfile, user) {
     const firstStore = stores[0] || {};
     const storeIds = user.storeIds || user.storeIDs || [];
     return saveProfile(Object.assign({}, baseProfile, {
-      storeId: firstStore.id || storeIds[0] || baseProfile.storeId || appConfig.defaultStoreId,
-      storeName: user.dataScope === "org_all" ? "全部门店" : (firstStore.name || baseProfile.storeName || appConfig.storeName),
-      storeCode: firstStore.code || baseProfile.storeCode || appConfig.defaultStoreCode,
+      storeId: firstStore.id || storeIds[0] || baseProfile.storeId || "",
+      storeName: firstStore.name || baseProfile.storeName || "",
+      storeCode: firstStore.code || baseProfile.storeCode || "",
       visibleStores: stores
     }));
   }).catch(function() {
@@ -195,9 +226,9 @@ function buildProfileFromLoginResult(data) {
     role: user.roleName || data.roleName || rolePreset.label,
     permissions: user.permissions || data.permissions || rolePreset.permissions,
     dataScope: user.dataScope || data.dataScope || "",
-    storeId: storeIds[0] || data.storeId || appConfig.defaultStoreId,
-    storeName: user.dataScope === "org_all" ? "全部门店" : (data.storeName || appConfig.storeName),
-    storeCode: data.storeCode || appConfig.defaultStoreCode
+    storeId: storeIds[0] || data.storeId || "",
+    storeName: data.storeName || "",
+    storeCode: data.storeCode || ""
   };
 }
 
@@ -218,6 +249,12 @@ function loginWithPassword(username, password) {
     const data = payload && payload.data ? payload.data : payload;
     const baseProfile = saveProfile(buildProfileFromLoginResult(data || {}));
     return resolveStoreForProfile(baseProfile, data.user || {});
+  }).catch(function(error) {
+    const debugLogin = loginWithDebugPassword(trimmedUsername, password);
+    if (debugLogin && (!error || error.type === "NETWORK_ERROR")) {
+      return debugLogin;
+    }
+    return Promise.reject(error);
   });
 }
 
@@ -262,7 +299,7 @@ function loginOnline(profile, options) {
             roleKey: rolePreset.key,
             role: data.roleName || loginProfile.role || rolePreset.label,
             permissions: data.permissions || rolePreset.permissions,
-            storeId: data.storeId || loginProfile.storeId || appConfig.defaultStoreId,
+            storeId: data.storeId || loginProfile.storeId || "",
             storeName: data.storeName || loginProfile.storeName,
             storeCode: data.storeCode || loginProfile.storeCode
           })));
@@ -304,6 +341,8 @@ function canAccessFeature(featureKey) {
     orders: ["orders.view", "cashier.order.read", "recycle.order.read"],
     members: ["members.view", "member.read"],
     products: ["products.view", "catalog.product.read"],
+    inventory: ["products.view", "catalog.product.read"],
+    materials: ["recycle.use", "recycle.order.read"],
     settings: ["settings.view", "settings.read"],
     "settings.manage": ["settings.manage", "settings.read"]
   };
@@ -332,19 +371,19 @@ function getRolePresets() {
 }
 
 function getQuickLoginProfiles() {
-  return ["owner", "manager", "staff"].map(function(roleKey) {
+  return ["boss", "shop_manager"].map(function(roleKey) {
     return Object.assign({}, getDefaultProfile(), quickLoginProfiles[roleKey], {
-      storeId: appConfig.defaultStoreId,
+      storeId: "",
       permissions: cloneArray(getRolePreset(roleKey).permissions)
     });
   });
 }
 
 function getDevtoolsOwnerProfile(ownerKey) {
-  const profileKey = ownerKey === "customerOwner" ? "customerOwner" : "owner";
+  const profileKey = ownerKey === "customerOwner" ? "customerOwner" : "boss";
   return Object.assign({}, getDefaultProfile(), quickLoginProfiles[profileKey], {
-    storeId: appConfig.defaultStoreId,
-    permissions: cloneArray(getRolePreset("owner").permissions)
+    storeId: "",
+    permissions: cloneArray(getRolePreset("boss").permissions)
   });
 }
 

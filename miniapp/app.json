@@ -7,6 +7,10 @@
     "pages/orders/index",
     "pages/members/index",
     "pages/products/index",
+    "pages/inventory/index",
+    "pages/materials/index",
+    "pages/product-detail/index",
+    "pages/product-form/index",
     "pages/profile/index",
     "pages/store-info/index",
     "pages/order-detail/index",
@@ -14,7 +18,7 @@
     "pages/legal/terms"
   ],
   "window": {
-    "navigationBarTitleText": "黄金收银",
+    "navigationBarTitleText": "金匠倌收银",
     "navigationBarBackgroundColor": "#333333",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#FDFBE7",

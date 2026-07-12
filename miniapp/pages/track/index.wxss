@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.wxss
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-03
+ */
+
 .page-header,
 .section-head,
 .photo-chip,
@@ -33,25 +46,6 @@
   margin-top: 6rpx;
   color: var(--muted);
   font-size: 25.3rpx;
-}
-
-.header-btn {
-  display: flex;
-  flex: 0 0 260rpx;
-  align-items: center;
-  justify-content: center;
-  width: 260rpx;
-  min-width: 0;
-  height: 60rpx;
-  padding: 0 12rpx;
-  border: 0.8rpx solid var(--line);
-  border-radius: 10rpx;
-  color: #ffffff;
-  font-size: 26.4rpx;
-  font-weight: 900;
-  line-height: 1;
-  background: #866e23;
-  background-color: #866e23;
 }
 
 .step-card {
@@ -155,6 +149,19 @@
   background: #ffffff;
 }
 
+.photo-thumb {
+  flex: 0 0 104rpx;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 12rpx;
+  background: #f4f1df;
+}
+
+.photo-copy {
+  flex: 1;
+  min-width: 0;
+}
+
 .photo-index {
   display: grid;
   place-items: center;
@@ -168,10 +175,16 @@
 }
 
 .photo-name {
-  flex: 1;
   color: var(--ink);
   font-size: 27.5rpx;
   font-weight: 800;
+}
+
+.photo-preview-tip {
+  display: block;
+  margin-top: 8rpx;
+  color: var(--muted);
+  font-size: 23rpx;
 }
 
 .photo-remove {

@@ -1,15 +1,25 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-05
+-->
+
 <view class="page home-page">
   <view class="home-header">
     <view class="home-brand-row">
-      <image class="home-brand-logo" src="/assets/ui/enterprise.png" mode="aspectFit" />
+      <image class="home-brand-logo" src="/assets/brand/app-icon.png" mode="aspectFit" />
       <view class="home-brand-copy">
-        <text class="home-title">黄金收银</text>
-        <text class="home-store">{{profile.storeName || '未登录门店'}}</text>
+        <text class="home-title">金匠倌收银</text>
+        <text class="home-store">{{homeStoreText}}</text>
       </view>
     </view>
-    <button class="account-btn" bindtap="goLogin">
-      <text>{{profile.loggedIn ? (profile.shiftName || profile.role || '账号') : '登录'}}</text>
-    </button>
   </view>
 
   <view class="card workbench-card">
@@ -80,7 +90,7 @@
         <text class="price-desc">{{item.label}}</text>
       </view>
       <view class="price-side">
-        <text class="board-price">¥{{item.price}}</text>
+        <text class="board-price">¥{{item.priceText}}</text>
         <text class="board-trend">{{item.trend}}</text>
       </view>
     </view>

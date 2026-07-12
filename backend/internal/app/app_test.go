@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: app_test.go
+ * 功能描述: 测试代码
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-05
+ */
+
 package app
 
 import (
@@ -36,6 +49,15 @@ type miniappLoginResult struct {
 	Perms     []string `json:"permissions"`
 }
 
+type passwordLoginResult struct {
+	Token string `json:"token"`
+	User  struct {
+		ID       string `json:"id"`
+		Username string `json:"username"`
+		RoleCode string `json:"roleCode"`
+	} `json:"user"`
+}
+
 func encryptedWechatPhonePayloadForTest(t *testing.T, sessionKey, iv, phone string) (string, string) {
 	t.Helper()
 
@@ -69,11 +91,41 @@ type recycleQuotePreviewTestResult struct {
 	PriceSource     string  `json:"priceSource"`
 }
 
+type goldReferencePricesTestResult struct {
+	Source          string                   `json:"source"`
+	BaseCNYPerGram  float64                  `json:"baseCnyPerGram"`
+	XAUUSD          float64                  `json:"xauUsd"`
+	USDCNY          float64                  `json:"usdCny"`
+	ReferencePrices []GoldReferencePriceItem `json:"referencePrices"`
+}
+
 type inventorySummaryTestResult struct {
 	TotalSKU             int             `json:"totalSku"`
 	LowStockSKU          int             `json:"lowStockSku"`
 	EstimatedRetailValue float64         `json:"estimatedRetailValue"`
 	Items                []InventoryItem `json:"items"`
+}
+
+func TestSaveCashierOrderStatementColumnPlaceholderCount(t *testing.T) {
+	insertStart := strings.Index(saveCashierOrderStatement, "INSERT INTO cashier_orders (")
+	valuesStart := strings.Index(saveCashierOrderStatement, ") VALUES (")
+	updateStart := strings.Index(saveCashierOrderStatement, "ON DUPLICATE KEY UPDATE")
+	if insertStart < 0 || valuesStart < 0 || updateStart < 0 {
+		t.Fatalf("unexpected cashier insert statement shape: %s", saveCashierOrderStatement)
+	}
+
+	columnSegment := saveCashierOrderStatement[insertStart+len("INSERT INTO cashier_orders (") : valuesStart]
+	valueSegment := saveCashierOrderStatement[valuesStart+len(") VALUES (") : updateStart]
+	columnCount := 0
+	for _, part := range strings.Split(columnSegment, ",") {
+		if strings.TrimSpace(part) != "" {
+			columnCount++
+		}
+	}
+	placeholderCount := strings.Count(valueSegment, "?")
+	if columnCount != placeholderCount {
+		t.Fatalf("cashier insert columns/placeholders mismatch: columns=%d placeholders=%d", columnCount, placeholderCount)
+	}
 }
 
 type dailyReportSummaryTestResult struct {
@@ -89,14 +141,23 @@ func newTestApp(t *testing.T) *App {
 func newTestAppWithEnv(t *testing.T, overrides map[string]string) *App {
 	t.Helper()
 	defaults := map[string]string{
-		"APP_MODE":                  "memory",
-		"PORT":                      "8080",
-		"TOKEN_SECRET":              "test-secret",
-		"CORS_ORIGIN":               "*",
-		"WECHAT_MINIAPP_APP_ID":     "",
-		"WECHAT_MINIAPP_APP_SECRET": "",
-		"WECHAT_API_BASE_URL":       "",
-		"MINIAPP_ALLOW_MOCK_LOGIN":  "true",
+		"APP_MODE":                        "memory",
+		"PORT":                            "8080",
+		"TOKEN_SECRET":                    "test-secret",
+		"CORS_ORIGIN":                     "*",
+		"WECHAT_MINIAPP_APP_ID":           "",
+		"WECHAT_MINIAPP_APP_SECRET":       "",
+		"WECHAT_API_BASE_URL":             "",
+		"MINIAPP_ALLOW_MOCK_LOGIN":        "true",
+		"GOLD_PRICE_LIVE_ENABLED":         "false",
+		"GOLD_PRICE_API_URL":              "",
+		"GOLD_PRICE_FX_API_URL":           "",
+		"GOLD_PRICE_CACHE_TTL_SECONDS":    "",
+		"GOLD_PRICE_HTTP_TIMEOUT_SECONDS": "",
+		"GOLD_PRICE_CNY_PER_GRAM":         "",
+		"GOLD_PRICE_XAU_USD":              "",
+		"GOLD_PRICE_USD_CNY":              "",
+		"GOLD_PRICE_UPDATED_AT":           "",
 	}
 	for key, value := range overrides {
 		defaults[key] = value
@@ -198,6 +259,15 @@ func adminLogin(t *testing.T, handler http.Handler, username, password string) A
 	return decodeResponse[AdminLoginResult](t, rr, http.StatusOK)
 }
 
+func passwordLogin(t *testing.T, handler http.Handler, username, password string) passwordLoginResult {
+	t.Helper()
+	rr := performRequest(t, handler, http.MethodPost, "/api/v1/auth/login", "", map[string]string{
+		"username": username,
+		"password": password,
+	})
+	return decodeResponse[passwordLoginResult](t, rr, http.StatusOK)
+}
+
 func miniappLogin(t *testing.T, handler http.Handler, roleKey string) miniappLoginResult {
 	t.Helper()
 	body := map[string]any{
@@ -211,6 +281,79 @@ func miniappLogin(t *testing.T, handler http.Handler, roleKey string) miniappLog
 	}
 	rr := performRequest(t, handler, http.MethodPost, "/api/v1/auth/wechat-login", "", body)
 	return decodeResponse[miniappLoginResult](t, rr, http.StatusOK)
+}
+
+func TestDefaultBossCredentialRestoresLoginAndOwnerCanUpdateSelf(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+
+	app.store.mu.Lock()
+	boss := app.store.usersByUsername[defaultBossUsername]
+	boss.Password = "lost-password"
+	boss.Status = "disabled"
+	app.store.usersByID[boss.ID] = boss
+	app.store.usersByUsername[boss.Username] = boss
+	app.store.mu.Unlock()
+
+	admin := adminLogin(t, handler, defaultBossUsername, defaultBossPassword)
+	if admin.User.RoleKey != "boss" || admin.User.Account != defaultBossUsername {
+		t.Fatalf("default boss login did not restore owner account: %#v", admin.User)
+	}
+
+	mini := passwordLogin(t, handler, defaultBossUsername, defaultBossPassword)
+	if mini.User.RoleCode != "boss" || mini.Token == "" {
+		t.Fatalf("miniapp password login did not use restored boss: %#v", mini)
+	}
+
+	updated := decodeResponse[AdminUserAccount](t, performRequest(t, handler, http.MethodPut, "/api/admin/users/"+admin.User.ID, admin.Token, map[string]any{
+		"id":       admin.User.ID,
+		"name":     admin.User.Name,
+		"account":  "boss.main",
+		"password": "BossMain456!",
+		"roleKey":  "boss",
+		"status":   "enabled",
+	}), http.StatusOK)
+	if updated.Account != "boss.main" || updated.RoleKey != "boss" {
+		t.Fatalf("owner self account update not applied: %#v", updated)
+	}
+
+	updatedAdmin := adminLogin(t, handler, "boss.main", "BossMain456!")
+	if updatedAdmin.User.ID != admin.User.ID || updatedAdmin.User.RoleKey != "boss" {
+		t.Fatalf("updated owner credentials cannot log in admin: %#v", updatedAdmin.User)
+	}
+
+	updatedMini := passwordLogin(t, handler, "boss.main", "BossMain456!")
+	if updatedMini.User.RoleCode != "boss" || updatedMini.Token == "" {
+		t.Fatalf("updated owner credentials cannot log in miniapp: %#v", updatedMini)
+	}
+}
+
+func TestDefaultManagerCredentialRestoresSingleStoreLogin(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+
+	app.store.mu.Lock()
+	manager := app.store.usersByUsername[defaultManagerUsername]
+	manager.Password = "lost-password"
+	manager.Status = "disabled"
+	app.store.usersByID[manager.ID] = manager
+	app.store.usersByUsername[manager.Username] = manager
+	app.store.mu.Unlock()
+
+	admin := adminLogin(t, handler, defaultManagerUsername, defaultManagerPassword)
+	if admin.User.RoleKey != "shop_manager" || admin.User.Account != defaultManagerUsername {
+		t.Fatalf("default manager login did not restore shop manager account: %#v", admin.User)
+	}
+
+	mini := passwordLogin(t, handler, defaultManagerUsername, defaultManagerPassword)
+	if mini.User.RoleCode != "shop_manager" || mini.Token == "" {
+		t.Fatalf("miniapp password login did not use restored shop manager: %#v", mini)
+	}
+
+	stores := decodeResponse[listResponse[StoreInfo]](t, performRequest(t, handler, http.MethodGet, "/api/v1/stores", mini.Token, nil), http.StatusOK)
+	if len(stores.Items) != 1 {
+		t.Fatalf("default manager should see exactly one store, got %#v", stores.Items)
+	}
 }
 
 func TestMiniappMainFlowInProcess(t *testing.T) {
@@ -238,6 +381,11 @@ func TestMiniappMainFlowInProcess(t *testing.T) {
 	products := decodeResponse[listResponse[CatalogProduct]](t, performRequest(t, handler, http.MethodGet, "/api/v1/products", mini.Token, nil), http.StatusOK)
 	if len(products.Items) == 0 {
 		t.Fatal("expected seeded products for miniapp flow")
+	}
+
+	goldPrices := decodeResponse[goldReferencePricesTestResult](t, performRequest(t, handler, http.MethodGet, "/api/v1/gold-prices/reference", mini.Token, nil), http.StatusOK)
+	if goldPrices.Source != "local_reference" || len(goldPrices.ReferencePrices) == 0 {
+		t.Fatalf("unexpected fallback gold reference prices: %#v", goldPrices)
 	}
 
 	inventory := decodeResponse[inventorySummaryTestResult](t, performRequest(t, handler, http.MethodGet, "/api/v1/inventory/summary", mini.Token, nil), http.StatusOK)
@@ -268,6 +416,8 @@ func TestMiniappMainFlowInProcess(t *testing.T) {
 		"remark":        "test cashier order",
 		"items": []map[string]any{
 			{
+				"productId": "product-001",
+				"sku":       "GJG-SZ-001",
 				"name":      "足金手镯标准款",
 				"quantity":  1,
 				"unitPrice": 1288,
@@ -279,6 +429,25 @@ func TestMiniappMainFlowInProcess(t *testing.T) {
 	}
 	if cashier.CustomerName != "收银客户" || cashier.CustomerPhone != "13800138001" {
 		t.Fatalf("cashier customer fields not preserved: %#v", cashier)
+	}
+	if len(cashier.Items) != 1 || cashier.Items[0].SKU != "GJG-SZ-001" || cashier.Items[0].ProductID != "product-001" {
+		t.Fatalf("cashier sku fields not preserved: %#v", cashier.Items)
+	}
+
+	skuOnlyCashier := decodeResponse[CashierOrder](t, performRequest(t, handler, http.MethodPost, "/api/v1/cashier/orders", mini.Token, map[string]any{
+		"storeId":       mini.StoreID,
+		"customerName":  "编码客户",
+		"customerPhone": "13800138002",
+		"remark":        "sku lookup cashier order",
+		"items": []map[string]any{
+			{
+				"sku":      "GJG-KG-018",
+				"quantity": 2,
+			},
+		},
+	}), http.StatusCreated)
+	if len(skuOnlyCashier.Items) != 1 || skuOnlyCashier.Items[0].Name != "18K 项链" || skuOnlyCashier.Items[0].UnitPrice != 612 || skuOnlyCashier.Items[0].Amount != 1224 {
+		t.Fatalf("cashier sku lookup did not populate product fields: %#v", skuOnlyCashier.Items)
 	}
 
 	recycleDraft := decodeResponse[RecycleOrder](t, performRequest(t, handler, http.MethodPost, "/api/v1/recycle/orders", mini.Token, map[string]any{
@@ -319,6 +488,320 @@ func TestMiniappMainFlowInProcess(t *testing.T) {
 	}
 }
 
+func TestInventoryAndMaterialLedgerRealAPIs(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+
+	boss := passwordLogin(t, handler, defaultBossUsername, defaultBossPassword)
+	manager := passwordLogin(t, handler, defaultManagerUsername, defaultManagerPassword)
+	if boss.Token == "" || manager.Token == "" {
+		t.Fatal("expected boss and manager tokens")
+	}
+
+	inventoryItem := decodeResponse[InventoryLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/inventory/items", manager.Token, map[string]any{
+		"styleNo":    "YS-TEST-001",
+		"name":       "验收足金手链",
+		"category":   "金饰",
+		"purity":     "足金999",
+		"pieceCount": 2,
+		"weightGram": 18.66,
+		"costAmount": 12888.5,
+		"remark":     "库存真实接口验收",
+	}), http.StatusCreated)
+	if inventoryItem.ID == "" || inventoryItem.StoreID == "" || inventoryItem.StyleNo != "YS-TEST-001" {
+		t.Fatalf("inventory item not created correctly: %#v", inventoryItem)
+	}
+
+	managerInventory := decodeResponse[InventoryLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/v1/inventory/items", manager.Token, nil), http.StatusOK)
+	if managerInventory.TotalPieceCount != 2 || managerInventory.TotalWeightGram != 18.66 || len(managerInventory.Items) != 1 {
+		t.Fatalf("manager inventory summary not scoped or aggregated correctly: %#v", managerInventory)
+	}
+
+	bossInventory := decodeResponse[InventoryLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/admin/inventory/items", boss.Token, nil), http.StatusOK)
+	if bossInventory.VisibleStoreCount < 2 || bossInventory.TotalPieceCount != 2 {
+		t.Fatalf("boss admin inventory summary should include all stores: %#v", bossInventory)
+	}
+
+	materialItem := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/materials", manager.Token, map[string]any{
+		"type":         "pledge",
+		"orderNo":      "JL-TEST-001",
+		"customerName": "验收客户",
+		"category":     "金饰",
+		"purity":       "足金999",
+		"weightGram":   10.25,
+		"amount":       6200,
+		"dueDate":      "2026-08-01",
+		"remark":       "抵押寄存真实接口验收",
+	}), http.StatusCreated)
+	if materialItem.ID == "" || materialItem.Type != "pledge" || materialItem.RemainingWeightGram != 10.25 {
+		t.Fatalf("material item not created correctly: %#v", materialItem)
+	}
+
+	updatedMaterial := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodPut, "/api/admin/materials/"+materialItem.ID, boss.Token, map[string]any{
+		"type":                "leftover",
+		"orderNo":             "JL-TEST-001-EDIT",
+		"customerName":        "编辑客户",
+		"category":            "黄金",
+		"purity":              "足金9999",
+		"weightGram":          11.5,
+		"amount":              6600,
+		"remainingWeightGram": 9.5,
+		"status":              "in_stock",
+		"dueDate":             "2026-08-08",
+		"remark":              "后台编辑真实接口验收",
+		"source":              "admin",
+	}), http.StatusOK)
+	if updatedMaterial.Type != "leftover" || updatedMaterial.OrderNo != "JL-TEST-001-EDIT" || updatedMaterial.RemainingWeightGram != 9.5 {
+		t.Fatalf("material update not applied: %#v", updatedMaterial)
+	}
+
+	materials := decodeResponse[MaterialLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/v1/materials", manager.Token, nil), http.StatusOK)
+	if materials.TodayWeightGram != 11.5 || materials.MonthAmount != 6600 || materials.PledgeCount != 0 || len(materials.PurityStats) != 1 {
+		t.Fatalf("material summary not aggregated correctly: %#v", materials)
+	}
+
+	outbound := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/materials/"+materialItem.ID+"/outbound", manager.Token, map[string]any{
+		"remark": "验收旧料出库",
+	}), http.StatusOK)
+	if outbound.Status != "outbound" || outbound.RemainingWeightGram != 0 || outbound.OutboundAt == nil {
+		t.Fatalf("material outbound not applied: %#v", outbound)
+	}
+
+	afterOutbound := decodeResponse[MaterialLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/admin/materials", boss.Token, nil), http.StatusOK)
+	if afterOutbound.RemainingWeightGram != 0 || len(afterOutbound.Items) != 1 || afterOutbound.Items[0].Status != "outbound" {
+		t.Fatalf("material summary after outbound incorrect: %#v", afterOutbound)
+	}
+
+	deleted := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodDelete, "/api/admin/materials/"+materialItem.ID, boss.Token, nil), http.StatusOK)
+	if deleted.Status != "deleted" {
+		t.Fatalf("material delete not applied: %#v", deleted)
+	}
+	afterDelete := decodeResponse[MaterialLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/admin/materials", boss.Token, nil), http.StatusOK)
+	if len(afterDelete.Items) != 0 {
+		t.Fatalf("deleted material should be hidden from ledger: %#v", afterDelete.Items)
+	}
+}
+
+func TestInventoryAndMaterialCreateIgnoreClientDisplayFields(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+	manager := passwordLogin(t, handler, defaultManagerUsername, defaultManagerPassword)
+
+	inventoryItem := decodeResponse[InventoryLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/inventory/items", manager.Token, map[string]any{
+		"id":         "local-inventory-id",
+		"storeName":  "前端展示门店",
+		"styleNo":    "CLIENT-DISPLAY-001",
+		"name":       "前端展示字段验收",
+		"category":   "黄金",
+		"purity":     "足金9999",
+		"pieceCount": 1,
+		"weightGram": 11,
+		"costAmount": 0,
+		"status":     "in_stock",
+		"source":     "miniapp",
+		"createdAt":  "2026-07-11 22:40",
+	}), http.StatusCreated)
+	if inventoryItem.ID == "local-inventory-id" || inventoryItem.StyleNo != "CLIENT-DISPLAY-001" {
+		t.Fatalf("inventory display-field payload not normalized by backend: %#v", inventoryItem)
+	}
+
+	materialItem := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/materials", manager.Token, map[string]any{
+		"id":                  "local-material-id",
+		"storeName":           "前端展示门店",
+		"type":                "pledge",
+		"customerName":        "前端客户",
+		"category":            "黄金",
+		"purity":              "足金9999",
+		"weightGram":          11,
+		"amount":              10000,
+		"remainingWeightGram": 10,
+		"status":              "in_stock",
+		"createdAt":           "2026-07-11 22:41",
+	}), http.StatusCreated)
+	if materialItem.ID == "local-material-id" || materialItem.RemainingWeightGram != 10 {
+		t.Fatalf("material display-field payload not normalized by backend: %#v", materialItem)
+	}
+}
+
+func TestMiniappCatalogWriteFlowsInProcess(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+	mini := miniappLogin(t, handler, "manager")
+
+	createdMember := decodeResponse[MemberProfile](t, performRequest(t, handler, http.MethodPost, "/api/v1/members", mini.Token, map[string]any{
+		"name":            "联调会员",
+		"phone":           "13800138111",
+		"level":           "VIP",
+		"status":          "follow_up",
+		"preferredPurity": "足金999",
+		"sourceChannel":   "小程序新增",
+		"managerName":     "李店长",
+		"tags":            []string{"联调", "新建"},
+		"notes":           "用于验证小程序会员真实写接口",
+	}), http.StatusCreated)
+	if createdMember.ID == "" || createdMember.StoreID != mini.StoreID || createdMember.Status != "follow_up" {
+		t.Fatalf("member create not applied: %#v", createdMember)
+	}
+
+	updatedMember := decodeResponse[MemberProfile](t, performRequest(t, handler, http.MethodPut, "/api/v1/members/"+createdMember.ID, mini.Token, map[string]any{
+		"name":            "联调会员已更新",
+		"phone":           "13800138112",
+		"level":           "普通会员",
+		"status":          "sleeping",
+		"preferredPurity": "18K",
+		"sourceChannel":   "回访更新",
+		"managerName":     "李店长",
+		"tags":            []string{"联调", "更新"},
+		"notes":           "会员资料已更新",
+	}), http.StatusOK)
+	if updatedMember.Name != "联调会员已更新" || updatedMember.Phone != "13800138112" || updatedMember.Status != "sleeping" {
+		t.Fatalf("member update not applied: %#v", updatedMember)
+	}
+
+	createdProduct := decodeResponse[CatalogProduct](t, performRequest(t, handler, http.MethodPost, "/api/v1/products", mini.Token, map[string]any{
+		"name":             "联调商品",
+		"sku":              "INT-SKU-001",
+		"category":         "金饰",
+		"categoryTab":      "黄金饰品",
+		"purity":           "足金999",
+		"benchPrice":       720,
+		"retailPrice":      760,
+		"gramWeight":       10.5,
+		"status":           "active",
+		"inventory":        3,
+		"tags":             []string{"联调", "新建"},
+		"recommendedScene": "用于验证小程序商品真实写接口",
+		"quoteLeadTime":    "30 秒",
+	}), http.StatusCreated)
+	if createdProduct.ID == "" || createdProduct.SKU != "INT-SKU-001" || len(createdProduct.StoreIDs) != 1 || createdProduct.StoreIDs[0] != mini.StoreID {
+		t.Fatalf("product create not applied: %#v", createdProduct)
+	}
+
+	updatedProduct := decodeResponse[CatalogProduct](t, performRequest(t, handler, http.MethodPut, "/api/v1/products/"+createdProduct.ID, mini.Token, map[string]any{
+		"name":             "联调商品已更新",
+		"sku":              "INT-SKU-001",
+		"category":         "K金",
+		"categoryTab":      "K金",
+		"purity":           "18K",
+		"benchPrice":       560,
+		"retailPrice":      610,
+		"gramWeight":       8.8,
+		"status":           "draft",
+		"inventory":        2,
+		"tags":             []string{"联调", "更新"},
+		"recommendedScene": "商品资料已更新",
+		"quoteLeadTime":    "60 秒",
+	}), http.StatusOK)
+	if updatedProduct.Name != "联调商品已更新" || updatedProduct.Category != "K金" || updatedProduct.Status != "draft" || updatedProduct.Inventory != 2 {
+		t.Fatalf("product update not applied: %#v", updatedProduct)
+	}
+
+	memberList := decodeResponse[listResponse[MemberProfile]](t, performRequest(t, handler, http.MethodGet, "/api/v1/members", mini.Token, nil), http.StatusOK)
+	if !containsMember(memberList.Items, updatedMember.ID) {
+		t.Fatalf("updated member missing from list: %#v", memberList.Items)
+	}
+
+	productList := decodeResponse[listResponse[CatalogProduct]](t, performRequest(t, handler, http.MethodGet, "/api/v1/products", mini.Token, nil), http.StatusOK)
+	if !containsProduct(productList.Items, updatedProduct.ID) {
+		t.Fatalf("updated product missing from list: %#v", productList.Items)
+	}
+}
+
+func containsMember(items []MemberProfile, memberID string) bool {
+	for _, item := range items {
+		if item.ID == memberID {
+			return true
+		}
+	}
+	return false
+}
+
+func containsProduct(items []CatalogProduct, productID string) bool {
+	for _, item := range items {
+		if item.ID == productID {
+			return true
+		}
+	}
+	return false
+}
+
+func TestGoldReferencePricesCanDriveQuotePreview(t *testing.T) {
+	app := newTestAppWithEnv(t, map[string]string{
+		"GOLD_PRICE_CNY_PER_GRAM": "800",
+		"GOLD_PRICE_UPDATED_AT":   "2026-06-06T00:00:00Z",
+	})
+	handler := app.Router()
+	mini := miniappLogin(t, handler, "manager")
+
+	goldPrices := decodeResponse[goldReferencePricesTestResult](t, performRequest(t, handler, http.MethodGet, "/api/v1/gold-prices/reference", mini.Token, nil), http.StatusOK)
+	if goldPrices.Source != "configured_cny_per_gram" || goldPrices.BaseCNYPerGram != 800 || len(goldPrices.ReferencePrices) < 5 {
+		t.Fatalf("unexpected configured gold reference prices: %#v", goldPrices)
+	}
+
+	quote := decodeResponse[recycleQuotePreviewTestResult](t, performRequest(t, handler, http.MethodPost, "/api/v1/recycle/quote-preview", mini.Token, map[string]any{
+		"storeId":             mini.StoreID,
+		"category":            "旧金料",
+		"purity":              "18K",
+		"grossWeightGram":     10,
+		"deductionWeightGram": 0,
+	}), http.StatusOK)
+	if quote.UnitPrice != 600 || quote.PriceSource != "configured_cny_per_gram" || quote.EstimatedAmount != 5975 {
+		t.Fatalf("quote preview did not use configured international gold price: %#v", quote)
+	}
+}
+
+func TestLiveGoldReferencePricesPullSpotAndFX(t *testing.T) {
+	spotServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/price/XAU" {
+			t.Fatalf("unexpected spot path: %s", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"symbol":    "XAU",
+			"name":      "Gold",
+			"currency":  "USD",
+			"price":     3110.34768,
+			"updatedAt": "2026-06-06T04:30:24Z",
+		})
+	}))
+	defer spotServer.Close()
+	fxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"base": "USD",
+			"date": "2026-06-05",
+			"rates": map[string]float64{
+				"CNY": 7,
+			},
+		})
+	}))
+	defer fxServer.Close()
+
+	app := newTestAppWithEnv(t, map[string]string{
+		"GOLD_PRICE_LIVE_ENABLED":         "true",
+		"GOLD_PRICE_API_URL":              spotServer.URL + "/price/XAU",
+		"GOLD_PRICE_FX_API_URL":           fxServer.URL + "/latest?base=USD&symbols=CNY",
+		"GOLD_PRICE_CACHE_TTL_SECONDS":    "60",
+		"GOLD_PRICE_HTTP_TIMEOUT_SECONDS": "2",
+	})
+	handler := app.Router()
+	mini := miniappLogin(t, handler, "manager")
+
+	goldPrices := decodeResponse[goldReferencePricesTestResult](t, performRequest(t, handler, http.MethodGet, "/api/v1/gold-prices/reference", mini.Token, nil), http.StatusOK)
+	if goldPrices.Source != "live_xau_usd_fx" || goldPrices.BaseCNYPerGram != 700 || goldPrices.XAUUSD != 3110.35 || goldPrices.USDCNY != 7 {
+		t.Fatalf("unexpected live gold reference prices: %#v", goldPrices)
+	}
+
+	quote := decodeResponse[recycleQuotePreviewTestResult](t, performRequest(t, handler, http.MethodPost, "/api/v1/recycle/quote-preview", mini.Token, map[string]any{
+		"storeId":             mini.StoreID,
+		"category":            "旧金料",
+		"purity":              "18K",
+		"grossWeightGram":     10,
+		"deductionWeightGram": 0,
+	}), http.StatusOK)
+	if quote.UnitPrice != 525 || quote.PriceSource != "live_xau_usd_fx" || quote.EstimatedAmount != 5225 {
+		t.Fatalf("quote preview did not use live international gold price: %#v", quote)
+	}
+}
+
 func TestAdminWriteFlowsPersistInBootstrap(t *testing.T) {
 	app := newTestApp(t)
 	handler := app.Router()
@@ -341,21 +824,27 @@ func TestAdminWriteFlowsPersistInBootstrap(t *testing.T) {
 	}
 
 	newUser := decodeResponse[AdminUserAccount](t, performRequest(t, handler, http.MethodPost, "/api/admin/users", admin.Token, nil), http.StatusCreated)
+	if newUser.StoreIDs == nil || newUser.StoreNames == nil {
+		t.Fatalf("new user store arrays must not be null: %#v", newUser)
+	}
 	updatedUser := decodeResponse[AdminUserAccount](t, performRequest(t, handler, http.MethodPut, "/api/admin/users/"+newUser.ID, admin.Token, map[string]any{
 		"id":        newUser.ID,
-		"name":      "赵收银",
-		"account":   "cashier.pd",
-		"roleKey":   "manager",
+		"name":      "赵店长",
+		"account":   "manager.pd",
+		"roleKey":   "shop_manager",
 		"roleName":  "店长",
 		"dataScope": "assigned_store",
 		"storeIds":  []string{updatedStore.ID},
 		"status":    "enabled",
 	}), http.StatusOK)
-	if updatedUser.Account != "cashier.pd" || len(updatedUser.StoreIDs) != 1 {
+	if updatedUser.Account != "manager.pd" || updatedUser.RoleKey != "shop_manager" || len(updatedUser.StoreIDs) != 1 {
 		t.Fatalf("user update not applied: %#v", updatedUser)
 	}
 
 	newProduct := decodeResponse[AdminProductRecord](t, performRequest(t, handler, http.MethodPost, "/api/admin/products", admin.Token, nil), http.StatusCreated)
+	if newProduct.StoreIDs == nil || newProduct.StoreNames == nil {
+		t.Fatalf("new product store arrays must not be null: %#v", newProduct)
+	}
 	updatedProduct := decodeResponse[AdminProductRecord](t, performRequest(t, handler, http.MethodPut, "/api/admin/products/"+newProduct.ID, admin.Token, map[string]any{
 		"id":         newProduct.ID,
 		"name":       "浦东试营业礼包",
@@ -364,10 +853,11 @@ func TestAdminWriteFlowsPersistInBootstrap(t *testing.T) {
 		"price":      99,
 		"gramWeight": 0,
 		"status":     "active",
+		"storeIds":   []string{updatedStore.ID},
 		"storeNames": []string{"浦东首店"},
 		"tags":       []string{"试营业", "礼包"},
 	}), http.StatusOK)
-	if updatedProduct.Name != "浦东试营业礼包" {
+	if updatedProduct.Name != "浦东试营业礼包" || len(updatedProduct.StoreIDs) != 1 || updatedProduct.StoreIDs[0] != updatedStore.ID || len(updatedProduct.StoreNames) != 1 || updatedProduct.StoreNames[0] != "浦东首店" {
 		t.Fatalf("product update not applied: %#v", updatedProduct)
 	}
 
@@ -421,7 +911,7 @@ func TestManagerScopeRestrictions(t *testing.T) {
 
 	admin := adminLogin(t, handler, "manager.sz", "Manager123!")
 	bootstrap := decodeResponse[AdminBootstrap](t, performRequest(t, handler, http.MethodGet, "/api/admin/bootstrap", admin.Token, nil), http.StatusOK)
-	if bootstrap.CurrentUser.RoleKey != "manager" {
+	if bootstrap.CurrentUser.RoleKey != "shop_manager" {
 		t.Fatalf("unexpected current user: %#v", bootstrap.CurrentUser)
 	}
 	if len(bootstrap.Stores) != 1 {
@@ -645,13 +1135,13 @@ func TestMiniAppLoginWithWechatCodeExchange(t *testing.T) {
 		"profile": map[string]any{
 			"name":      "李店长",
 			"phone":     "13800002108",
-			"roleKey":   "manager",
+			"roleKey":   "shop_manager",
 			"storeName": "南山旗舰店",
 			"storeCode": "SZ-NS",
 		},
 	}), http.StatusOK)
 
-	if result.UserID != "user-manager-001" || result.RoleKey != "manager" || result.StoreID == "" {
+	if result.UserID != "user-manager-001" || result.RoleKey != "shop_manager" || result.StoreID == "" {
 		t.Fatalf("unexpected miniapp login result: %#v", result)
 	}
 }
@@ -676,8 +1166,8 @@ func TestMiniAppLoginRejectsUnboundWechatOpenID(t *testing.T) {
 	envelope := decodeError(t, performRequest(t, handler, http.MethodPost, "/api/v1/auth/wechat-login", "", map[string]any{
 		"code": "real-wechat-code",
 		"profile": map[string]any{
-			"name":      "未绑定店员",
-			"roleKey":   "manager",
+			"name":      "未绑定店长",
+			"roleKey":   "shop_manager",
 			"storeName": "南山旗舰店",
 			"storeCode": "SZ-NS",
 		},
@@ -716,14 +1206,14 @@ func TestMiniAppLoginAutoBindsWechatOpenIDByPhone(t *testing.T) {
 		"profile": map[string]any{
 			"name":      "廖总",
 			"phone":     "13800000001",
-			"roleKey":   "owner",
+			"roleKey":   "boss",
 			"storeName": "南山旗舰店",
 			"storeCode": "SZ-NS",
 			"extra":     "ignored",
 		},
 	}), http.StatusOK)
 
-	if result.UserID != "user-owner-001" || result.RoleKey != "owner" {
+	if result.UserID != "user-owner-001" || result.RoleKey != "boss" {
 		t.Fatalf("unexpected auto-bound miniapp login result: %#v", result)
 	}
 
@@ -792,13 +1282,13 @@ func TestMiniAppLoginAutoBindsWechatOpenIDByPhoneCode(t *testing.T) {
 		"phoneCode": "phone-code-001",
 		"profile": map[string]any{
 			"name":      "廖总",
-			"roleKey":   "owner",
+			"roleKey":   "boss",
 			"storeName": "南山旗舰店",
 			"storeCode": "SZ-NS",
 		},
 	}), http.StatusOK)
 
-	if result.UserID != "user-owner-001" || result.RoleKey != "owner" {
+	if result.UserID != "user-owner-001" || result.RoleKey != "boss" {
 		t.Fatalf("unexpected phone-code miniapp login result: %#v", result)
 	}
 
@@ -844,13 +1334,13 @@ func TestMiniAppLoginAutoBindsWechatOpenIDByEncryptedPhoneData(t *testing.T) {
 		"phoneIv":            encryptedIV,
 		"profile": map[string]any{
 			"name":      "廖总",
-			"roleKey":   "owner",
+			"roleKey":   "boss",
 			"storeName": "南山旗舰店",
 			"storeCode": "SZ-NS",
 		},
 	}), http.StatusOK)
 
-	if result.UserID != "user-owner-001" || result.RoleKey != "owner" {
+	if result.UserID != "user-owner-001" || result.RoleKey != "boss" {
 		t.Fatalf("unexpected encrypted-phone miniapp login result: %#v", result)
 	}
 
@@ -900,13 +1390,13 @@ func TestMiniAppLoginAutoBindsCustomerOwnerByPhoneCode(t *testing.T) {
 		"phoneCode": "phone-code-zhou",
 		"profile": map[string]any{
 			"name":      "示例老板",
-			"roleKey":   "owner",
+			"roleKey":   "boss",
 			"storeName": "南山旗舰店",
 			"storeCode": "SZ-NS",
 		},
 	}), http.StatusOK)
 
-	if result.UserID != "user-owner-002" || result.RoleKey != "owner" {
+	if result.UserID != "user-owner-002" || result.RoleKey != "boss" {
 		t.Fatalf("unexpected customer owner miniapp login result: %#v", result)
 	}
 
@@ -926,7 +1416,7 @@ func TestMiniAppLoginRejectsWhenWechatAuthIsRequiredButNotConfigured(t *testing.
 		"code": "real-wechat-code",
 		"profile": map[string]any{
 			"name":      "李店长",
-			"roleKey":   "manager",
+			"roleKey":   "shop_manager",
 			"storeName": "南山旗舰店",
 			"storeCode": "SZ-NS",
 		},

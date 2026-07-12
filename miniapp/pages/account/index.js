@@ -1,7 +1,19 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.js
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-10
+ */
+
 const {
   getProfile,
   loginWithPassword,
-  loginOnline,
   loginOnlineWithPhoneCode,
   loginDevtoolsAccount,
   isMiniAppBindingRequired,
@@ -16,7 +28,7 @@ function formatLoginError(error) {
   }
 
   if (isMiniAppBindingRequired(error)) {
-    return "当前微信还没有绑定员工账号。首次使用可以授权手机号，系统会按后台员工手机号完成匹配。";
+    return "当前微信还没有绑定后台账号。首次使用可以授权手机号，系统会按后台账号手机号完成匹配。";
   }
 
   const message = error && error.message ? error.message : "";
@@ -25,7 +37,7 @@ function formatLoginError(error) {
     return "手机号授权校验失败，请重新点击授权手机号。";
   }
   if (/openid|appsecret|wx\.login|code|invalid request body|开发者|api/i.test(message)) {
-    return "当前微信还没有绑定后台员工账号，请联系管理员完成绑定后重试。";
+    return "当前微信还没有绑定后台账号，请联系管理员完成绑定后重试。";
   }
 
   if (message) {
@@ -91,11 +103,10 @@ Page({
       password: ""
     },
     submitting: false,
-    submitText: "微信快捷登录",
     passwordSubmitting: false,
     passwordButtonText: "登录",
     phoneSubmitting: false,
-    phoneButtonText: "微信快捷登录",
+    phoneButtonText: "手机号快捷登录",
     agreementAccepted: false,
     needsPhoneBinding: false,
     devtoolsMode: isDevtoolsRuntime(),
@@ -182,44 +193,6 @@ Page({
       });
   },
 
-  handleWechatLogin() {
-    if (!this.ensureAgreement()) return;
-    this.submitProfile();
-  },
-
-  submitProfile(profileOverride) {
-    const form = profileOverride || this.data.form;
-    this.setData({
-      submitting: true,
-      submitText: "正在进入",
-      loginError: ""
-    });
-
-    const loginAction = isDevtoolsRuntime() ? loginDevtoolsAccount : loginOnline;
-
-    loginAction(form)
-      .then(() => {
-        wx.showToast({ title: "登录成功", icon: "success" });
-        setTimeout(() => {
-          openHome();
-        }, 350);
-      })
-      .catch((error) => {
-        const message = formatLoginError(error);
-        this.setData({
-          loginError: message,
-          needsPhoneBinding: isMiniAppBindingRequired(error)
-        });
-        wx.showToast({ title: "登录失败", icon: "none" });
-      })
-      .finally(() => {
-        this.setData({
-          submitting: false,
-          submitText: "微信快捷登录"
-        });
-      });
-  },
-
   handlePhoneAuthorize(event) {
     if (!this.ensureAgreement()) return;
 
@@ -257,7 +230,7 @@ Page({
       })
       .catch((error) => {
         const message = isMiniAppBindingRequired(error)
-          ? "授权手机号未匹配到后台员工账号，请管理员先在后台录入或核对手机号。"
+          ? "授权手机号未匹配到后台账号，请管理员先在后台录入或核对手机号。"
           : formatLoginError(error);
         this.setData({
           loginError: message,

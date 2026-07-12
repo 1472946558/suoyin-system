@@ -1,7 +1,21 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: orderStore.js
+ * 功能描述: 工具函数
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-05
+ */
+
 const STORAGE_KEY = "gr_recycle_orders";
 const CASHIER_STORAGE_KEY = "gr_cashier_orders";
 const DRAFT_KEY = "gr_recycle_draft";
 const { appConfig, request } = require("./apiClient");
+const { getSuggestedPrice, refreshReferencePrices } = require("./goldPriceStore");
 const { getScopedStorageSync, setScopedStorageSync, removeScopedStorageSync } = require("./sessionStorage");
 const photoRules = appConfig.recyclePhotoRules;
 
@@ -13,14 +27,6 @@ const statusMap = {
   cancelled: "已作废"
 };
 
-const purityPriceMap = {
-  "足金9999": 748,
-  "足金999": 742,
-  "22K": 680,
-  "18K": 558,
-  "14K": 436
-};
-
 const cashierStatusMap = {
   paid: "已完成",
   pending: "待复核",
@@ -28,6 +34,15 @@ const cashierStatusMap = {
   completed: "已完成",
   cancelled: "已取消"
 };
+
+function getOnlineStoreContext(profile) {
+  const source = profile || wx.getStorageSync("gr_operator_profile") || {};
+  return {
+    storeId: String(source.storeId || "").trim(),
+    storeName: String(source.storeName || "").trim(),
+    storeCode: String(source.storeCode || "").trim()
+  };
+}
 
 function safeNumber(value) {
   const parsed = parseFloat(value);
@@ -173,13 +188,16 @@ function completeRecyclePhotoUpload(orderId, preparation) {
 
 function uploadRecyclePhotos(orderId, photos, profile) {
   const list = normalizePhotos(photos);
-  const storeId = (profile && profile.storeId) || appConfig.defaultStoreId;
+  const storeContext = getOnlineStoreContext(profile);
+  if (!storeContext.storeId) {
+    return Promise.reject(new Error("当前登录账号未同步到真实门店，请先重新登录门店账号。"));
+  }
   return list.reduce(function(chain, photo) {
     return chain.then(function(collected) {
       const fileName = getFileName(photo.path, `${photo.name || "photo"}.jpg`);
       return getFileInfo(photo.path)
         .then(function(fileInfo) {
-          return requestUploadPreparation(storeId, fileName, fileInfo);
+          return requestUploadPreparation(storeContext.storeId, fileName, fileInfo);
         })
         .then(function(preparation) {
           return uploadPreparedFile(photo.path, preparation).then(function() {
@@ -241,17 +259,19 @@ function hasOperatorToken() {
 }
 
 function shouldUseLocalBusinessData() {
-  return appConfig.mode === "offline" || !hasOperatorToken();
+  return appConfig.mode === "offline";
 }
 
 function getDefaultDraft() {
   return {
+    storeId: "",
+    storeCode: "",
     customerName: "",
     customerPhone: "",
     sourceChannel: "到店散客",
     operatorName: "",
-    storeName: appConfig.storeName,
-    itemCategory: "金饰",
+    storeName: "",
+    itemCategory: "足金",
     itemName: "",
     purity: "足金999",
     grossWeight: "",
@@ -263,8 +283,17 @@ function getDefaultDraft() {
   };
 }
 
+function normalizeRecycleCategory(category) {
+  const value = String(category || "").trim();
+  if (value === "金饰" || value === "金条" || value === "旧金料") {
+    return "足金";
+  }
+  return value || "足金";
+}
+
 function normalizeDraft(draft) {
   const nextDraft = Object.assign(getDefaultDraft(), draft || {});
+  nextDraft.itemCategory = normalizeRecycleCategory(nextDraft.itemCategory);
   nextDraft.photos = normalizePhotos(nextDraft.photos || nextDraft.attachments || nextDraft.attachmentUrls || []);
   nextDraft.cashierItems = normalizeCashierItems(nextDraft.cashierItems);
   return nextDraft;
@@ -298,9 +327,14 @@ function normalizePhotos(source) {
 function buildEmptyCashierItem(index) {
   return {
     id: `cashier_item_${Date.now()}_${index + 1}`,
+    productId: "",
+    sku: "",
     name: "",
     quantity: "1",
-    unitPrice: ""
+    unitPrice: "",
+    inventory: "",
+    productHint: "",
+    productHintTone: ""
   };
 }
 
@@ -309,12 +343,17 @@ function normalizeCashierItems(source) {
   const normalized = list.map(function(item, index) {
     return {
       id: item.id || `cashier_item_${Date.now()}_${index + 1}`,
+      productId: String(item.productId || "").trim(),
+      sku: String(item.sku || "").trim(),
       name: String(item.name || "").trim(),
       quantity: String(item.quantity || "1").trim() || "1",
-      unitPrice: String(item.unitPrice || "").trim()
+      unitPrice: String(item.unitPrice || "").trim(),
+      inventory: String(item.inventory || "").trim(),
+      productHint: String(item.productHint || "").trim(),
+      productHintTone: String(item.productHintTone || "").trim()
     };
   }).filter(function(item) {
-    return item.name || item.unitPrice || item.quantity !== "1";
+    return item.productId || item.sku || item.name || item.unitPrice || item.quantity !== "1";
   });
   return normalized.length ? normalized : [buildEmptyCashierItem(0)];
 }
@@ -341,7 +380,7 @@ function calculateCashierSummary(draft) {
     return sum + item.amount;
   }, 0);
   const validItems = normalizedItems.filter(function(item) {
-    return item.name && item.quantity > 0 && item.unitPrice >= 0;
+    return item.sku && item.name && item.quantity > 0 && item.unitPrice >= 0;
   });
   return {
     items: normalizedItems,
@@ -389,10 +428,6 @@ function getPhotoValidation(photos) {
     maxCount: photoRules.maxCount,
     message: "照片数量满足确认要求"
   };
-}
-
-function getSuggestedPrice(purity) {
-  return purityPriceMap[purity] || purityPriceMap["足金999"];
 }
 
 function getPrimaryRecycleItem(source) {
@@ -470,11 +505,15 @@ function previewRecycleQuoteOnline(draft, profile) {
     return Promise.resolve(localQuote);
   }
   const operatorProfile = profile || wx.getStorageSync("gr_operator_profile") || {};
+  const storeContext = getOnlineStoreContext(operatorProfile);
+  if (!storeContext.storeId) {
+    return Promise.reject(new Error("当前登录账号未同步到真实门店，请先重新登录门店账号。"));
+  }
   return request({
     endpoint: appConfig.endpoints.quotePreview,
     method: "POST",
     data: {
-      storeId: operatorProfile.storeId || appConfig.defaultStoreId,
+      storeId: storeContext.storeId,
       category: normalizedDraft.itemCategory,
       purity: normalizedDraft.purity,
       grossWeightGram: localQuote.grossWeight,
@@ -510,7 +549,9 @@ function clearDraft() {
 }
 
 function getOrders() {
-  seedOrders();
+  if (shouldUseLocalBusinessData()) {
+    seedOrders();
+  }
   return getScopedStorageSync(STORAGE_KEY, []);
 }
 
@@ -519,7 +560,9 @@ function saveOrders(orders) {
 }
 
 function getCashierOrders() {
-  seedCashierOrders();
+  if (shouldUseLocalBusinessData()) {
+    seedCashierOrders();
+  }
   return getScopedStorageSync(CASHIER_STORAGE_KEY, []);
 }
 
@@ -556,7 +599,7 @@ function buildOrderRecord(source, overrides) {
     grossWeight: source.grossWeight || (grossWeight > 0 ? String(grossWeight) : ""),
     deductionWeight: source.deductionWeight || (deductionWeight > 0 ? String(deductionWeight) : "0"),
     recyclePrice: source.recyclePrice || (recyclePrice > 0 ? String(recyclePrice) : ""),
-    storeName: source.storeName || source.shopName || appConfig.storeName,
+    storeName: source.storeName || source.shopName || "",
     photos: source.photos || source.attachments || source.attachmentUrls || []
   }));
   const quote = calculateQuote(draft);
@@ -579,6 +622,8 @@ function buildOrderRecord(source, overrides) {
 function buildCashierOrderRecord(source, overrides) {
   const items = (source.items || []).map(function(item) {
     return {
+      productId: String(item.productId || "").trim(),
+      sku: String(item.sku || "").trim(),
       name: item.name || "未命名商品",
       quantity: Number(item.quantity || 0),
       unitPrice: safeNumber(item.unitPrice),
@@ -614,7 +659,7 @@ function buildCashierOrderRecord(source, overrides) {
     totalAmountText: totalAmount.toFixed(2),
     operatorName: source.createdBy || source.operatorName || "未填写",
     sourceChannel: source.sourceChannel || "门店收银",
-    storeName: source.storeName || appConfig.storeName,
+    storeName: source.storeName || "",
     remark: source.remark || "",
     createdAt: createdAt,
     updatedAt: normalizeDateText(source.updatedAt) || createdAt,
@@ -624,13 +669,13 @@ function buildCashierOrderRecord(source, overrides) {
 }
 
 function normalizeLegacyStoreName(storeName) {
-  if (storeName === "示例门店1") return "示例门店1";
-  if (storeName === "示例门店2") return "示例门店2";
+  if (storeName === "示例门店1") return "本地测试门店1";
+  if (storeName === "示例门店2") return "本地测试门店2";
   return storeName;
 }
 
 function normalizeLegacyOperatorName(operatorName) {
-  return operatorName === "示例店长" ? "示例店长" : operatorName;
+  return operatorName === "示例店长" ? "本地测试店长" : operatorName;
 }
 
 function migrateLegacyOrders(list) {
@@ -658,8 +703,8 @@ function seedOrders() {
       customerName: "张女士",
       customerPhone: "13800002026",
       sourceChannel: "到店散客",
-      operatorName: "示例店长",
-      storeName: appConfig.storeName,
+      operatorName: "本地测试店长",
+      storeName: "本地测试门店1",
       itemCategory: "金饰",
       itemName: "足金手镯",
       purity: "足金999",
@@ -677,8 +722,8 @@ function seedOrders() {
       customerName: "陈先生",
       customerPhone: "13900008866",
       sourceChannel: "企业回访",
-      operatorName: "示例店长",
-      storeName: appConfig.storeName,
+      operatorName: "本地测试店长",
+      storeName: "本地测试门店1",
       itemCategory: "K金",
       itemName: "18K 项链",
       purity: "18K",
@@ -715,10 +760,10 @@ function seedCashierOrders() {
       totalAmount: 3298,
       createdBy: "李店长",
       createdAt: "2026-05-10 14:18",
-      storeName: appConfig.storeName,
+      storeName: "本地测试门店1",
       remark: "足金项链到店成交",
       items: [
-        { name: "足金项链", quantity: 1, unitPrice: 3298, amount: 3298 }
+        { productId: "product-001", sku: "GJG-SZ-001", name: "足金项链", quantity: 1, unitPrice: 3298, amount: 3298 }
       ]
     }),
     buildCashierOrderRecord({
@@ -728,10 +773,10 @@ function seedCashierOrders() {
       totalAmount: 1880,
       createdBy: "张收银",
       createdAt: "2026-05-09 18:06",
-      storeName: appConfig.storeName,
+      storeName: "本地测试门店1",
       remark: "等待客户完成转账",
       items: [
-        { name: "古法耳饰", quantity: 1, unitPrice: 1880, amount: 1880 }
+        { productId: "product-002", sku: "GJG-KG-018", name: "古法耳饰", quantity: 1, unitPrice: 1880, amount: 1880 }
       ]
     })
   ];
@@ -755,13 +800,13 @@ function createCashierOrder(draft) {
   const source = normalizeDraft(draft);
   const summary = calculateCashierSummary(source);
   if (!summary.readyForSubmit) {
-    throw new Error("请补齐客户信息和至少一条有效商品明细");
+    throw new Error("请补齐客户信息、商品编码和至少一条有效商品明细");
   }
   const order = buildCashierOrderRecord({
     customerName: source.customerName,
     customerPhone: source.customerPhone,
     remark: source.remark,
-    storeName: source.storeName || appConfig.storeName,
+    storeName: source.storeName || "",
     operatorName: source.operatorName || "未填写",
     sourceChannel: source.sourceChannel,
     items: summary.items
@@ -784,8 +829,12 @@ function createRecycleOrderOnline(draft) {
   const normalizedDraft = normalizeDraft(draft);
   const validation = getPhotoValidation(normalizedDraft.photos);
   const profile = wx.getStorageSync("gr_operator_profile") || {};
+  const storeContext = getOnlineStoreContext(profile);
   if (!validation.ok) {
     return Promise.reject(new Error(validation.message));
+  }
+  if (!storeContext.storeId) {
+    return Promise.reject(new Error("当前登录账号未同步到真实门店，请先重新登录门店账号。"));
   }
 
   return previewRecycleQuoteOnline(normalizedDraft, profile).then((quote) => {
@@ -793,7 +842,7 @@ function createRecycleOrderOnline(draft) {
       endpoint: appConfig.endpoints.createRecycleOrder,
       method: "POST",
       data: {
-        storeId: profile.storeId || appConfig.defaultStoreId,
+        storeId: storeContext.storeId,
         customerName: normalizedDraft.customerName,
         customerPhone: normalizedDraft.customerPhone,
         estimatedAmount: quote.amount,
@@ -857,20 +906,30 @@ function createCashierOrderOnline(draft) {
   const source = normalizeDraft(draft);
   const summary = calculateCashierSummary(source);
   const profile = wx.getStorageSync("gr_operator_profile") || {};
+  const storeContext = {
+    storeId: String(source.storeId || profile.storeId || "").trim(),
+    storeName: String(source.storeName || profile.storeName || "").trim(),
+    storeCode: String(source.storeCode || profile.storeCode || "").trim()
+  };
   if (!summary.readyForSubmit) {
-    return Promise.reject(new Error("请补齐客户信息和至少一条有效商品明细"));
+    return Promise.reject(new Error("请补齐客户信息、商品编码和至少一条有效商品明细"));
+  }
+  if (!storeContext.storeId) {
+    return Promise.reject(new Error("当前登录账号未同步到真实门店，请先重新登录门店账号。"));
   }
 
   return request({
     endpoint: appConfig.endpoints.createCashierOrder,
     method: "POST",
     data: {
-      storeId: profile.storeId || appConfig.defaultStoreId,
+      storeId: storeContext.storeId,
       customerName: source.customerName,
       customerPhone: source.customerPhone,
       remark: source.remark,
       items: summary.items.map(function(item) {
         return {
+          productId: item.productId,
+          sku: item.sku,
           name: item.name,
           quantity: item.quantity,
           unitPrice: item.unitPrice
@@ -882,7 +941,8 @@ function createCashierOrderOnline(draft) {
     const nextOrder = buildCashierOrderRecord(Object.assign({}, data, {
       customerName: source.customerName,
       customerPhone: source.customerPhone,
-      sourceChannel: source.sourceChannel
+      sourceChannel: source.sourceChannel,
+      storeName: storeContext.storeName || source.storeName
     }));
     const orders = [nextOrder].concat(getCashierOrders().filter(function(item) {
       return item.id !== nextOrder.id;
@@ -989,7 +1049,7 @@ function getOrderAmount(order) {
 }
 
 function getScopedDashboardOrders(orders, profile) {
-  if (!profile || profile.roleKey === "owner") {
+  if (!profile || profile.roleKey === "owner" || profile.roleKey === "boss") {
     return orders;
   }
   const storeName = profile.storeName || "";
@@ -1045,10 +1105,72 @@ function getDashboardStats(profile) {
     todayRecycleAmount: todayRecycleOrders.reduce((sum, item) => sum + getOrderAmount(item), 0).toFixed(2),
     pendingCount: pendingOrders.length,
     completedCount: completedOrders.length,
-    scopeText: profile && profile.roleKey === "owner" ? "全部门店" : ((profile && profile.storeName) || appConfig.storeName),
+    scopeText: profile && (profile.roleKey === "owner" || profile.roleKey === "boss") ? "全部门店" : ((profile && profile.storeName) || "未绑定门店"),
     visibleStoreCount: storeBreakdown.length,
     storeBreakdown: storeBreakdown.slice(0, 3)
   };
+}
+
+function getDashboardStatsOnline(profile) {
+  if (shouldUseLocalBusinessData()) {
+    return Promise.resolve(getDashboardStats(profile));
+  }
+
+  return Promise.all([
+    request({
+      endpoint: appConfig.endpoints.dashboardSummary
+    }).then((payload) => {
+      return payload && payload.data ? payload.data : payload;
+    }),
+    listOrdersOnline(),
+    listCashierOrdersOnline()
+  ]).then(function(results) {
+    const summary = results[0] || {};
+    const recycleOrders = results[1] || [];
+    const cashierOrders = results[2] || [];
+    const scopedRecycleOrders = getScopedDashboardOrders(recycleOrders, profile);
+    const scopedCashierOrders = getScopedDashboardOrders(cashierOrders, profile);
+    const allOrders = scopedRecycleOrders.concat(scopedCashierOrders);
+    const today = todayPrefix();
+    const todayOrders = allOrders.filter(function(item) {
+      return String(item.createdAt || "").indexOf(today) === 0;
+    });
+    const todayRecycleOrders = scopedRecycleOrders.filter(function(item) {
+      return String(item.createdAt || "").indexOf(today) === 0;
+    });
+    const todayCashierOrders = scopedCashierOrders.filter(function(item) {
+      return String(item.createdAt || "").indexOf(today) === 0;
+    });
+    const completedOrders = allOrders.filter(function(item) {
+      return item.status === "completed" || item.status === "confirmed" || item.status === "paid" || item.status === "refunded";
+    });
+    const pendingOrders = allOrders.filter(function(item) {
+      return item.status === "pending_confirm" || item.status === "pending" || item.status === "draft";
+    });
+    const storeBreakdown = buildStoreBreakdown(allOrders);
+
+    return {
+      todayCount: todayOrders.length,
+      todayAmount: todayOrders.reduce(function(sum, item) {
+        return sum + getOrderAmount(item);
+      }, 0).toFixed(2),
+      todayCashierAmount: todayCashierOrders.reduce(function(sum, item) {
+        return sum + getOrderAmount(item);
+      }, 0).toFixed(2),
+      todayRecycleAmount: todayRecycleOrders.reduce(function(sum, item) {
+        return sum + getOrderAmount(item);
+      }, 0).toFixed(2),
+      pendingCount: typeof summary.draftRecycleOrderCount === "number"
+        ? summary.draftRecycleOrderCount
+        : pendingOrders.length,
+      completedCount: completedOrders.length,
+      scopeText: profile && (profile.roleKey === "owner" || profile.roleKey === "boss") ? "全部门店" : ((profile && profile.storeName) || "未绑定门店"),
+      visibleStoreCount: typeof summary.visibleStoreCount === "number"
+        ? summary.visibleStoreCount
+        : storeBreakdown.length,
+      storeBreakdown: storeBreakdown.slice(0, 3)
+    };
+  });
 }
 
 module.exports = {
@@ -1066,6 +1188,7 @@ module.exports = {
   calculateQuote,
   previewRecycleQuoteOnline,
   getSuggestedPrice,
+  refreshReferencePrices,
   getPhotoValidation,
   createRecycleOrder,
   createCashierOrder,
@@ -1078,5 +1201,6 @@ module.exports = {
   getOrderByIdOnline,
   getCashierOrderByIdOnline,
   getDashboardStats,
+  getDashboardStatsOnline,
   calculateCashierSummary
 };

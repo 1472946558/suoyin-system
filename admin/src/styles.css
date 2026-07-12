@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: styles.css
+ * 功能描述: 样式或主模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-10
+ */
+
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap");
 
 :root {
@@ -245,6 +258,14 @@ strong {
   gap: 10px;
 }
 
+.compact-field {
+  min-width: 160px;
+}
+
+.grow-field {
+  flex: 1 1 280px;
+}
+
 .field input,
 .field select,
 .field textarea {
@@ -257,11 +278,135 @@ strong {
   outline: none;
 }
 
+.field textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
   border-color: rgba(217, 154, 8, 0.48);
   box-shadow: 0 0 0 3px rgba(217, 154, 8, 0.12);
+}
+
+.field small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.store-picker-field {
+  grid-column: 1 / -1;
+}
+
+.store-picker {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.store-picker input {
+  min-height: 46px;
+}
+
+.store-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.store-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid rgba(217, 154, 8, 0.28);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(217, 154, 8, 0.1);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.store-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--slate);
+  background: rgba(255, 255, 255, 0.76);
+  cursor: pointer;
+}
+
+.store-dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf8;
+  box-shadow: 0 20px 40px rgba(49, 38, 16, 0.14);
+}
+
+.store-dropdown button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.store-dropdown button:hover,
+.store-dropdown button.selected {
+  border-color: rgba(217, 154, 8, 0.28);
+  background: rgba(217, 154, 8, 0.1);
+}
+
+.store-dropdown strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-dropdown span {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-dropdown em {
+  color: var(--gold);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.empty-dropdown {
+  margin: 0;
+  padding: 12px;
+  color: var(--muted);
 }
 
 .grow {
@@ -307,6 +452,11 @@ strong {
   border: 1px solid var(--line);
 }
 
+.small-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
 .text-btn {
   padding: 0;
   color: var(--gold);
@@ -315,6 +465,25 @@ strong {
 
 .state-text.error {
   color: var(--danger);
+}
+
+.login-role-actions,
+.import-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.login-role-actions .primary-btn,
+.login-role-actions .secondary-btn {
+  flex: 1 1 160px;
+}
+
+.primary-btn.muted,
+.secondary-btn.active {
+  border: 1px solid rgba(217, 154, 8, 0.48);
+  box-shadow: 0 0 0 3px rgba(217, 154, 8, 0.1);
 }
 
 .login-tips {
@@ -547,6 +716,52 @@ strong {
   background: linear-gradient(180deg, rgba(214, 69, 54, 0.1), #ffffff);
 }
 
+.import-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  align-items: end;
+  gap: 18px;
+}
+
+.inventory-import-panel {
+  grid-template-columns: 1fr;
+  align-content: start;
+}
+
+.file-picker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: #fffdf8;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.file-picker input {
+  display: none;
+}
+
+.import-result {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(31, 157, 114, 0.22);
+  border-radius: 12px;
+  background: rgba(31, 157, 114, 0.08);
+}
+
+.import-result span,
+.import-result p {
+  margin: 0;
+  color: var(--muted);
+}
+
 .two-up {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -573,6 +788,13 @@ strong {
   text-align: left;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
+}
+
+.data-table .select-cell {
+  width: 48px;
+  padding-left: 14px;
+  padding-right: 8px;
+  text-align: center;
 }
 
 .data-table th {
@@ -616,6 +838,151 @@ strong {
   background: linear-gradient(135deg, rgba(217, 154, 8, 0.14), #fffaf0);
 }
 
+.action-cell {
+  position: relative;
+  min-width: 112px;
+}
+
+.row-action-menu {
+  position: absolute;
+  z-index: 20;
+  top: 48px;
+  right: 14px;
+  display: grid;
+  min-width: 128px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(47, 35, 8, 0.14);
+}
+
+.row-action-menu button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+  background: transparent;
+}
+
+.row-action-menu button:hover {
+  background: #fff7df;
+}
+
+.row-action-menu span {
+  display: block;
+  padding: 10px 12px;
+  color: var(--muted);
+  white-space: normal;
+}
+
+.danger-text {
+  color: #b42318 !important;
+}
+
+.edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(35, 27, 10, 0.24);
+}
+
+.edit-dialog {
+  width: min(920px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+}
+
+.edit-form-grid {
+  margin-top: 18px;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.quick-grid-simple {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.quick-grid-simple .shortcut-card {
+  min-height: 132px;
+  text-align: left;
+  background: #fffdf8;
+}
+
+.quick-grid-simple .shortcut-card:hover {
+  background: linear-gradient(135deg, rgba(217, 154, 8, 0.14), #fffaf0);
+  transform: translateY(-1px);
+}
+
+.simple-page-head,
+.simple-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.simple-page-head h3 {
+  margin-bottom: 8px;
+}
+
+.simple-row-end {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  min-width: 140px;
+  text-align: right;
+}
+
+.order-link-card {
+  width: 100%;
+  text-align: left;
+}
+
+.order-row-main {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+}
+
+.order-row-main p {
+  margin: 0;
+  text-align: left;
+}
+
+.simple-top-gap {
+  margin-top: 18px;
+}
+
+.product-card-simple {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-card .form-card,
+.panel > .form-card {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .detail-card {
   display: grid;
   gap: 18px;
@@ -656,6 +1023,14 @@ strong {
 .badge-stack,
 .detail-actions {
   flex-wrap: wrap;
+}
+
+.compact-stack {
+  gap: 10px;
+}
+
+.compact-stack .list-card {
+  padding: 14px 16px;
 }
 
 .summary-pill {
@@ -734,6 +1109,7 @@ strong {
   .workspace-shell,
   .two-up,
   .sidebar-layout,
+  .import-panel,
   .scope-switch {
     grid-template-columns: 1fr;
   }
@@ -741,7 +1117,9 @@ strong {
   .stat-grid,
   .role-grid,
   .hero-grid,
-  .template-grid {
+  .template-grid,
+  .quick-grid-simple,
+  .settings-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -759,7 +1137,11 @@ strong {
   .role-grid,
   .hero-grid,
   .template-grid,
-  .detail-grid {
+  .detail-grid,
+  .quick-grid-simple,
+  .settings-grid,
+  .detail-card .form-card,
+  .panel > .form-card {
     grid-template-columns: 1fr;
   }
 

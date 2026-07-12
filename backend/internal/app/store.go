@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: store.go
+ * 功能描述: 状态管理
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-05
+ */
+
 package app
 
 import (
@@ -26,6 +39,9 @@ var (
 	errUploadNotFound     = errors.New("upload session not found")
 	errMemberNotFound     = errors.New("member not found")
 	errProductNotFound    = errors.New("product not found")
+	errInvalidCashierItem = errors.New("invalid cashier order item")
+	errInventoryNotFound  = errors.New("inventory item not found")
+	errMaterialNotFound   = errors.New("material item not found")
 )
 
 const (
@@ -39,6 +55,21 @@ const (
 	configKeyBaseProducts = "base_products"
 	configKeyBaseSettings = "base_system_settings"
 	configKeyAdminRoles   = "admin_roles"
+	configKeyImportLogs   = "admin_product_import_logs"
+	configKeyInventory    = "inventory_ledger"
+	configKeyMaterials    = "material_ledger"
+)
+
+const (
+	defaultBossUserID   = "user-owner-001"
+	defaultBossUsername = "boss"
+	defaultBossPassword = "Boss123!"
+)
+
+const (
+	defaultManagerUserID   = "user-manager-001"
+	defaultManagerUsername = "manager.sz"
+	defaultManagerPassword = "Manager123!"
 )
 
 type MockStore struct {
@@ -68,6 +99,11 @@ type MockStore struct {
 	adminSystemProfile  AdminSystemProfile
 	adminAuditLogs      []AdminAuditLogRecord
 	adminTemplateInit   AdminTemplateInitPlan
+	productImportLogs   []AdminProductImportLog
+	inventoryLedger     []InventoryLedgerItem
+	materialLedger      []MaterialLedgerItem
+	inventorySeq        int
+	materialSeq         int
 	uploadSessions      map[string]UploadPreparation
 	pendingMiniAppBinds []PendingMiniAppBinding
 }
@@ -159,23 +195,6 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 				"settings.read",
 			},
 		},
-		{
-			Code:        "cashier",
-			Name:        "收银员",
-			Description: "门店前台收银与回收录单",
-			DataScope:   "assigned_stores",
-			Permissions: []string{
-				"dashboard.summary.view",
-				"store.read",
-				"member.read",
-				"catalog.product.read",
-				"cashier.order.read",
-				"cashier.order.create",
-				"recycle.order.read",
-				"recycle.order.draft",
-				"settings.read",
-			},
-		},
 	}
 
 	stores := []StoreInfo{
@@ -250,19 +269,19 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 			WechatOpenID: "wx-openid-manager-001",
 		},
 		{
-			ID:           "user-cashier-001",
+			ID:           "user-manager-002",
 			OrgID:        "org-gold-v1",
-			Username:     "cashier.sz",
-			DisplayName:  "张收银",
+			Username:     "manager.gz",
+			DisplayName:  "王店长",
 			Phone:        "13800003001",
-			Password:     "Cashier123!",
-			RoleCode:     "cashier",
-			RoleName:     "收银员",
+			Password:     "Manager123!",
+			RoleCode:     "manager",
+			RoleName:     "店长",
 			DataScope:    "assigned_stores",
-			StoreIDs:     []string{stores[0].ID},
-			Permissions:  roles[2].Permissions,
+			StoreIDs:     []string{stores[1].ID},
+			Permissions:  roles[1].Permissions,
 			Status:       "active",
-			WechatOpenID: "wx-openid-cashier-001",
+			WechatOpenID: "wx-openid-manager-002",
 		},
 	}
 
@@ -277,9 +296,9 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 	settings := SystemSettings{
 		OrgID: "org-gold-v1",
 		Brand: BrandSettings{
-			Name:            "金掌柜回收",
-			ServicePhone:    "400-888-2026",
-			ReceiptTitle:    "黄金回收收银系统",
+			Name:            "金匠倌收银",
+			ServicePhone:    "13456844944",
+			ReceiptTitle:    "金匠倌收银门店小票",
 			SupportMiniApp:  true,
 			DefaultCurrency: "CNY",
 		},
@@ -298,7 +317,7 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 			PathPrefix:        "recycle-evidence",
 			UploadStrategy:    "manual_url",
 			CallbackEnabled:   false,
-			StatusDescription: "对象存储待配置，当前允许先登记外部图片链接。",
+			StatusDescription: "回收留档图片已接入云端存储",
 		},
 		FeatureFlags: map[string]bool{
 			"localDataMode":        true,
@@ -324,7 +343,7 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 			PaidAmount:    1688,
 			Remark:        "开业活动订单",
 			Items: []CashierOrderLine{
-				{Name: "足金戒指", Quantity: 1, UnitPrice: 1688, Amount: 1688},
+				{SKU: "GJG-SZ-001", ProductID: "product-001", Name: "足金戒指", Quantity: 1, UnitPrice: 1688, Amount: 1688},
 			},
 			CreatedBy: users[2].DisplayName,
 			CreatedAt: now.Add(-2 * time.Hour),
@@ -461,7 +480,7 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 		{
 			ID:               "product-002",
 			OrgID:            "org-gold-v1",
-			Name:             "18K 项链回收模板",
+			Name:             "18K 项链",
 			SKU:              "GJG-KG-018",
 			Category:         "K金",
 			CategoryTab:      "K金",
@@ -476,7 +495,7 @@ func newMockStore(persistence *Persistence) (*MockStore, error) {
 			StoreIDs:         []string{stores[0].ID},
 			Stores:           []string{stores[0].Name},
 			Tags:             []string{"K金", "常见回收"},
-			RecommendedScene: "适合员工快速带入常见 K 金参数。",
+			RecommendedScene: "适合门店快速带入常见 K 金参数。",
 			QuoteLeadTime:    "60 秒内完成复检",
 		},
 		{
@@ -556,25 +575,92 @@ func flattenPermissions(groups []PermissionGroup) []string {
 }
 
 func (s *MockStore) authenticate(username, password string) (UserAccount, error) {
+	username = strings.TrimSpace(username)
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	user, ok := s.usersByUsername[username]
-	if !ok || user.Password != password || user.Status != "active" {
-		return UserAccount{}, errInvalidCredentials
+	if ok && user.Password == password && user.Status == "active" {
+		s.mu.RUnlock()
+		return user, nil
 	}
+	s.mu.RUnlock()
+
+	if isDefaultBossCredential(username, password) {
+		return s.restoreDefaultBossLogin()
+	}
+	if isDefaultManagerCredential(username, password) {
+		return s.restoreDefaultManagerLogin()
+	}
+	return UserAccount{}, errInvalidCredentials
+}
+
+func (s *MockStore) authenticateAdmin(identifier, password, roleKey string) (UserAccount, error) {
+	normalizedIdentifier := strings.TrimSpace(identifier)
+	normalizedRole := normalizeAdminRoleKey(roleKey)
+	s.mu.RLock()
+
+	for _, user := range s.usersByID {
+		if user.Password != password || user.Status != "active" {
+			continue
+		}
+		if strings.TrimSpace(user.Username) != normalizedIdentifier && strings.TrimSpace(user.Phone) != normalizedIdentifier {
+			continue
+		}
+		if strings.TrimSpace(roleKey) != "" && normalizeAdminRoleKey(user.RoleCode) != normalizedRole {
+			continue
+		}
+		s.mu.RUnlock()
+		return user, nil
+	}
+	s.mu.RUnlock()
+
+	if isDefaultBossCredential(normalizedIdentifier, password) && (strings.TrimSpace(roleKey) == "" || normalizedRole == "boss") {
+		return s.restoreDefaultBossLogin()
+	}
+	if isDefaultManagerCredential(normalizedIdentifier, password) && (strings.TrimSpace(roleKey) == "" || normalizedRole == "shop_manager") {
+		return s.restoreDefaultManagerLogin()
+	}
+	return UserAccount{}, errInvalidCredentials
+}
+
+func isDefaultBossCredential(username, password string) bool {
+	return strings.TrimSpace(username) == defaultBossUsername && password == defaultBossPassword
+}
+
+func isDefaultManagerCredential(username, password string) bool {
+	return strings.TrimSpace(username) == defaultManagerUsername && password == defaultManagerPassword
+}
+
+func (s *MockStore) restoreDefaultBossLogin() (UserAccount, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	user := s.ensureDefaultBossAccountLocked(true)
+	if s.persistence != nil {
+		_ = s.persistUsersLocked()
+	}
+	s.appendAuditLogLocked("账号管理", "恢复老板默认账号", user.DisplayName, "warning", "high", "已启用老板账号 boss 并刷新默认登录密码")
+	return user, nil
+}
+
+func (s *MockStore) restoreDefaultManagerLogin() (UserAccount, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	user := s.ensureDefaultManagerAccountLocked(true)
+	if s.persistence != nil {
+		_ = s.persistUsersLocked()
+	}
+	s.appendAuditLogLocked("账号管理", "恢复店长默认账号", user.DisplayName, "warning", "medium", "已启用店长账号 manager.sz 并刷新默认登录密码")
 	return user, nil
 }
 
 func (s *MockStore) mockMiniAppUserForRole(roleKey string) (UserAccount, error) {
-	username := "cashier.sz"
-	switch strings.TrimSpace(roleKey) {
-	case "owner":
+	username := "manager.sz"
+	switch normalizeAdminRoleKey(roleKey) {
+	case "boss":
 		username = "boss"
-	case "manager":
+	case "shop_manager":
 		username = "manager.sz"
-	case "cashier", "clerk":
-		username = "cashier.sz"
 	}
 
 	s.mu.RLock()
@@ -852,6 +938,7 @@ func buildRecycleAttachmentAssets(order RecycleOrder, urls []string, actor strin
 	items := make([]AttachmentAsset, 0, len(urls))
 	for index, rawURL := range urls {
 		fileName := attachmentFileName(rawURL, index)
+		previewURL := strings.TrimSpace(rawURL)
 		items = append(items, AttachmentAsset{
 			ID:              fmt.Sprintf("att-%s-%02d", order.ID, index+1),
 			OrgID:           order.OrgID,
@@ -869,6 +956,8 @@ func buildRecycleAttachmentAssets(order RecycleOrder, urls []string, actor strin
 			Status:          "archived",
 			UploadedBy:      actor,
 			UploadedAt:      uploadedAt,
+			HasPreview:      previewURL != "",
+			PreviewURL:      previewURL,
 		})
 	}
 	return items
@@ -951,7 +1040,7 @@ func applySystemSettingDefaults(settings *SystemSettings) {
 		settings.Storage.UploadStrategy = "manual_url"
 	}
 	if strings.TrimSpace(settings.Storage.StatusDescription) == "" {
-		settings.Storage.StatusDescription = "对象存储待配置，当前允许先登记外部图片链接。"
+		settings.Storage.StatusDescription = "回收留档图片已接入云端存储"
 	}
 }
 
@@ -1206,6 +1295,11 @@ func (s *MockStore) completeRecycleAttachmentUpload(user UserAccount, uploadID, 
 		Status:          "archived",
 		UploadedBy:      user.DisplayName,
 		UploadedAt:      time.Now(),
+		HasPreview:      finalThumbURL != "" || finalPublicURL != "",
+		PreviewURL:      finalThumbURL,
+	}
+	if strings.TrimSpace(asset.PreviewURL) == "" {
+		asset.PreviewURL = finalPublicURL
 	}
 
 	replaced := false
@@ -1255,8 +1349,15 @@ func (s *MockStore) listMembersForUser(user UserAccount) []MemberProfile {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	return s.listMembersForUserLocked(user)
+}
+
+func (s *MockStore) listMembersForUserLocked(user UserAccount) []MemberProfile {
 	items := make([]MemberProfile, 0, len(s.members))
 	for _, member := range s.members {
+		if member.Status == "disabled" {
+			continue
+		}
 		if s.canAccessStore(user, member.StoreID) {
 			items = append(items, member)
 		}
@@ -1273,11 +1374,143 @@ func (s *MockStore) getMemberForUser(user UserAccount, memberID string) (MemberP
 
 	for _, member := range s.members {
 		if member.ID == memberID {
+			if member.Status == "disabled" {
+				return MemberProfile{}, errMemberNotFound
+			}
 			if !s.canAccessStore(user, member.StoreID) {
 				return MemberProfile{}, errUnauthorizedStore
 			}
 			return member, nil
 		}
+	}
+	return MemberProfile{}, errMemberNotFound
+}
+
+func (s *MockStore) createMemberForUser(user UserAccount, input MemberProfile) (MemberProfile, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	storeID := strings.TrimSpace(input.StoreID)
+	if storeID == "" {
+		if len(user.StoreIDs) > 0 {
+			storeID = user.StoreIDs[0]
+		} else if user.DataScope == "org_all" && len(s.stores) > 0 {
+			storeID = s.stores[0].ID
+		}
+	}
+	if storeID == "" || !s.canAccessStore(user, storeID) {
+		return MemberProfile{}, errUnauthorizedStore
+	}
+	store, ok := s.getStoreByIDLocked(storeID)
+	if !ok {
+		return MemberProfile{}, errUnauthorizedStore
+	}
+
+	now := time.Now()
+	member := MemberProfile{
+		ID:                 fmt.Sprintf("member-%03d", len(s.members)+1),
+		OrgID:              user.OrgID,
+		StoreID:            storeID,
+		StoreName:          store.Name,
+		Name:               strings.TrimSpace(input.Name),
+		Phone:              strings.TrimSpace(input.Phone),
+		Level:              strings.TrimSpace(input.Level),
+		Status:             normalizeMemberStatus(input.Status),
+		TotalOrders:        max(input.TotalOrders, 0),
+		TotalRecycleAmount: input.TotalRecycleAmount,
+		LastVisitAt:        now,
+		PreferredPurity:    strings.TrimSpace(input.PreferredPurity),
+		SourceChannel:      strings.TrimSpace(input.SourceChannel),
+		ManagerName:        strings.TrimSpace(input.ManagerName),
+		IDVerified:         input.IDVerified,
+		Tags:               append([]string(nil), input.Tags...),
+		Notes:              strings.TrimSpace(input.Notes),
+	}
+	if member.Level == "" {
+		member.Level = "普通会员"
+	}
+	if member.SourceChannel == "" {
+		member.SourceChannel = "门店登记"
+	}
+	if member.ManagerName == "" {
+		member.ManagerName = user.DisplayName
+	}
+	if !input.LastVisitAt.IsZero() {
+		member.LastVisitAt = input.LastVisitAt
+	}
+
+	s.members = append([]MemberProfile{member}, s.members...)
+	if s.persistence != nil {
+		_ = s.persistMembersLocked()
+	}
+	s.appendAuditLogLocked("会员档案", "小程序新增会员", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已保存", member.Name))
+	return member, nil
+}
+
+func (s *MockStore) updateMemberForUser(user UserAccount, memberID string, input MemberProfile) (MemberProfile, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for index, member := range s.members {
+		if member.ID != memberID {
+			continue
+		}
+		if !s.canAccessStore(user, member.StoreID) {
+			return MemberProfile{}, errUnauthorizedStore
+		}
+
+		if storeID := strings.TrimSpace(input.StoreID); storeID != "" {
+			if !s.canAccessStore(user, storeID) {
+				return MemberProfile{}, errUnauthorizedStore
+			}
+			if store, ok := s.getStoreByIDLocked(storeID); ok {
+				member.StoreID = storeID
+				member.StoreName = store.Name
+			}
+		}
+		if name := strings.TrimSpace(input.Name); name != "" {
+			member.Name = name
+		}
+		if phone := strings.TrimSpace(input.Phone); phone != "" {
+			member.Phone = phone
+		}
+		if level := strings.TrimSpace(input.Level); level != "" {
+			member.Level = level
+		}
+		if status := strings.TrimSpace(input.Status); status != "" {
+			member.Status = normalizeMemberStatus(status)
+		}
+		if input.TotalOrders >= 0 {
+			member.TotalOrders = input.TotalOrders
+		}
+		if input.TotalRecycleAmount >= 0 {
+			member.TotalRecycleAmount = input.TotalRecycleAmount
+		}
+		if purity := strings.TrimSpace(input.PreferredPurity); purity != "" {
+			member.PreferredPurity = purity
+		}
+		if sourceChannel := strings.TrimSpace(input.SourceChannel); sourceChannel != "" {
+			member.SourceChannel = sourceChannel
+		}
+		if managerName := strings.TrimSpace(input.ManagerName); managerName != "" {
+			member.ManagerName = managerName
+		}
+		member.IDVerified = input.IDVerified
+		if input.Tags != nil {
+			member.Tags = append([]string(nil), input.Tags...)
+		}
+		member.Notes = strings.TrimSpace(input.Notes)
+		member.LastVisitAt = time.Now()
+		if !input.LastVisitAt.IsZero() {
+			member.LastVisitAt = input.LastVisitAt
+		}
+
+		s.members[index] = member
+		if s.persistence != nil {
+			_ = s.persistMembersLocked()
+		}
+		s.appendAuditLogLocked("会员档案", "小程序更新会员", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已更新", member.Name))
+		return member, nil
 	}
 	return MemberProfile{}, errMemberNotFound
 }
@@ -1288,6 +1521,9 @@ func (s *MockStore) listCatalogProductsForUser(user UserAccount) []CatalogProduc
 
 	items := make([]CatalogProduct, 0, len(s.catalogProducts))
 	for _, product := range s.catalogProducts {
+		if product.Status == "disabled" {
+			continue
+		}
 		if user.DataScope == "org_all" {
 			items = append(items, product)
 			continue
@@ -1302,6 +1538,164 @@ func (s *MockStore) listCatalogProductsForUser(user UserAccount) []CatalogProduc
 	return items
 }
 
+func (s *MockStore) createCatalogProductForUser(user UserAccount, input CatalogProduct) (CatalogProduct, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	storeIDs := append([]string(nil), input.StoreIDs...)
+	if len(storeIDs) == 0 {
+		if user.DataScope == "org_all" && len(s.stores) > 0 {
+			storeIDs = []string{s.stores[0].ID}
+		} else {
+			storeIDs = append([]string(nil), user.StoreIDs...)
+		}
+	}
+	if len(storeIDs) == 0 {
+		return CatalogProduct{}, errUnauthorizedStore
+	}
+	for _, storeID := range storeIDs {
+		if !s.canAccessStore(user, storeID) {
+			return CatalogProduct{}, errUnauthorizedStore
+		}
+	}
+
+	storeNames := make([]string, 0, len(storeIDs))
+	for _, storeID := range storeIDs {
+		store, ok := s.getStoreByIDLocked(storeID)
+		if !ok {
+			return CatalogProduct{}, errUnauthorizedStore
+		}
+		storeNames = append(storeNames, store.Name)
+	}
+
+	product := CatalogProduct{
+		ID:               fmt.Sprintf("product-%03d", len(s.catalogProducts)+1),
+		OrgID:            user.OrgID,
+		Name:             strings.TrimSpace(input.Name),
+		SKU:              strings.TrimSpace(input.SKU),
+		Category:         strings.TrimSpace(input.Category),
+		CategoryTab:      strings.TrimSpace(input.CategoryTab),
+		ImageURL:         strings.TrimSpace(input.ImageURL),
+		Purity:           strings.TrimSpace(input.Purity),
+		BenchPrice:       input.BenchPrice,
+		RetailPrice:      input.RetailPrice,
+		GramWeight:       input.GramWeight,
+		Status:           strings.TrimSpace(input.Status),
+		Inventory:        input.Inventory,
+		StockStatus:      strings.TrimSpace(input.StockStatus),
+		StoreIDs:         storeIDs,
+		Stores:           storeNames,
+		Tags:             append([]string(nil), input.Tags...),
+		RecommendedScene: strings.TrimSpace(input.RecommendedScene),
+		QuoteLeadTime:    strings.TrimSpace(input.QuoteLeadTime),
+	}
+	if product.Category == "" {
+		product.Category = "金饰"
+	}
+	if product.CategoryTab == "" {
+		product.CategoryTab = product.Category
+	}
+	if product.Purity == "" {
+		product.Purity = "足金999"
+	}
+	if product.Status == "" {
+		product.Status = "active"
+	}
+	if product.StockStatus == "" {
+		product.StockStatus = deriveStockStatus(product)
+	}
+
+	s.catalogProducts = append([]CatalogProduct{product}, s.catalogProducts...)
+	if s.persistence != nil {
+		_ = s.persistProductsLocked()
+	}
+	s.appendAuditLogLocked("商品管理", "小程序新增商品", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已保存", product.Name))
+	return product, nil
+}
+
+func (s *MockStore) updateCatalogProductForUser(user UserAccount, productID string, input CatalogProduct) (CatalogProduct, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for index, product := range s.catalogProducts {
+		if product.ID != productID && product.SKU != productID {
+			continue
+		}
+		if user.DataScope != "org_all" && !hasIntersect(product.StoreIDs, user.StoreIDs) {
+			return CatalogProduct{}, errUnauthorizedStore
+		}
+
+		if storeIDs := input.StoreIDs; len(storeIDs) > 0 {
+			for _, storeID := range storeIDs {
+				if !s.canAccessStore(user, storeID) {
+					return CatalogProduct{}, errUnauthorizedStore
+				}
+			}
+			storeNames := make([]string, 0, len(storeIDs))
+			for _, storeID := range storeIDs {
+				store, ok := s.getStoreByIDLocked(storeID)
+				if !ok {
+					return CatalogProduct{}, errUnauthorizedStore
+				}
+				storeNames = append(storeNames, store.Name)
+			}
+			product.StoreIDs = append([]string(nil), storeIDs...)
+			product.Stores = storeNames
+		}
+		if name := strings.TrimSpace(input.Name); name != "" {
+			product.Name = name
+		}
+		if sku := strings.TrimSpace(input.SKU); sku != "" {
+			product.SKU = sku
+		}
+		if category := strings.TrimSpace(input.Category); category != "" {
+			product.Category = category
+		}
+		if categoryTab := strings.TrimSpace(input.CategoryTab); categoryTab != "" {
+			product.CategoryTab = categoryTab
+		}
+		if imageURL := strings.TrimSpace(input.ImageURL); imageURL != "" {
+			product.ImageURL = imageURL
+		}
+		if purity := strings.TrimSpace(input.Purity); purity != "" {
+			product.Purity = purity
+		}
+		if input.BenchPrice >= 0 {
+			product.BenchPrice = input.BenchPrice
+		}
+		if input.RetailPrice >= 0 {
+			product.RetailPrice = input.RetailPrice
+		}
+		if input.GramWeight >= 0 {
+			product.GramWeight = input.GramWeight
+		}
+		if status := strings.TrimSpace(input.Status); status != "" {
+			product.Status = status
+		}
+		if input.Inventory >= 0 {
+			product.Inventory = input.Inventory
+		}
+		if input.Tags != nil {
+			product.Tags = append([]string(nil), input.Tags...)
+		}
+		product.RecommendedScene = strings.TrimSpace(input.RecommendedScene)
+		product.QuoteLeadTime = strings.TrimSpace(input.QuoteLeadTime)
+		if stockStatus := strings.TrimSpace(input.StockStatus); stockStatus != "" {
+			product.StockStatus = stockStatus
+		} else {
+			product.StockStatus = deriveStockStatus(product)
+		}
+
+		s.catalogProducts[index] = product
+		if s.persistence != nil {
+			_ = s.persistProductsLocked()
+		}
+		s.appendAuditLogLocked("商品管理", "小程序更新商品", user.DisplayName, "success", "medium", fmt.Sprintf("%s 已更新", product.Name))
+		return product, nil
+	}
+	return CatalogProduct{}, errProductNotFound
+}
+
 func (s *MockStore) getCatalogProductForUser(user UserAccount, productID string) (CatalogProduct, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -1309,6 +1703,9 @@ func (s *MockStore) getCatalogProductForUser(user UserAccount, productID string)
 	for _, product := range s.catalogProducts {
 		if product.ID != productID && product.SKU != productID {
 			continue
+		}
+		if product.Status == "disabled" {
+			return CatalogProduct{}, errProductNotFound
 		}
 		if user.DataScope == "org_all" {
 			return product, nil
@@ -1362,6 +1759,85 @@ func (s *MockStore) getCashierOrder(user UserAccount, orderID string) (CashierOr
 	return CashierOrder{}, errCashierNotFound
 }
 
+func (s *MockStore) findCatalogProductForCashierLine(user UserAccount, storeID, productID, sku string) (CatalogProduct, bool) {
+	normalizedProductID := strings.TrimSpace(productID)
+	normalizedSKU := strings.TrimSpace(sku)
+	if normalizedProductID == "" && normalizedSKU == "" {
+		return CatalogProduct{}, false
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, product := range s.catalogProducts {
+		if product.Status == "disabled" {
+			continue
+		}
+		matchesProductID := normalizedProductID != "" && product.ID == normalizedProductID
+		matchesSKU := normalizedSKU != "" && strings.EqualFold(product.SKU, normalizedSKU)
+		if !matchesProductID && !matchesSKU {
+			continue
+		}
+		if product.OrgID != "" && user.OrgID != "" && product.OrgID != user.OrgID {
+			continue
+		}
+		if !catalogProductAvailableInStore(product, storeID) {
+			continue
+		}
+		return product, true
+	}
+	return CatalogProduct{}, false
+}
+
+func catalogProductAvailableInStore(product CatalogProduct, storeID string) bool {
+	for _, productStoreID := range product.StoreIDs {
+		if productStoreID == storeID {
+			return true
+		}
+	}
+	return false
+}
+
+func cashierCatalogUnitPrice(product CatalogProduct) float64 {
+	if product.RetailPrice > 0 {
+		return round2(product.RetailPrice)
+	}
+	if product.BenchPrice > 0 && product.GramWeight > 0 {
+		return round2(product.BenchPrice * product.GramWeight)
+	}
+	return 0
+}
+
+func (s *MockStore) normalizeCashierOrderLine(user UserAccount, storeID string, item CashierOrderLine) (CashierOrderLine, error) {
+	line := CashierOrderLine{
+		ProductID: strings.TrimSpace(item.ProductID),
+		SKU:       strings.TrimSpace(item.SKU),
+		Name:      strings.TrimSpace(item.Name),
+		Quantity:  item.Quantity,
+		UnitPrice: round2(item.UnitPrice),
+	}
+	if line.Quantity <= 0 || line.UnitPrice < 0 {
+		return CashierOrderLine{}, errInvalidCashierItem
+	}
+
+	if product, ok := s.findCatalogProductForCashierLine(user, storeID, line.ProductID, line.SKU); ok {
+		line.ProductID = product.ID
+		line.SKU = product.SKU
+		if line.Name == "" {
+			line.Name = product.Name
+		}
+		if line.UnitPrice <= 0 {
+			line.UnitPrice = cashierCatalogUnitPrice(product)
+		}
+	}
+
+	if strings.TrimSpace(line.Name) == "" {
+		return CashierOrderLine{}, errInvalidCashierItem
+	}
+	line.Amount = round2(line.UnitPrice * float64(line.Quantity))
+	return line, nil
+}
+
 func (s *MockStore) createCashierOrder(user UserAccount, storeID string, customerName string, customerPhone string, paymentMethod string, items []CashierOrderLine, remark string) (CashierOrder, error) {
 	if !s.canAccessStore(user, storeID) {
 		return CashierOrder{}, errUnauthorizedStore
@@ -1377,14 +1853,12 @@ func (s *MockStore) createCashierOrder(user UserAccount, storeID string, custome
 	paidAmount := 0.0
 	normalizedPaymentMethod := normalizePaymentMethod(paymentMethod)
 	for _, item := range items {
-		amount := round2(item.UnitPrice * float64(item.Quantity))
-		normalized = append(normalized, CashierOrderLine{
-			Name:      strings.TrimSpace(item.Name),
-			Quantity:  item.Quantity,
-			UnitPrice: round2(item.UnitPrice),
-			Amount:    amount,
-		})
-		total += amount
+		normalizedItem, err := s.normalizeCashierOrderLine(user, storeID, item)
+		if err != nil {
+			return CashierOrder{}, err
+		}
+		normalized = append(normalized, normalizedItem)
+		total += normalizedItem.Amount
 	}
 	if normalizedPaymentMethod == "暂不支付" {
 		status = "pending"
@@ -1816,6 +2290,9 @@ func visibleStoresForUserLocked(stores []StoreInfo, user UserAccount) ([]StoreIn
 }
 
 func productVisibleToUser(product CatalogProduct, user UserAccount, storeSet map[string]struct{}) bool {
+	if product.Status == "disabled" {
+		return false
+	}
 	if user.DataScope == "org_all" {
 		return true
 	}
@@ -1934,6 +2411,9 @@ func (s *MockStore) bootstrapPersistence() error {
 	if err := s.bootstrapAdminConfigs(ctx); err != nil {
 		return err
 	}
+	if err := s.bootstrapInventoryMaterialConfigs(ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1950,6 +2430,11 @@ func (s *MockStore) bootstrapBaseConfigs(ctx context.Context) error {
 	if found {
 		s.settings = settings
 		applySystemSettingDefaults(&s.settings)
+		if sanitizePersistedAdminSystemProfile(&s.adminSystemProfile, &s.settings) {
+			if err := s.persistence.saveConfig(ctx, configKeyBaseSettings, s.settings); err != nil {
+				return err
+			}
+		}
 	} else if err := s.persistence.saveConfig(ctx, configKeyBaseSettings, s.settings); err != nil {
 		return err
 	}
@@ -1983,9 +2468,9 @@ func (s *MockStore) bootstrapBaseConfigs(ctx context.Context) error {
 	}
 	if found {
 		restoredUsers, restored := restoreMissingUserPasswords(users, s.usersByUsername)
-		users = restoredUsers
+		users, changed := sanitizePersistedUsers(restoredUsers, s.stores, s.roles)
 		s.rebuildUserMaps(users)
-		if restored {
+		if restored || changed {
 			if err := s.persistence.saveConfig(ctx, configKeyBaseUsers, s.usersSliceLocked()); err != nil {
 				return err
 			}
@@ -2030,7 +2515,13 @@ func (s *MockStore) bootstrapAdminConfigs(ctx context.Context) error {
 		return err
 	}
 	if found {
-		s.adminRoles = adminRoles
+		var changed bool
+		s.adminRoles, changed = sanitizePersistedAdminRoles(adminRoles)
+		if changed {
+			if err := s.persistence.saveConfig(ctx, configKeyAdminRoles, s.adminRoles); err != nil {
+				return err
+			}
+		}
 	} else if err := s.persistence.saveConfig(ctx, configKeyAdminRoles, s.adminRoles); err != nil {
 		return err
 	}
@@ -2053,6 +2544,14 @@ func (s *MockStore) bootstrapAdminConfigs(ctx context.Context) error {
 	}
 	if found {
 		s.adminSystemProfile = systemProfile
+		if sanitizePersistedAdminSystemProfile(&s.adminSystemProfile, &s.settings) {
+			if err := s.persistence.saveConfig(ctx, configKeyAdminSystem, s.adminSystemProfile); err != nil {
+				return err
+			}
+			if err := s.persistence.saveConfig(ctx, configKeyBaseSettings, s.settings); err != nil {
+				return err
+			}
+		}
 	} else if err := s.persistence.saveConfig(ctx, configKeyAdminSystem, s.adminSystemProfile); err != nil {
 		return err
 	}
@@ -2065,6 +2564,17 @@ func (s *MockStore) bootstrapAdminConfigs(ctx context.Context) error {
 	if found {
 		s.adminAuditLogs = auditLogs
 	} else if err := s.persistence.saveConfig(ctx, configKeyAdminAudit, s.adminAuditLogs); err != nil {
+		return err
+	}
+
+	var importLogs []AdminProductImportLog
+	found, err = s.persistence.loadConfig(ctx, configKeyImportLogs, &importLogs)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.productImportLogs = importLogs
+	} else if err := s.persistence.saveConfig(ctx, configKeyImportLogs, s.productImportLogs); err != nil {
 		return err
 	}
 	return nil
@@ -2094,6 +2604,212 @@ func restoreMissingUserPasswords(users []UserAccount, defaults map[string]UserAc
 	return items, restored
 }
 
+func defaultBossAccount(stores []StoreInfo, roles []RoleTemplate) UserAccount {
+	return UserAccount{
+		ID:          defaultBossUserID,
+		OrgID:       "org-gold-v1",
+		Username:    defaultBossUsername,
+		DisplayName: "老板",
+		Phone:       "",
+		Password:    defaultBossPassword,
+		RoleCode:    "owner",
+		RoleName:    "老板",
+		DataScope:   "org_all",
+		StoreIDs:    allStoreIDsLocked(stores),
+		Permissions: permissionsForRoleLocked("boss", roles),
+		Status:      "active",
+	}
+}
+
+func defaultManagerAccount(stores []StoreInfo, roles []RoleTemplate) UserAccount {
+	storeIDs := []string{}
+	if len(stores) > 0 {
+		storeIDs = []string{stores[0].ID}
+	}
+	return UserAccount{
+		ID:          defaultManagerUserID,
+		OrgID:       "org-gold-v1",
+		Username:    defaultManagerUsername,
+		DisplayName: "店长",
+		Phone:       "",
+		Password:    defaultManagerPassword,
+		RoleCode:    "manager",
+		RoleName:    "店长",
+		DataScope:   "assigned_stores",
+		StoreIDs:    storeIDs,
+		Permissions: permissionsForRoleLocked("shop_manager", roles),
+		Status:      "active",
+	}
+}
+
+func sanitizePersistedUsers(users []UserAccount, stores []StoreInfo, roles []RoleTemplate) ([]UserAccount, bool) {
+	changed := false
+	allStoreIDs := allStoreIDsLocked(stores)
+	items := make([]UserAccount, 0, len(users))
+	hasBossUsername := false
+	hasDefaultManager := false
+	for _, user := range users {
+		if strings.TrimSpace(user.Username) == defaultBossUsername {
+			hasBossUsername = true
+		}
+		if strings.TrimSpace(user.Username) == defaultManagerUsername || user.ID == defaultManagerUserID {
+			hasDefaultManager = true
+		}
+		roleKey := normalizeAdminRoleKey(user.RoleCode)
+		nextRoleCode := baseRoleCodeFromAdmin(roleKey)
+		if user.RoleCode != nextRoleCode {
+			user.RoleCode = nextRoleCode
+			changed = true
+		}
+		nextRoleName := roleNameForKey(roleKey)
+		if user.RoleName != nextRoleName {
+			user.RoleName = nextRoleName
+			changed = true
+		}
+		nextScope := baseDataScopeForRole(roleKey)
+		if user.DataScope != nextScope {
+			user.DataScope = nextScope
+			changed = true
+		}
+		if roleKey == "boss" {
+			if !sameStringSet(user.StoreIDs, allStoreIDs) {
+				user.StoreIDs = append([]string(nil), allStoreIDs...)
+				changed = true
+			}
+		} else {
+			cleaned := cleanUniqueStrings(user.StoreIDs)
+			if len(cleaned) == 0 && len(stores) > 0 {
+				cleaned = []string{stores[0].ID}
+			}
+			if len(cleaned) > 1 {
+				cleaned = cleaned[:1]
+			}
+			if !sameStringSet(user.StoreIDs, cleaned) {
+				user.StoreIDs = cleaned
+				changed = true
+			}
+		}
+		nextPermissions := permissionsForRoleLocked(roleKey, roles)
+		if len(nextPermissions) > 0 && !sameStringSet(user.Permissions, nextPermissions) {
+			user.Permissions = nextPermissions
+			changed = true
+		}
+		items = append(items, user)
+	}
+	if !hasBossUsername {
+		items = append(items, defaultBossAccount(stores, roles))
+		changed = true
+	}
+	if !hasDefaultManager {
+		items = append(items, defaultManagerAccount(stores, roles))
+		changed = true
+	}
+	return items, changed
+}
+
+func (s *MockStore) ensureDefaultBossAccountLocked(resetPassword bool) UserAccount {
+	defaultUser := defaultBossAccount(s.stores, s.roles)
+	user, ok := s.usersByUsername[defaultBossUsername]
+	if !ok {
+		if existing, existsByID := s.usersByID[defaultBossUserID]; existsByID {
+			user = existing
+			if strings.TrimSpace(user.Username) != "" && user.Username != defaultBossUsername {
+				delete(s.usersByUsername, user.Username)
+			}
+			ok = true
+		}
+	}
+
+	if !ok {
+		user = defaultUser
+	} else {
+		user.ID = firstNonEmpty(user.ID, defaultUser.ID)
+		user.OrgID = firstNonEmpty(user.OrgID, defaultUser.OrgID)
+		user.Username = defaultBossUsername
+		user.DisplayName = firstNonEmpty(user.DisplayName, defaultUser.DisplayName)
+		user.RoleCode = defaultUser.RoleCode
+		user.RoleName = defaultUser.RoleName
+		user.DataScope = defaultUser.DataScope
+		user.StoreIDs = append([]string(nil), defaultUser.StoreIDs...)
+		user.Permissions = append([]string(nil), defaultUser.Permissions...)
+		user.Status = "active"
+		if resetPassword || strings.TrimSpace(user.Password) == "" {
+			user.Password = defaultBossPassword
+		}
+	}
+
+	s.usersByID[user.ID] = user
+	s.usersByUsername[user.Username] = user
+	return user
+}
+
+func (s *MockStore) ensureDefaultManagerAccountLocked(resetPassword bool) UserAccount {
+	defaultUser := defaultManagerAccount(s.stores, s.roles)
+	user, ok := s.usersByUsername[defaultManagerUsername]
+	if !ok {
+		if existing, existsByID := s.usersByID[defaultManagerUserID]; existsByID {
+			user = existing
+			if strings.TrimSpace(user.Username) != "" && user.Username != defaultManagerUsername {
+				delete(s.usersByUsername, user.Username)
+			}
+			ok = true
+		}
+	}
+
+	if !ok {
+		user = defaultUser
+	} else {
+		user.ID = firstNonEmpty(user.ID, defaultUser.ID)
+		user.OrgID = firstNonEmpty(user.OrgID, defaultUser.OrgID)
+		user.Username = defaultManagerUsername
+		user.DisplayName = firstNonEmpty(user.DisplayName, defaultUser.DisplayName)
+		user.RoleCode = defaultUser.RoleCode
+		user.RoleName = defaultUser.RoleName
+		user.DataScope = defaultUser.DataScope
+		cleanedStoreIDs := cleanUniqueStrings(user.StoreIDs)
+		if len(cleanedStoreIDs) == 0 {
+			cleanedStoreIDs = append([]string(nil), defaultUser.StoreIDs...)
+		}
+		if len(cleanedStoreIDs) > 1 {
+			cleanedStoreIDs = cleanedStoreIDs[:1]
+		}
+		user.StoreIDs = cleanedStoreIDs
+		user.Permissions = append([]string(nil), defaultUser.Permissions...)
+		user.Status = "active"
+		if resetPassword || strings.TrimSpace(user.Password) == "" {
+			user.Password = defaultManagerPassword
+		}
+	}
+
+	s.usersByID[user.ID] = user
+	s.usersByUsername[user.Username] = user
+	return user
+}
+
+func firstNonEmpty(value, fallback string) string {
+	if strings.TrimSpace(value) != "" {
+		return value
+	}
+	return fallback
+}
+
+func sameStringSet(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	seen := make(map[string]int, len(left))
+	for _, item := range left {
+		seen[item]++
+	}
+	for _, item := range right {
+		seen[item]--
+		if seen[item] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *MockStore) usersSliceLocked() []UserAccount {
 	items := make([]UserAccount, 0, len(s.usersByID))
 	for _, user := range s.usersByID {
@@ -2113,6 +2829,10 @@ func (s *MockStore) persistUsersLocked() error {
 	return s.persistence.saveConfig(context.Background(), configKeyBaseUsers, s.usersSliceLocked())
 }
 
+func (s *MockStore) persistMembersLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyBaseMembers, s.members)
+}
+
 func (s *MockStore) persistProductsLocked() error {
 	return s.persistence.saveConfig(context.Background(), configKeyBaseProducts, s.catalogProducts)
 }
@@ -2127,6 +2847,10 @@ func (s *MockStore) persistAdminRolesLocked() error {
 
 func (s *MockStore) persistAdminAuditLogsLocked() error {
 	return s.persistence.saveConfig(context.Background(), configKeyAdminAudit, s.adminAuditLogs)
+}
+
+func (s *MockStore) persistProductImportLogsLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyImportLogs, s.productImportLogs)
 }
 
 func nextSequenceFromCashierOrders(orders []CashierOrder) int {

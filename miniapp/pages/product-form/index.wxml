@@ -1,0 +1,109 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-06
+-->
+
+<view class="page product-form-page">
+  <view class="form-header">
+    <text class="eyebrow">商品管理</text>
+    <text class="form-title">{{pageTitle}}</text>
+    <text class="form-subtitle">维护商品展示、商品数量和回收报价参数</text>
+  </view>
+
+  <view class="form-section">
+    <view class="section-head">
+      <text class="section-title-text">基础信息</text>
+      <text class="section-chip">{{form.statusText}}</text>
+    </view>
+    <view class="field">
+      <text class="label">商品名称</text>
+      <input class="input" placeholder="请输入商品名称" value="{{form.name}}" data-key="name" bindinput="onInput" />
+    </view>
+    <view class="form-grid">
+      <view class="field">
+        <text class="label">SKU</text>
+        <input class="input" placeholder="商品编码" value="{{form.sku}}" data-key="sku" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">成色</text>
+        <input class="input" placeholder="足金999" value="{{form.purity}}" data-key="purity" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">分类</text>
+        <picker mode="selector" range="{{categoryOptions}}" value="{{categoryIndex}}" bindchange="onCategoryChange">
+          <view class="picker-box">{{form.category}}</view>
+        </picker>
+      </view>
+      <view class="field">
+        <text class="label">状态</text>
+        <picker mode="selector" range="{{statusLabels}}" value="{{statusIndex}}" bindchange="onStatusChange">
+          <view class="picker-box">{{statusLabels[statusIndex]}}</view>
+        </picker>
+      </view>
+    </view>
+  </view>
+
+  <view class="form-section">
+    <view class="section-head">
+      <text class="section-title-text">报价与库存</text>
+    </view>
+    <view class="form-grid">
+      <view class="field">
+        <text class="label">商品数量</text>
+        <input class="input" type="number" placeholder="0" value="{{form.inventory}}" data-key="inventory" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">克重模板</text>
+        <input class="input" type="digit" placeholder="按实秤可填 0" value="{{form.gramWeight}}" data-key="gramWeight" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">参考回收价</text>
+        <input class="input" type="digit" placeholder="元/g" value="{{form.benchPrice}}" data-key="benchPrice" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">销售参考价</text>
+        <input class="input" type="digit" placeholder="元/g" value="{{form.retailPrice}}" data-key="retailPrice" bindinput="onInput" />
+      </view>
+    </view>
+  </view>
+
+  <view class="form-section">
+    <view class="section-head">
+      <text class="section-title-text">展示内容</text>
+    </view>
+    <view class="field image-field">
+      <text class="label">商品图片</text>
+      <view class="image-uploader">
+        <view class="image-preview-box" bindtap="uploadProductImage">
+          <image wx:if="{{form.imageUrl}}" class="product-image-preview" src="{{form.imageUrl}}" mode="aspectFill" />
+          <view wx:else class="image-upload-empty">
+            <text class="image-upload-mark">+</text>
+            <text class="image-upload-title">上传商品图片</text>
+            <text class="image-upload-hint">相册或拍照</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="field">
+      <text class="label">标签</text>
+      <input class="input" placeholder="例如：主推，高转化" value="{{form.tagsText}}" data-key="tagsText" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="label">使用说明</text>
+      <textarea class="textarea" placeholder="录单时给操作员看的提示" value="{{form.recommendedScene}}" data-key="recommendedScene" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="product-form-actions">
+    <button class="form-secondary-btn" bindtap="goBack">取消</button>
+    <button class="form-primary-btn" bindtap="saveProduct" loading="{{saving}}">保存商品</button>
+  </view>
+</view>

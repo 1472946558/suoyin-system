@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.js
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-10
+ */
+
 const {
   getDraft,
   clearDraft,
@@ -13,7 +26,8 @@ const { formatRequestError } = require("../../utils/apiClient");
 const {
   buildReceiptPrintText,
   buildLabelPrintText,
-  printTextViaBluetooth,
+  printReceiptViaBluetooth,
+  printLabelViaBluetooth,
   resetSavedPrinter
 } = require("../../utils/bluetoothPrinter");
 const { isLoggedIn } = require("../../utils/userStore");
@@ -36,6 +50,7 @@ Page({
     printPreviewTitle: "",
     printPreviewText: "",
     printPendingType: "",
+    printProtocol: "",
     printStatusText: ""
   },
 
@@ -290,6 +305,7 @@ Page({
       printPreviewTitle: title,
       printPreviewText: text,
       printPendingType: printType,
+      printProtocol: printType === "label" ? "TSC 标签指令" : "ESC/POS 小票指令",
       printStatusText: "打印任务已生成，请确认预览后发送。"
     });
   },
@@ -312,19 +328,25 @@ Page({
       printing: true,
       printStatusText: "正在搜索并连接蓝牙打印机"
     });
-    printTextViaBluetooth(text)
+    const action = this.data.printPendingType === "label"
+      ? printLabelViaBluetooth(this.data.record, this.data.detailType, this.data.quote)
+      : printReceiptViaBluetooth(text);
+
+    action
       .then(() => {
         this.setData({ printStatusText: "打印任务已发送" });
         wx.showToast({ title: "已发送打印", icon: "success" });
       })
-      .catch(() => {
+      .catch((error) => {
         wx.setClipboardData({ data: text });
         this.setData({
           printStatusText: "打印任务已生成，等待连接设备"
         });
         wx.showModal({
           title: "打印任务已生成",
-          content: "等待连接设备。打印内容已保留在预览区，并已复制到剪贴板，可在连接打印机后重新发送。",
+          content: (error && error.message)
+            ? `${error.message}。打印内容已保留在预览区，并已复制到剪贴板，可在连接打印机后重新发送。`
+            : "等待连接设备。打印内容已保留在预览区，并已复制到剪贴板，可在连接打印机后重新发送。",
           showCancel: false
         });
       })

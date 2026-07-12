@@ -1,12 +1,24 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.js
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-03
+ */
+
 const {
-  seedCatalog,
-  getMembers,
   listMembersOnline,
   saveMemberRecord,
   getMemberStats
 } = require("../../utils/catalogStore");
 const { mergeDraft } = require("../../utils/orderStore");
 const { canAccessFeature, getProfile } = require("../../utils/userStore");
+const { formatRequestError } = require("../../utils/apiClient");
 
 const LEVEL_FILTER_VALUES = ["all", "VIP", "潜力客户", "普通会员"];
 const LEVEL_FILTER_LABELS = ["全部等级", "VIP", "潜力客户", "普通会员"];
@@ -132,16 +144,21 @@ Page({
     this.setData({ loading: true, profile: getProfile() });
     listMembersOnline().then((result) => {
       let members = result && Array.isArray(result.items) ? result.items : [];
-      if (!members.length) {
-        seedCatalog();
-        members = getMembers();
-      }
       members = members.map(normalizeMemberView);
       this.setData({
         members,
         stats: getMemberStats(members)
       });
       this.applyFilters();
+    }).catch((error) => {
+      this.setData({
+        members: [],
+        filteredMembers: [],
+        selectedId: "",
+        selectedMember: null,
+        stats: getMemberStats([])
+      });
+      wx.showToast({ title: formatRequestError(error), icon: "none" });
     }).finally(() => {
       this.setData({ loading: false });
     });
@@ -269,18 +286,28 @@ Page({
       wx.showToast({ title: "请输入正确手机号", icon: "none" });
       return;
     }
-    const savedMember = normalizeMemberView(saveMemberRecord(editor));
-    const members = [savedMember].concat(this.data.members.filter(function(item) {
-      return item.id !== savedMember.id;
-    }));
-    this.setData({
-      members,
-      stats: getMemberStats(members),
-      selectedId: savedMember.id,
-      memberEditorVisible: false
+    if (this.data.loading) {
+      return;
+    }
+    this.setData({ loading: true });
+    saveMemberRecord(editor).then((savedMember) => {
+      const normalizedMember = normalizeMemberView(savedMember);
+      const members = [normalizedMember].concat(this.data.members.filter(function(item) {
+        return item.id !== normalizedMember.id;
+      }));
+      this.setData({
+        members,
+        stats: getMemberStats(members),
+        selectedId: normalizedMember.id,
+        memberEditorVisible: false
+      });
+      this.applyFilters();
+      wx.showToast({ title: "会员已保存", icon: "success" });
+    }).catch((error) => {
+      wx.showToast({ title: formatRequestError(error), icon: "none" });
+    }).finally(() => {
+      this.setData({ loading: false });
     });
-    this.applyFilters();
-    wx.showToast({ title: "会员已保存", icon: "success" });
   },
 
   useForCashier() {

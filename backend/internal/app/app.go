@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: app.go
+ * 功能描述: 业务模块实现
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-10
+ */
+
 package app
 
 import (
@@ -29,6 +42,9 @@ type App struct {
 	wechatAccessTokenMu        sync.Mutex
 	wechatAccessToken          string
 	wechatAccessTokenExpiresAt time.Time
+	goldReferenceMu            sync.Mutex
+	goldReferenceSnapshot      GoldReferencePriceSnapshot
+	goldReferenceFetchedAt     time.Time
 }
 
 func New() (*App, error) {
@@ -66,6 +82,15 @@ func New() (*App, error) {
 		StorageCallbackEnabled: storageCallbackEnabled,
 		StorageCallbackSet:     storageCallbackSet,
 		StorageStatus:          env("STORAGE_STATUS_DESCRIPTION", ""),
+		GoldPriceLiveEnabled:   envBool("GOLD_PRICE_LIVE_ENABLED", true),
+		GoldPriceAPIURL:        env("GOLD_PRICE_API_URL", "https://api.gold-api.com/price/XAU"),
+		GoldFXAPIURL:           env("GOLD_PRICE_FX_API_URL", "https://api.frankfurter.dev/v1/latest?base=USD&symbols=CNY"),
+		GoldPriceCacheTTL:      envInt("GOLD_PRICE_CACHE_TTL_SECONDS", 60),
+		GoldPriceHTTPTimeout:   envInt("GOLD_PRICE_HTTP_TIMEOUT_SECONDS", 5),
+		GoldPriceCNYPerGram:    envFloat("GOLD_PRICE_CNY_PER_GRAM", 0),
+		GoldPriceXAUUSD:        envFloat("GOLD_PRICE_XAU_USD", 0),
+		GoldPriceUSDCNY:        envFloat("GOLD_PRICE_USD_CNY", 0),
+		GoldPriceUpdatedAt:     env("GOLD_PRICE_UPDATED_AT", ""),
 	}
 
 	persistence, err := newPersistence(cfg)
@@ -102,14 +127,27 @@ func (a *App) Router() http.Handler {
 	mux.HandleFunc("/api/admin/login", a.handleAdminLogin)
 	mux.Handle("/api/admin/bootstrap", a.withAuth(a.requireAdminAbility("dashboard.view", a.handleAdminBootstrap)))
 	mux.Handle("/api/admin/print-template", a.withAuth(a.requireAdminAbility("system.config.manage", a.handleAdminPrintTemplate)))
-	mux.Handle("/api/admin/stores", a.withAuth(a.requireAdminAbility("store.manage", a.handleAdminStoreCreate)))
+	mux.Handle("/api/admin/stores", a.withAuth(a.requireAdminAbility("store.manage", a.handleAdminStoreCollection)))
+	mux.Handle("/api/admin/roles", a.withAuth(a.requireAdminAbility("role.manage", a.handleAdminRoleCollection)))
 	mux.Handle("/api/admin/roles/", a.withAuth(a.requireAdminAbility("role.manage", a.handleAdminRoleTemplate)))
 	mux.Handle("/api/admin/stores/", a.withAuth(a.requireAdminAbility("store.manage", a.handleAdminStore)))
-	mux.Handle("/api/admin/users", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminUserCreate)))
+	mux.Handle("/api/admin/users", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminUserCollection)))
 	mux.Handle("/api/admin/users/", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminUser)))
 	mux.Handle("/api/admin/miniapp/pending-bindings", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminMiniAppPendingBindings)))
-	mux.Handle("/api/admin/products", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProductCreate)))
+	mux.Handle("/api/admin/products/import-template", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProductImportTemplate)))
+	mux.Handle("/api/admin/products/import", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProductImport)))
+	mux.Handle("/api/admin/products", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProductCollection)))
 	mux.Handle("/api/admin/products/", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProduct)))
+	mux.Handle("/api/admin/inventory/items", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminInventoryItems)))
+	mux.Handle("/api/admin/members", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminMemberCollection)))
+	mux.Handle("/api/admin/members/", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminMember)))
+	mux.Handle("/api/admin/cashier-orders", a.withAuth(a.requireAdminAbility("order.view", a.handleAdminCashierOrderCollection)))
+	mux.Handle("/api/admin/cashier-orders/", a.withAuth(a.requireAdminAbility("order.view", a.handleAdminCashierOrder)))
+	mux.Handle("/api/admin/recycle-orders", a.withAuth(a.requireAdminAbility("recycle.view", a.handleAdminRecycleOrderCollection)))
+	mux.Handle("/api/admin/recycle-orders/", a.withAuth(a.requireAdminAbility("recycle.view", a.handleAdminRecycleOrder)))
+	mux.Handle("/api/admin/materials", a.withAuth(a.requireAdminAbility("recycle.view", a.handleAdminMaterialItems)))
+	mux.Handle("/api/admin/materials/", a.withAuth(a.requireAdminAbility("recycle.view", a.handleAdminMaterialActions)))
+	mux.Handle("/api/admin/orders", a.withAuth(a.requireAdminAbility("order.view", a.handleAdminOrderCollection)))
 	mux.Handle("/api/admin/system-profile", a.withAuth(a.requireAdminAbility("system.config.manage", a.handleAdminSystemProfile)))
 	mux.Handle("/api/v1/auth/logout", a.withAuth(a.handleLogout))
 	mux.Handle("/api/v1/me", a.withAuth(a.handleMe))
@@ -123,7 +161,9 @@ func (a *App) Router() http.Handler {
 	mux.Handle("/api/v1/members/", a.withAuth(a.requirePermission("member.read", a.handleMemberDetail)))
 	mux.Handle("/api/v1/products", a.withAuth(a.requirePermission("catalog.product.read", a.handleCatalogProducts)))
 	mux.Handle("/api/v1/products/", a.withAuth(a.requirePermission("catalog.product.read", a.handleCatalogProductDetail)))
+	mux.Handle("/api/v1/gold-prices/reference", a.withAuth(a.handleGoldReferencePrices))
 	mux.Handle("/api/v1/inventory/summary", a.withAuth(a.requirePermission("catalog.product.read", a.handleInventorySummary)))
+	mux.Handle("/api/v1/inventory/items", a.withAuth(a.requirePermission("catalog.product.read", a.handleInventoryItems)))
 	mux.Handle("/api/v1/cashier/orders", a.withAuth(a.handleCashierOrders))
 	mux.Handle("/api/v1/cashier/orders/", a.withAuth(a.handleCashierOrderDetail))
 	mux.Handle("/api/v1/uploads/recycle-photos/prepare", a.withAuth(a.requirePermission("recycle.order.draft", a.handleRecyclePhotoUploadPrepare)))
@@ -131,6 +171,8 @@ func (a *App) Router() http.Handler {
 	mux.Handle("/api/v1/recycle/quote-preview", a.withAuth(a.requirePermission("recycle.order.draft", a.handleRecycleQuotePreview)))
 	mux.Handle("/api/v1/recycle/orders", a.withAuth(a.handleRecycleOrders))
 	mux.Handle("/api/v1/recycle/orders/", a.withAuth(a.handleRecycleOrderActions))
+	mux.Handle("/api/v1/materials", a.withAuth(a.requirePermission("recycle.order.read", a.handleMaterialItems)))
+	mux.Handle("/api/v1/materials/", a.withAuth(a.requirePermission("recycle.order.read", a.handleMaterialActions)))
 	mux.Handle("/api/v1/settings", a.withAuth(a.handleSettings))
 	mux.HandleFunc("/", a.handleNotFound)
 
@@ -150,7 +192,7 @@ func (a *App) withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", a.Config.CORSOrigin)
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -255,6 +297,18 @@ func envInt(key string, fallback int) int {
 		return fallback
 	}
 	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func envFloat(key string, fallback float64) float64 {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		return fallback
 	}

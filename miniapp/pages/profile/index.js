@@ -1,6 +1,22 @@
-const { getOrders, getCashierOrders, clearDraft } = require("../../utils/orderStore");
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.js
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-03
+ */
+
+const { listOrdersOnline, listCashierOrdersOnline, clearDraft } = require("../../utils/orderStore");
+const { appConfig } = require("../../utils/config");
 const { getProfile, logoutOnline } = require("../../utils/userStore");
-const { getMemberStats, getProductStats } = require("../../utils/catalogStore");
+const { listMembersOnline, listProductsOnline, getMemberStats, getProductStats } = require("../../utils/catalogStore");
+const { formatRequestError } = require("../../utils/apiClient");
+const { refreshProfileStoreBinding } = require("../../utils/storeSession");
 
 function buildModules(profile) {
   const publicModules = [
@@ -15,15 +31,21 @@ function buildModules(profile) {
     return publicModules;
   }
 
-  return publicModules.slice(0, 2).concat([
+  const businessModules = [
     { title: "会员管理", desc: "新增会员、编辑资料、查看跟进记录", key: "members" },
-    { title: "商品目录", desc: "维护商品图片、分类、状态和库存", key: "products" },
-    { title: "订单记录", desc: "查看收银与回收记录", key: "orders" },
+    { title: "商品目录", desc: "维护商品模板、报价和展示状态", key: "products" },
+    { title: "库存系统", desc: "商品入库、款式编号和库存查询", key: "inventory" },
+    { title: "旧料管理", desc: "旧料统计、余料和抵押寄存", key: "materials" },
+    { title: "订单记录", desc: "查看收银与回收记录", key: "orders" }
+  ];
+
+  return publicModules.slice(0, 2).concat(
+    businessModules,
     publicModules[2],
     publicModules[3],
     publicModules[4],
     { title: "清空草稿", desc: "清空当前账号未完成的收银和录单草稿", key: "draft" }
-  ]);
+  );
 }
 
 Page({
@@ -41,18 +63,46 @@ Page({
 
   onShow() {
     this.setTabBarIndex();
-    const profile = getProfile();
-    const loggedIn = Boolean(profile.loggedIn);
-    this.setData({
-      profile,
-      modules: buildModules(profile),
-      stats: {
-        orders: loggedIn ? getOrders().length + getCashierOrders().length : 0,
-        storeCode: profile.storeCode || "--",
-        role: profile.role || "--",
-        members: loggedIn ? getMemberStats().total : 0,
-        products: loggedIn ? getProductStats().total : 0
+    refreshProfileStoreBinding().finally(() => {
+      const profile = getProfile();
+      const loggedIn = Boolean(profile.loggedIn);
+      this.setData({
+        profile,
+        modules: buildModules(profile),
+        stats: {
+          orders: 0,
+          storeCode: profile.storeCode || "--",
+          role: profile.role || "--",
+          members: 0,
+          products: 0
+        }
+      });
+      if (loggedIn) {
+        this.loadStats();
       }
+    });
+  },
+
+  loadStats() {
+    Promise.all([
+      listOrdersOnline(),
+      listCashierOrdersOnline(),
+      listMembersOnline(),
+      listProductsOnline()
+    ]).then((results) => {
+      const orders = results[0] || [];
+      const cashierOrders = results[1] || [];
+      const members = results[2] && Array.isArray(results[2].items) ? results[2].items : [];
+      const products = results[3] && Array.isArray(results[3].items) ? results[3].items : [];
+      this.setData({
+        stats: Object.assign({}, this.data.stats, {
+          orders: orders.length + cashierOrders.length,
+          members: getMemberStats(members).total,
+          products: getProductStats(products).total
+        })
+      });
+    }).catch((error) => {
+      wx.showToast({ title: formatRequestError(error), icon: "none" });
     });
   },
 
@@ -118,6 +168,14 @@ Page({
     }
     if (key === "products") {
       wx.navigateTo({ url: "/pages/products/index" });
+      return;
+    }
+    if (key === "inventory") {
+      wx.navigateTo({ url: "/pages/inventory/index" });
+      return;
+    }
+    if (key === "materials") {
+      wx.navigateTo({ url: "/pages/materials/index" });
       return;
     }
     if (key === "orders") {

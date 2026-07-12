@@ -1,3 +1,16 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-03
+-->
+
 <view class="page order-page">
   <view class="page-header">
     <view>
@@ -12,7 +25,7 @@
     <view class="step-line"></view>
     <view class="step-item active"><text>2</text><text>商品</text></view>
     <view class="step-line"></view>
-    <view class="step-item"><text>3</text><text>回收</text></view>
+    <view class="step-item"><text>3</text><text>收银</text></view>
   </view>
 
   <view class="card form-card">
@@ -45,7 +58,16 @@
     </view>
     <view class="field">
       <view class="field-head"><image class="field-icon" src="/assets/ui/enterprise.png" mode="aspectFit" /><text class="label">门店</text></view>
-      <input class="input" placeholder="请输入门店名称" value="{{form.storeName}}" data-key="storeName" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onInput" />
+      <input class="input" placeholder="点击选择门店" value="{{form.storeName}}" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindfocus="onStoreFocus" bindblur="onStoreBlur" bindinput="onStoreInput" />
+      <view wx:if="{{storeDropdownVisible}}" class="store-dropdown">
+        <view wx:if="{{filteredStoreOptions.length}}" class="store-dropdown-list">
+          <view class="store-dropdown-item" wx:for="{{filteredStoreOptions}}" wx:key="id" wx:for-item="store" data-store-id="{{store.id}}" data-store-name="{{store.name}}" data-store-code="{{store.code}}" bindtap="onStoreSelect">
+            <text class="store-dropdown-name">{{store.name}}</text>
+            <text class="store-dropdown-meta">{{store.code || '未设置编码'}}</text>
+          </view>
+        </view>
+        <view wx:else class="store-dropdown-empty">暂无匹配门店，请继续输入筛选</view>
+      </view>
     </view>
     <view class="field">
       <view class="field-head"><image class="field-icon" src="/assets/ui/support.png" mode="aspectFit" /><text class="label">操作员</text></view>
@@ -60,9 +82,28 @@
   <view class="card cashier-items-card">
     <view class="section-head">
       <text class="block-title">商品明细</text>
-      <button class="mini-add-btn" bindtap="addCashierItem">新增</button>
     </view>
     <view class="cashier-item" wx:for="{{cashierSummary.items}}" wx:key="id">
+      <view class="field">
+        <view class="field-head"><image class="field-icon" src="/assets/ui/list.png" mode="aspectFit" /><text class="label">商品编码/SKU</text></view>
+        <view class="sku-input-row">
+          <input class="input sku-input" placeholder="点击选择商品，或输入编码筛选" value="{{item.sku}}" data-index="{{index}}" confirm-type="search" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindfocus="onCashierSkuFocus" bindblur="onCashierSkuBlur" bindinput="onCashierSkuInput" bindconfirm="lookupCashierItemBySku" />
+          <button class="sku-query-btn" data-index="{{index}}" bindtap="lookupCashierItemBySku">查询</button>
+        </view>
+        <view wx:if="{{activeSkuDropdownIndex === index}}" class="sku-dropdown">
+          <view wx:if="{{filteredProductOptions.length}}" class="sku-dropdown-list">
+            <view class="sku-dropdown-item" wx:for="{{filteredProductOptions}}" wx:key="sku" wx:for-item="product" wx:for-index="productIndex" data-index="{{index}}" data-sku="{{product.sku}}" bindtap="onCashierDropdownSelect">
+              <view class="sku-dropdown-copy">
+                <text class="sku-dropdown-sku">{{product.sku}}</text>
+                <text class="sku-dropdown-name">{{product.name}}</text>
+              </view>
+              <text class="sku-dropdown-meta">{{product.priceText}} · 库存 {{product.inventory}} 件</text>
+            </view>
+          </view>
+          <view wx:else class="sku-dropdown-empty">暂无匹配商品，请继续输入编码</view>
+        </view>
+        <text wx:if="{{item.productHint}}" class="product-hint {{item.productHintTone}}">{{item.productHint}}</text>
+      </view>
       <view class="field">
         <view class="field-head"><image class="field-icon" src="/assets/ui/document.png" mode="aspectFit" /><text class="label">商品名称</text></view>
         <input class="input" placeholder="例如：足金项链 / 古法手镯" value="{{item.name}}" data-index="{{index}}" data-key="name" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="onCashierItemInput" />
@@ -97,9 +138,7 @@
 
   <view class="action-grid">
     <button class="ghost-btn" bindtap="saveDraftOnly">保存草稿</button>
-    <button class="primary-btn" bindtap="goEntry">下一步：回收录单</button>
+    <button class="primary-btn" loading="{{cashierSubmitting}}" disabled="{{cashierSubmitting}}" bindtap="submitCashierOrder">生成收银单</button>
   </view>
-  <button class="primary-btn full-btn" loading="{{cashierSubmitting}}" disabled="{{cashierSubmitting}}" bindtap="submitCashierOrder">直接生成收银单</button>
-  <button class="ghost-btn full-btn" bindtap="goConfirm">查看回收确认</button>
 
 </view>

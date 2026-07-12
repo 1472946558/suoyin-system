@@ -1,13 +1,26 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.js
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-10
+ */
+
 const { appConfig } = require("../../utils/config");
-const { getDraft, saveDraft, calculateQuote, getSuggestedPrice, getPhotoValidation } = require("../../utils/orderStore");
+const { getDraft, saveDraft, calculateQuote, getSuggestedPrice, getPhotoValidation, refreshReferencePrices } = require("../../utils/orderStore");
 const { canAccessFeature } = require("../../utils/userStore");
+const { refreshProfileStoreBinding } = require("../../utils/storeSession");
 
 Page({
   data: {
-    itemCategories: ["金饰", "金条", "K金", "旧金料"],
-    purities: ["足金9999", "足金999", "22K", "18K", "14K"],
+    itemCategories: ["足金", "K金", "铂金", "钯金", "银饰", "牙金"],
     itemCategoryIndex: 0,
-    purityIndex: 1,
+    inlineCustomerFeatureEnabled: !!appConfig.featureFlags.recycleInlineCustomerEnabled,
     form: getDraft(),
     quote: calculateQuote(getDraft()),
     photoRule: appConfig.recyclePhotoRules,
@@ -21,7 +34,12 @@ Page({
       wx.switchTab({ url: "/pages/home/index" });
       return;
     }
-    this.loadDraft();
+    refreshProfileStoreBinding().finally(() => {
+      this.loadDraft();
+      refreshReferencePrices().then(() => {
+        this.loadDraft();
+      });
+    });
   },
 
   setTabBarIndex() {
@@ -33,7 +51,6 @@ Page({
   loadDraft() {
     const form = getDraft();
     const itemCategoryIndex = this.data.itemCategories.indexOf(form.itemCategory);
-    const purityIndex = this.data.purities.indexOf(form.purity);
 
     if (!form.recyclePrice) {
       form.recyclePrice = String(getSuggestedPrice(form.purity));
@@ -41,8 +58,8 @@ Page({
 
     this.setData({
       form,
+      inlineCustomerFeatureEnabled: !!appConfig.featureFlags.recycleInlineCustomerEnabled,
       itemCategoryIndex: Math.max(itemCategoryIndex, 0),
-      purityIndex: Math.max(purityIndex, 0),
       quote: calculateQuote(form),
       photoValidation: getPhotoValidation(form.photos || [])
     });
@@ -54,6 +71,7 @@ Page({
     const value = event.detail.value;
     fieldUpdate[key] = value;
     const form = Object.assign({}, this.data.form, fieldUpdate);
+    saveDraft(form);
     const update = {
       quote: calculateQuote(form),
       photoValidation: getPhotoValidation(form.photos || [])
@@ -67,23 +85,9 @@ Page({
     const form = Object.assign({}, this.data.form, {
       itemCategory: this.data.itemCategories[itemCategoryIndex]
     });
+    saveDraft(form);
     this.setData({
       itemCategoryIndex,
-      form,
-      quote: calculateQuote(form),
-      photoValidation: getPhotoValidation(form.photos || [])
-    });
-  },
-
-  onPurityChange(event) {
-    const purityIndex = Number(event.detail.value);
-    const purity = this.data.purities[purityIndex];
-    const form = Object.assign({}, this.data.form, {
-      purity,
-      recyclePrice: String(getSuggestedPrice(purity))
-    });
-    this.setData({
-      purityIndex,
       form,
       quote: calculateQuote(form),
       photoValidation: getPhotoValidation(form.photos || [])
@@ -113,6 +117,7 @@ Page({
         const form = Object.assign({}, this.data.form, {
           photos: nextPhotos
         });
+        saveDraft(form);
         this.setData({
           form: form,
           photoValidation: getPhotoValidation(nextPhotos)
@@ -129,9 +134,26 @@ Page({
     const form = Object.assign({}, this.data.form, {
       photos: nextPhotos
     });
+    saveDraft(form);
     this.setData({
       form: form,
       photoValidation: getPhotoValidation(nextPhotos)
+    });
+  },
+
+  previewPhoto(event) {
+    const url = event.currentTarget.dataset.url;
+    const urls = (this.data.form.photos || []).map(function(item) {
+      return item.path;
+    }).filter(function(item) {
+      return !!item;
+    });
+    if (!url || !urls.length) {
+      return;
+    }
+    wx.previewImage({
+      current: url,
+      urls: urls
     });
   },
 
@@ -141,7 +163,11 @@ Page({
   },
 
   saveAndConfirm() {
-    const { itemName } = this.data.form;
+    const { customerName, customerPhone, itemName } = this.data.form;
+    if (!customerName || !customerPhone) {
+      wx.showToast({ title: "请先填写客户姓名和手机号", icon: "none" });
+      return;
+    }
     if (!itemName || !this.data.quote.netWeight) {
       wx.showToast({ title: "请填写品名并录入有效克重", icon: "none" });
       return;
@@ -156,10 +182,5 @@ Page({
 
     saveDraft(this.data.form);
     wx.navigateTo({ url: "/pages/order-detail/index?mode=draft" });
-  },
-
-  goCashier() {
-    saveDraft(this.data.form);
-    wx.switchTab({ url: "/pages/order/index" });
   }
 });

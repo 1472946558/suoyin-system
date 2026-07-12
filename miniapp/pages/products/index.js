@@ -1,19 +1,27 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.js
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-03
+ */
+
 const {
-  seedCatalog,
-  getProducts,
   listProductsOnline,
-  saveProductRecord,
   getProductStats
 } = require("../../utils/catalogStore");
 const { mergeDraft } = require("../../utils/orderStore");
 const { canAccessFeature, getProfile } = require("../../utils/userStore");
+const { formatRequestError } = require("../../utils/apiClient");
 
 const CATEGORY_OPTIONS = ["all", "金饰", "金条", "K金", "旧金料"];
-const PRODUCT_CATEGORY_OPTIONS = ["金饰", "金条", "K金", "旧金料"];
 const STATUS_FILTER_VALUES = ["all", "active", "draft", "disabled"];
 const STATUS_FILTER_LABELS = ["全部状态", "上架中", "草稿", "停用"];
-const STATUS_VALUES = ["active", "draft", "disabled"];
-const STATUS_LABELS = ["上架中", "草稿", "停用"];
 const STATUS_TEXT = {
   active: "上架中",
   draft: "草稿",
@@ -35,7 +43,7 @@ function normalizeProductView(product) {
   nextProduct.statusText = STATUS_TEXT[nextProduct.status] || "未设置";
   nextProduct.stockText = nextProduct.status === "disabled"
     ? "停用"
-    : (nextProduct.stockStatus === "low" ? "低库存" : `${Number(nextProduct.inventory || 0)} 件`);
+    : (nextProduct.stockStatus === "low" ? "低数量" : `${Number(nextProduct.inventory || 0)} 件`);
   return nextProduct;
 }
 
@@ -50,29 +58,6 @@ function filterProducts(products, filters) {
     const matchesStatus = filters.status === "all" || item.status === filters.status;
     return matchesKeyword && matchesCategory && matchesStatus;
   });
-}
-
-function buildProductEditor(product) {
-  const source = product || {};
-  const category = source.category || "金饰";
-  const status = source.status || "active";
-  return {
-    id: source.id || "",
-    name: source.name || "",
-    sku: source.sku || `GJG-${Date.now() % 100000}`,
-    category,
-    categoryTab: source.categoryTab || category,
-    imageUrl: source.imageUrl || "/assets/ui/price.png",
-    purity: source.purity || "足金999",
-    benchPrice: String(source.benchPrice || ""),
-    retailPrice: String(source.retailPrice || ""),
-    gramWeight: String(source.gramWeight || ""),
-    status,
-    inventory: String(source.inventory || 0),
-    tagsText: Array.isArray(source.tags) ? source.tags.join("，") : "",
-    recommendedScene: source.recommendedScene || "适合门店快速带入录单。",
-    quoteLeadTime: source.quoteLeadTime || "当场可报价"
-  };
 }
 
 Page({
@@ -94,18 +79,10 @@ Page({
       status: "all"
     },
     categoryOptions: CATEGORY_OPTIONS,
-    productCategoryOptions: PRODUCT_CATEGORY_OPTIONS,
     statusFilterValues: STATUS_FILTER_VALUES,
     statusFilterLabels: STATUS_FILTER_LABELS,
-    statusValues: STATUS_VALUES,
-    statusLabels: STATUS_LABELS,
     statusFilterIndex: 0,
-    loading: false,
-    productEditorVisible: false,
-    productEditorTitle: "新增商品",
-    productEditor: buildProductEditor(),
-    productEditorCategoryIndex: 0,
-    productEditorStatusIndex: 0
+    loading: false
   },
 
   onShow() {
@@ -121,16 +98,21 @@ Page({
     this.setData({ loading: true, profile: getProfile() });
     listProductsOnline().then((result) => {
       let products = result && Array.isArray(result.items) ? result.items : [];
-      if (!products.length) {
-        seedCatalog();
-        products = getProducts();
-      }
       products = products.map(normalizeProductView);
       this.setData({
         products,
         stats: getProductStats(products)
       });
       this.applyFilters();
+    }).catch((error) => {
+      this.setData({
+        products: [],
+        filteredProducts: [],
+        selectedId: "",
+        selectedProduct: null,
+        stats: getProductStats([])
+      });
+      wx.showToast({ title: formatRequestError(error), icon: "none" });
     }).finally(() => {
       this.setData({ loading: false });
     });
@@ -196,83 +178,25 @@ Page({
     const selectedProduct = this.data.filteredProducts.find(function(item) {
       return item.id === id;
     }) || null;
+    if (!selectedProduct) {
+      wx.showToast({ title: "未找到商品", icon: "none" });
+      return;
+    }
     this.setData({
       selectedId: id,
       selectedProduct
     });
+    wx.navigateTo({ url: `/pages/product-detail/index?id=${encodeURIComponent(id)}` });
   },
 
   openCreateProduct() {
-    this.setData({
-      productEditorVisible: true,
-      productEditorTitle: "新增商品",
-      productEditor: buildProductEditor(),
-      productEditorCategoryIndex: 0,
-      productEditorStatusIndex: 0
-    });
+    wx.navigateTo({ url: "/pages/product-form/index?mode=create" });
   },
 
   openEditProduct() {
     const product = this.data.selectedProduct;
     if (!product) return;
-    this.setData({
-      productEditorVisible: true,
-      productEditorTitle: "编辑商品",
-      productEditor: buildProductEditor(product),
-      productEditorCategoryIndex: Math.max(0, PRODUCT_CATEGORY_OPTIONS.indexOf(product.category)),
-      productEditorStatusIndex: Math.max(0, STATUS_VALUES.indexOf(product.status))
-    });
-  },
-
-  closeProductEditor() {
-    this.setData({ productEditorVisible: false });
-  },
-
-  noop() {},
-
-  onProductEditorInput(event) {
-    const key = event.currentTarget.dataset.key;
-    const update = {};
-    update[`productEditor.${key}`] = event.detail.value;
-    this.setData(update);
-  },
-
-  onProductEditorCategory(event) {
-    const index = Number(event.detail.value);
-    const category = PRODUCT_CATEGORY_OPTIONS[index] || PRODUCT_CATEGORY_OPTIONS[0];
-    this.setData({
-      productEditorCategoryIndex: index,
-      "productEditor.category": category,
-      "productEditor.categoryTab": category
-    });
-  },
-
-  onProductEditorStatus(event) {
-    const index = Number(event.detail.value);
-    this.setData({
-      productEditorStatusIndex: index,
-      "productEditor.status": STATUS_VALUES[index] || "active"
-    });
-  },
-
-  saveProductEditor() {
-    const editor = this.data.productEditor;
-    if (!editor.name || !editor.sku) {
-      wx.showToast({ title: "请填写商品名称和 SKU", icon: "none" });
-      return;
-    }
-    const savedProduct = normalizeProductView(saveProductRecord(editor));
-    const products = [savedProduct].concat(this.data.products.filter(function(item) {
-      return item.id !== savedProduct.id;
-    }));
-    this.setData({
-      products,
-      stats: getProductStats(products),
-      selectedId: savedProduct.id,
-      productEditorVisible: false
-    });
-    this.applyFilters();
-    wx.showToast({ title: "商品已保存", icon: "success" });
+    wx.navigateTo({ url: `/pages/product-form/index?mode=edit&id=${encodeURIComponent(product.id)}` });
   },
 
   useForRecycle() {

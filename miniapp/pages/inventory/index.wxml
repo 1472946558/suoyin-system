@@ -1,0 +1,119 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-07-03
+-->
+
+<view class="page">
+  <view class="dark-hero">
+    <text class="eyebrow">库存系统</text>
+    <text class="hero-title">商品入库与库存查询</text>
+    <text class="hero-subtitle">录入款式编号、品类、成色、件数和重量；库存数据与后台实时同步。</text>
+    <view class="stats-strip">
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.styles}}</text>
+        <text class="stats-label">款式</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.pieces}}</text>
+        <text class="stats-label">件数</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.weightText}}g</text>
+        <text class="stats-label">重量</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-head">
+      <text class="card-title">商品入库</text>
+      <button class="small-btn" bindtap="showImportTip">文件导入</button>
+    </view>
+    <view class="field">
+      <text class="label">款式编号</text>
+      <input class="input" value="{{form.styleNo}}" data-key="styleNo" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="label">商品名称</text>
+      <input class="input" placeholder="例如 素圈手镯" value="{{form.name}}" data-key="name" bindinput="onInput" />
+    </view>
+    <view class="form-grid">
+      <view class="field">
+        <text class="label">品类</text>
+        <input class="input" value="{{form.category}}" data-key="category" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">成色</text>
+        <input class="input" value="{{form.purity}}" data-key="purity" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">件数</text>
+        <input class="input" type="number" value="{{form.pieceCount}}" data-key="pieceCount" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">重量(g)</text>
+        <input class="input" type="digit" placeholder="0.00" value="{{form.weightGram}}" data-key="weightGram" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">成本/参考价</text>
+        <input class="input" type="digit" placeholder="可不填" value="{{form.costAmount}}" data-key="costAmount" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">门店</text>
+        <input class="input" value="{{form.storeName}}" data-key="storeName" bindinput="onInput" />
+      </view>
+    </view>
+    <view class="field">
+      <text class="label">备注</text>
+      <input class="input" placeholder="可选" value="{{form.remark}}" data-key="remark" bindinput="onInput" />
+    </view>
+    <button class="primary-btn" bindtap="saveEntry">确认入库</button>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>库存查询</text>
+      <text class="section-kicker">{{loading ? '加载中...' : filteredRows.length + ' 条记录'}}</text>
+    </view>
+  </view>
+  <view class="card">
+    <view class="field">
+      <text class="label">搜索</text>
+      <input class="input" placeholder="款式编号 / 商品 / 品类 / 成色" value="{{keyword}}" bindinput="onKeywordInput" />
+    </view>
+  </view>
+
+  <view wx:if="{{filteredRows.length}}" class="record-list">
+    <view class="card record-card" wx:for="{{filteredRows}}" wx:key="id">
+      <view class="record-head">
+        <view>
+          <text class="record-title">{{item.styleNo}}</text>
+          <text class="record-sub">{{item.name}}</text>
+        </view>
+        <text class="status-tag {{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="detail-grid">
+        <view class="detail-item"><text class="muted">品类</text><text>{{item.category}}</text></view>
+        <view class="detail-item"><text class="muted">成色</text><text>{{item.purity}}</text></view>
+        <view class="detail-item"><text class="muted">件数</text><text>{{item.pieceCount}}</text></view>
+        <view class="detail-item"><text class="muted">重量</text><text>{{item.weightText}}</text></view>
+      </view>
+      <view class="record-foot">
+        <text>{{item.storeName}} · {{item.source}}</text>
+        <button wx:if="{{item.canDelete}}" class="text-btn" data-id="{{item.id}}" bindtap="deleteEntry">删除</button>
+      </view>
+    </view>
+  </view>
+  <view wx:else class="card empty-card">
+    <text class="empty-title">暂无库存记录</text>
+    <text class="muted">可以先新增一条商品入库。</text>
+  </view>
+</view>
