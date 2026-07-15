@@ -89,6 +89,66 @@ func (s *MockStore) createInventoryLedgerItem(user UserAccount, req InventoryLed
 	return item, nil
 }
 
+func (s *MockStore) updateInventoryLedgerItem(user UserAccount, itemID string, req InventoryLedgerItem) (InventoryLedgerItem, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, storeSet := visibleStoresForUserLocked(s.stores, user)
+	for idx, item := range s.inventoryLedger {
+		if item.ID != itemID {
+			continue
+		}
+		if !ledgerOrgVisibleToUserLocked(item.OrgID, user) || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
+			return InventoryLedgerItem{}, errUnauthorizedStore
+		}
+		store, ok := resolveStoreForWriteLocked(s.stores, user, firstNonEmpty(strings.TrimSpace(req.StoreID), item.StoreID))
+		if !ok {
+			return InventoryLedgerItem{}, errUnauthorizedStore
+		}
+		item.StoreID = store.ID
+		item.StoreName = store.Name
+		item.StyleNo = strings.TrimSpace(firstNonEmpty(req.StyleNo, item.StyleNo))
+		item.Name = strings.TrimSpace(firstNonEmpty(req.Name, item.Name))
+		item.Category = strings.TrimSpace(req.Category)
+		item.Purity = strings.TrimSpace(req.Purity)
+		item.PieceCount = maxInt(req.PieceCount, 1)
+		item.WeightGram = round2(req.WeightGram)
+		item.CostAmount = round2(req.CostAmount)
+		if value := strings.TrimSpace(req.Status); value != "" {
+			item.Status = value
+		}
+		if value := strings.TrimSpace(req.Source); value != "" {
+			item.Source = value
+		}
+		item.Remark = strings.TrimSpace(req.Remark)
+		s.inventoryLedger[idx] = item
+		s.persistInventoryLedgerLocked()
+		return item, nil
+	}
+	return InventoryLedgerItem{}, errInventoryNotFound
+}
+
+func (s *MockStore) deleteInventoryLedgerItem(user UserAccount, itemID string) (InventoryLedgerItem, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, storeSet := visibleStoresForUserLocked(s.stores, user)
+	for idx, item := range s.inventoryLedger {
+		if item.ID != itemID {
+			continue
+		}
+		if !ledgerOrgVisibleToUserLocked(item.OrgID, user) || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
+			return InventoryLedgerItem{}, errUnauthorizedStore
+		}
+		item.Status = "deleted"
+		item.Remark = strings.TrimSpace(firstNonEmpty(item.Remark, "后台删除"))
+		s.inventoryLedger[idx] = item
+		s.persistInventoryLedgerLocked()
+		return item, nil
+	}
+	return InventoryLedgerItem{}, errInventoryNotFound
+}
+
 func (s *MockStore) listMaterialLedger(user UserAccount) MaterialLedgerSummary {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -766,6 +766,23 @@ export async function createInventoryLedgerItem(token: string, item: Partial<Inv
   return { data, source: "api" };
 }
 
+export async function saveInventoryLedgerItem(token: string, id: string, item: Partial<InventoryLedgerItem>): Promise<ResourceResult<InventoryLedgerItem>> {
+  const data = await request<InventoryLedgerItem>(`/admin/inventory/items/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(item),
+  });
+  return { data, source: "api" };
+}
+
+export async function deleteInventoryLedgerItem(token: string, id: string): Promise<ResourceResult<InventoryLedgerItem>> {
+  const data = await request<InventoryLedgerItem>(`/admin/inventory/items/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
 export async function fetchMaterialLedger(token: string): Promise<ResourceResult<MaterialLedgerSummary>> {
   const data = await request<MaterialLedgerSummary>("/admin/materials", {
     headers: authHeaders(token),

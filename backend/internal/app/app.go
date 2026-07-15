@@ -139,6 +139,7 @@ func (a *App) Router() http.Handler {
 	mux.Handle("/api/admin/products", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProductCollection)))
 	mux.Handle("/api/admin/products/", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminProduct)))
 	mux.Handle("/api/admin/inventory/items", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminInventoryItems)))
+	mux.Handle("/api/admin/inventory/items/", a.withAuth(a.requireAdminAbility("product.manage", a.handleAdminInventoryActions)))
 	mux.Handle("/api/admin/members", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminMemberCollection)))
 	mux.Handle("/api/admin/members/", a.withAuth(a.requireAdminAbility("user.manage", a.handleAdminMember)))
 	mux.Handle("/api/admin/cashier-orders", a.withAuth(a.requireAdminAbility("order.view", a.handleAdminCashierOrderCollection)))

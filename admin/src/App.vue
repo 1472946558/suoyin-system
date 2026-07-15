@@ -21,6 +21,7 @@ import {
   createProductRecord,
   createStoreRecord,
   createUserAccount,
+  deleteInventoryLedgerItem,
   deleteMaterialLedgerItem,
   deleteProductRecords,
   disableMemberProfile,
@@ -44,6 +45,7 @@ import {
   importProducts,
   loginAdmin,
   outboundMaterialLedgerItem,
+  saveInventoryLedgerItem,
   saveMaterialLedgerItem,
   saveMemberProfile,
   saveProductRecord,
@@ -288,6 +290,8 @@ const productImportResult = ref<ProductImportResult | null>(null);
 const productImportInputKey = ref(0);
 const inventoryEntries = ref<InventoryStockItem[]>([]);
 const materialEntries = ref<MaterialLedgerItem[]>([]);
+const inventoryActionMenuId = ref("");
+const editingInventoryId = ref("");
 const materialActionMenuId = ref("");
 const editingMaterialId = ref("");
 const inventoryImportInputKey = ref(0);
@@ -305,6 +309,17 @@ const materialFilters = reactive({
   dateTo: "",
 });
 const inventoryDraft = reactive({
+  storeId: "",
+  styleNo: "",
+  name: "",
+  category: "",
+  purity: "",
+  pieceCount: 1,
+  weightGram: 0,
+  unitCost: 0,
+  status: "normal" as InventoryStatus,
+});
+const inventoryEditDraft = reactive({
   storeId: "",
   styleNo: "",
   name: "",
@@ -904,6 +919,67 @@ function addInventoryEntry() {
     });
     resetInventoryDraft();
   }, "商品已入库，已写入后端台账。", "inventory");
+}
+
+function inventoryStatusForApi(status: InventoryStatus | string) {
+  if (status === "out") return "outbound";
+  if (status === "normal" || status === "low" || status === "review") return "in_stock";
+  return status || "in_stock";
+}
+
+function toggleInventoryActionMenu(id: string) {
+  inventoryActionMenuId.value = inventoryActionMenuId.value === id ? "" : id;
+}
+
+function openInventoryEditor(item: InventoryStockItem) {
+  inventoryActionMenuId.value = "";
+  editingInventoryId.value = item.id;
+  inventoryEditDraft.storeId = item.storeId;
+  inventoryEditDraft.styleNo = item.styleNo;
+  inventoryEditDraft.name = item.name;
+  inventoryEditDraft.category = item.category;
+  inventoryEditDraft.purity = item.purity;
+  inventoryEditDraft.pieceCount = item.pieceCount;
+  inventoryEditDraft.weightGram = item.weightGram;
+  inventoryEditDraft.unitCost = item.unitCost;
+  inventoryEditDraft.status = item.status;
+}
+
+function closeInventoryEditor() {
+  editingInventoryId.value = "";
+}
+
+function saveInventoryEditor() {
+  if (!sessionToken.value || !editingInventoryId.value) return;
+  if (!inventoryEditDraft.styleNo.trim() || !inventoryEditDraft.name.trim()) {
+    showNotice("warning", "请填写款式编号和商品名称。");
+    return;
+  }
+  const itemId = editingInventoryId.value;
+  void runAction(async () => {
+    await saveInventoryLedgerItem(sessionToken.value, itemId, {
+      storeId: inventoryEditDraft.storeId,
+      styleNo: inventoryEditDraft.styleNo,
+      name: inventoryEditDraft.name,
+      category: inventoryEditDraft.category,
+      purity: inventoryEditDraft.purity,
+      pieceCount: inventoryEditDraft.pieceCount,
+      weightGram: inventoryEditDraft.weightGram,
+      costAmount: inventoryEditDraft.unitCost,
+      status: inventoryStatusForApi(inventoryEditDraft.status),
+      source: "admin",
+    });
+    editingInventoryId.value = "";
+  }, "库存记录已更新。", "inventory");
+}
+
+function deleteInventoryEntry(id: string) {
+  if (!sessionToken.value) return;
+  inventoryActionMenuId.value = "";
+  if (!window.confirm("确认删除这条库存记录吗？删除后不会在库存台账中显示。")) return;
+  void runAction(async () => {
+    await deleteInventoryLedgerItem(sessionToken.value, id);
+  }, "库存记录已删除。", "inventory");
 }
 
 function addMaterialEntry() {
@@ -2922,13 +2998,55 @@ watchEffect(() => {
                   <td><span class="badge" :class="statusTone(inventoryStatusLabel(item.status))">{{ inventoryStatusLabel(item.status) }}</span></td>
                   <td>{{ item.source }}</td>
                   <td>
-                    <span v-if="item.source !== '商品目录'" class="muted-text">后端台账</span>
+                    <div v-if="item.source !== '商品目录'" class="action-menu-wrap">
+                      <button class="secondary-btn small-btn" type="button" @click="toggleInventoryActionMenu(item.id)">操作</button>
+                      <div v-if="inventoryActionMenuId === item.id" class="action-menu">
+                        <button type="button" @click="openInventoryEditor(item)">编辑</button>
+                        <button class="danger-text" type="button" @click="deleteInventoryEntry(item.id)">删除</button>
+                      </div>
+                    </div>
                     <span v-else>随商品维护</span>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <article v-if="editingInventoryId" class="panel editor-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">编辑库存</p>
+                <h3>{{ inventoryEditDraft.styleNo || "库存记录" }}</h3>
+              </div>
+              <button class="text-btn" type="button" @click="closeInventoryEditor">关闭</button>
+            </div>
+            <div class="form-grid">
+              <label class="field">
+                <span>门店</span>
+                <select v-model="inventoryEditDraft.storeId">
+                  <option v-for="store in stores" :key="store.id" :value="store.id">{{ store.name }}</option>
+                </select>
+              </label>
+              <label class="field"><span>款式编号</span><input v-model="inventoryEditDraft.styleNo" /></label>
+              <label class="field"><span>商品名称</span><input v-model="inventoryEditDraft.name" /></label>
+              <label class="field"><span>品类</span><input v-model="inventoryEditDraft.category" /></label>
+              <label class="field"><span>成色</span><input v-model="inventoryEditDraft.purity" /></label>
+              <label class="field"><span>件数</span><input v-model.number="inventoryEditDraft.pieceCount" min="0" type="number" /></label>
+              <label class="field"><span>重量(g)</span><input v-model.number="inventoryEditDraft.weightGram" min="0" step="0.01" type="number" /></label>
+              <label class="field"><span>成本/参考价</span><input v-model.number="inventoryEditDraft.unitCost" min="0" type="number" /></label>
+              <label class="field">
+                <span>库存状态</span>
+                <select v-model="inventoryEditDraft.status">
+                  <option value="normal">库存正常</option>
+                  <option value="low">库存较低</option>
+                  <option value="review">待盘点</option>
+                  <option value="out">无库存</option>
+                </select>
+              </label>
+            </div>
+            <div class="actions-row">
+              <button class="primary-btn" type="button" :disabled="actionPending" @click="saveInventoryEditor">保存库存</button>
+            </div>
+          </article>
         </section>
 
         <section v-if="activePage === 'materials'" class="page-grid">

@@ -103,6 +103,47 @@ func (a *App) handleAdminInventoryItems(w http.ResponseWriter, r *http.Request) 
 	a.handleInventoryItems(w, r)
 }
 
+func (a *App) handleAdminInventoryActions(w http.ResponseWriter, r *http.Request) {
+	itemID := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/admin/inventory/items/"), "/")
+	if itemID == "" || strings.Contains(itemID, "/") {
+		a.writeError(w, r, http.StatusBadRequest, 40002, "invalid inventory id")
+		return
+	}
+	switch r.Method {
+	case http.MethodPut:
+		var req inventoryItemCreateRequest
+		if err := decodeJSONLenient(r, &req); err != nil {
+			a.writeError(w, r, http.StatusBadRequest, 40001, "invalid request body")
+			return
+		}
+		item, err := a.store.updateInventoryLedgerItem(currentUser(r.Context()), itemID, req.toLedgerItem())
+		switch {
+		case errors.Is(err, errUnauthorizedStore):
+			a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+		case errors.Is(err, errInventoryNotFound):
+			a.writeError(w, r, http.StatusNotFound, 40402, "inventory item not found")
+		case err != nil:
+			a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to update inventory item")
+		default:
+			a.writeJSON(w, r, http.StatusOK, 0, "ok", item)
+		}
+	case http.MethodDelete:
+		item, err := a.store.deleteInventoryLedgerItem(currentUser(r.Context()), itemID)
+		switch {
+		case errors.Is(err, errUnauthorizedStore):
+			a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+		case errors.Is(err, errInventoryNotFound):
+			a.writeError(w, r, http.StatusNotFound, 40402, "inventory item not found")
+		case err != nil:
+			a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to delete inventory item")
+		default:
+			a.writeJSON(w, r, http.StatusOK, 0, "ok", item)
+		}
+	default:
+		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
+	}
+}
+
 func (a *App) handleMaterialItems(w http.ResponseWriter, r *http.Request) {
 	user := currentUser(r.Context())
 	switch r.Method {

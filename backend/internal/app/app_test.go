@@ -521,6 +521,29 @@ func TestInventoryAndMaterialLedgerRealAPIs(t *testing.T) {
 	if bossInventory.VisibleStoreCount < 2 || bossInventory.TotalPieceCount != 2 {
 		t.Fatalf("boss admin inventory summary should include all stores: %#v", bossInventory)
 	}
+	updatedInventory := decodeResponse[InventoryLedgerItem](t, performRequest(t, handler, http.MethodPut, "/api/admin/inventory/items/"+inventoryItem.ID, boss.Token, map[string]any{
+		"storeId":    inventoryItem.StoreID,
+		"styleNo":    inventoryItem.StyleNo,
+		"name":       "验收足金手链已编辑",
+		"category":   inventoryItem.Category,
+		"purity":     inventoryItem.Purity,
+		"pieceCount": 3,
+		"weightGram": inventoryItem.WeightGram,
+		"costAmount": inventoryItem.CostAmount,
+		"status":     "in_stock",
+		"remark":     "库存编辑验收",
+	}), http.StatusOK)
+	if updatedInventory.Name != "验收足金手链已编辑" || updatedInventory.PieceCount != 3 {
+		t.Fatalf("inventory item not updated correctly: %#v", updatedInventory)
+	}
+	deletedInventory := decodeResponse[InventoryLedgerItem](t, performRequest(t, handler, http.MethodDelete, "/api/admin/inventory/items/"+inventoryItem.ID, boss.Token, nil), http.StatusOK)
+	if deletedInventory.Status != "deleted" {
+		t.Fatalf("inventory delete not applied: %#v", deletedInventory)
+	}
+	afterInventoryDelete := decodeResponse[InventoryLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/admin/inventory/items", boss.Token, nil), http.StatusOK)
+	if len(afterInventoryDelete.Items) != 0 {
+		t.Fatalf("deleted inventory should be hidden from ledger: %#v", afterInventoryDelete.Items)
+	}
 
 	materialItem := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/materials", manager.Token, map[string]any{
 		"type":         "pledge",
