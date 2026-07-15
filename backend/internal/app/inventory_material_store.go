@@ -19,7 +19,7 @@ func (s *MockStore) listInventoryLedger(user UserAccount) InventoryLedgerSummary
 		Items:             make([]InventoryLedgerItem, 0, len(s.inventoryLedger)),
 	}
 	for _, item := range s.inventoryLedger {
-		if item.OrgID != user.OrgID || !storeVisibleToUserLocked(item.StoreID, user, storeSet) || item.Status == "deleted" {
+		if !ledgerOrgVisibleToUserLocked(item.OrgID, user) || !storeVisibleToUserLocked(item.StoreID, user, storeSet) || item.Status == "deleted" {
 			continue
 		}
 		summary.Items = append(summary.Items, item)
@@ -104,7 +104,7 @@ func (s *MockStore) listMaterialLedger(user UserAccount) MaterialLedgerSummary {
 		Items:             make([]MaterialLedgerItem, 0, len(s.materialLedger)),
 	}
 	for _, item := range s.materialLedger {
-		if item.OrgID != user.OrgID || !storeVisibleToUserLocked(item.StoreID, user, storeSet) || item.Status == "deleted" {
+		if !ledgerOrgVisibleToUserLocked(item.OrgID, user) || !storeVisibleToUserLocked(item.StoreID, user, storeSet) || item.Status == "deleted" {
 			continue
 		}
 		summary.Items = append(summary.Items, item)
@@ -213,7 +213,7 @@ func (s *MockStore) outboundMaterialLedgerItem(user UserAccount, itemID, remark 
 		if item.ID != itemID {
 			continue
 		}
-		if item.OrgID != user.OrgID || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
+		if !ledgerOrgVisibleToUserLocked(item.OrgID, user) || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
 			return MaterialLedgerItem{}, errUnauthorizedStore
 		}
 		now := time.Now()
@@ -238,7 +238,7 @@ func (s *MockStore) updateMaterialLedgerItem(user UserAccount, itemID string, re
 		if item.ID != itemID {
 			continue
 		}
-		if item.OrgID != user.OrgID || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
+		if !ledgerOrgVisibleToUserLocked(item.OrgID, user) || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
 			return MaterialLedgerItem{}, errUnauthorizedStore
 		}
 		store, ok := resolveStoreForWriteLocked(s.stores, user, firstNonEmpty(strings.TrimSpace(req.StoreID), item.StoreID))
@@ -285,7 +285,7 @@ func (s *MockStore) deleteMaterialLedgerItem(user UserAccount, itemID string) (M
 		if item.ID != itemID {
 			continue
 		}
-		if item.OrgID != user.OrgID || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
+		if !ledgerOrgVisibleToUserLocked(item.OrgID, user) || !storeVisibleToUserLocked(item.StoreID, user, storeSet) {
 			return MaterialLedgerItem{}, errUnauthorizedStore
 		}
 		item.Status = "deleted"
@@ -344,11 +344,22 @@ func (s *MockStore) persistMaterialLedgerLocked() {
 }
 
 func storeVisibleToUserLocked(storeID string, user UserAccount, storeSet map[string]struct{}) bool {
-	if user.DataScope == "org_all" {
+	if hasAllStoresScope(user.DataScope) {
 		return true
 	}
 	_, ok := storeSet[storeID]
 	return ok
+}
+
+func ledgerOrgVisibleToUserLocked(itemOrgID string, user UserAccount) bool {
+	if hasAllStoresScope(user.DataScope) {
+		return true
+	}
+	itemOrgID = strings.TrimSpace(itemOrgID)
+	if itemOrgID == "" {
+		return true
+	}
+	return itemOrgID == strings.TrimSpace(user.OrgID)
 }
 
 func resolveStoreForWriteLocked(stores []StoreInfo, user UserAccount, storeID string) (StoreInfo, bool) {

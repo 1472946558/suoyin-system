@@ -582,6 +582,66 @@ func TestInventoryAndMaterialLedgerRealAPIs(t *testing.T) {
 	}
 }
 
+func TestAllStoresAdminScopeCanSeeInventoryAndMaterials(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+
+	manager := passwordLogin(t, handler, defaultManagerUsername, defaultManagerPassword)
+	if manager.Token == "" {
+		t.Fatal("expected manager token")
+	}
+	inventoryItem := decodeResponse[InventoryLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/inventory/items", manager.Token, map[string]any{
+		"styleNo":    "SCOPE-INV-001",
+		"name":       "范围验收库存",
+		"category":   "黄金",
+		"purity":     "足金9999",
+		"pieceCount": 1,
+		"weightGram": 1.23,
+	}), http.StatusCreated)
+	materialItem := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodPost, "/api/v1/materials", manager.Token, map[string]any{
+		"type":       "leftover",
+		"orderNo":    "SCOPE-MAT-001",
+		"category":   "黄金",
+		"purity":     "足金9999",
+		"weightGram": 1.11,
+		"amount":     888,
+	}), http.StatusCreated)
+
+	adminUser := app.store.usersByUsername[defaultBossUsername]
+	adminUser.DataScope = "all_stores"
+	adminUser.OrgID = "legacy-admin-org"
+	adminSession, err := app.store.createSession(app.Config.TokenSecret, adminUser)
+	if err != nil {
+		t.Fatalf("create all_stores session: %v", err)
+	}
+	adminInventory := decodeResponse[InventoryLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/admin/inventory/items", adminSession.Token, nil), http.StatusOK)
+	if !containsInventoryItemForTest(adminInventory.Items, inventoryItem.ID) {
+		t.Fatalf("all_stores admin should see manager inventory item: %#v", adminInventory.Items)
+	}
+	updatedMaterial := decodeResponse[MaterialLedgerItem](t, performRequest(t, handler, http.MethodPut, "/api/admin/materials/"+materialItem.ID, adminSession.Token, map[string]any{
+		"type":                materialItem.Type,
+		"orderNo":             materialItem.OrderNo,
+		"category":            materialItem.Category,
+		"purity":              materialItem.Purity,
+		"weightGram":          materialItem.WeightGram,
+		"amount":              889,
+		"remainingWeightGram": materialItem.RemainingWeightGram,
+		"status":              "in_stock",
+	}), http.StatusOK)
+	if updatedMaterial.Amount != 889 {
+		t.Fatalf("all_stores admin should update manager material item: %#v", updatedMaterial)
+	}
+}
+
+func containsInventoryItemForTest(items []InventoryLedgerItem, id string) bool {
+	for _, item := range items {
+		if item.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 func TestInventoryAndMaterialCreateIgnoreClientDisplayFields(t *testing.T) {
 	app := newTestApp(t)
 	handler := app.Router()

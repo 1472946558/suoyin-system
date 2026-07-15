@@ -828,6 +828,7 @@ func (s *MockStore) getUserByToken(token string) (UserAccount, Session, bool) {
 	s.mu.RLock()
 	session, ok := s.sessions[token]
 	user := s.usersByID[session.UserID]
+	user = s.normalizeSessionUserLocked(user)
 	s.mu.RUnlock()
 
 	if ok && !session.ExpiresAt.Before(time.Now()) {
@@ -845,6 +846,7 @@ func (s *MockStore) getUserByToken(token string) (UserAccount, Session, bool) {
 		s.mu.Lock()
 		s.sessions[token] = persisted
 		user, ok = s.usersByID[persisted.UserID]
+		user = s.normalizeSessionUserLocked(user)
 		s.mu.Unlock()
 		if ok {
 			return user, persisted, true
@@ -855,6 +857,30 @@ func (s *MockStore) getUserByToken(token string) (UserAccount, Session, bool) {
 		return UserAccount{}, Session{}, false
 	}
 	return user, session, true
+}
+
+func (s *MockStore) normalizeSessionUserLocked(user UserAccount) UserAccount {
+	if user.ID == "" {
+		return user
+	}
+	if strings.TrimSpace(user.OrgID) == "" {
+		for _, store := range s.stores {
+			if strings.TrimSpace(store.OrgID) != "" {
+				user.OrgID = store.OrgID
+				break
+			}
+		}
+		if strings.TrimSpace(user.OrgID) == "" {
+			user.OrgID = "org-gold-demo"
+		}
+	}
+	if user.DataScope == "all_stores" {
+		user.DataScope = "org_all"
+	}
+	if hasAllStoresScope(user.DataScope) && len(user.StoreIDs) == 0 {
+		user.StoreIDs = allStoreIDsLocked(s.stores)
+	}
+	return user
 }
 
 func (s *MockStore) deleteSession(token string) error {
@@ -871,7 +897,7 @@ func (s *MockStore) listStoresForUser(user UserAccount) []StoreInfo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if user.DataScope == "org_all" {
+	if hasAllStoresScope(user.DataScope) {
 		return append([]StoreInfo(nil), s.stores...)
 	}
 
@@ -889,7 +915,7 @@ func (s *MockStore) listStoresForUser(user UserAccount) []StoreInfo {
 }
 
 func (s *MockStore) canAccessStore(user UserAccount, storeID string) bool {
-	if user.DataScope == "org_all" {
+	if hasAllStoresScope(user.DataScope) {
 		return true
 	}
 	for _, id := range user.StoreIDs {
@@ -909,6 +935,10 @@ func (s *MockStore) getStore(storeID string) (StoreInfo, bool) {
 		}
 	}
 	return StoreInfo{}, false
+}
+
+func hasAllStoresScope(scope string) bool {
+	return scope == "org_all" || scope == "all_stores"
 }
 
 func (s *MockStore) listRoles() []RoleTemplate {
@@ -2267,7 +2297,7 @@ func (s *MockStore) dailyReport(user UserAccount, date string) DailyReportSummar
 }
 
 func visibleStoresForUserLocked(stores []StoreInfo, user UserAccount) ([]StoreInfo, map[string]struct{}) {
-	if user.DataScope == "org_all" {
+	if hasAllStoresScope(user.DataScope) {
 		storeSet := make(map[string]struct{}, len(stores))
 		for _, store := range stores {
 			storeSet[store.ID] = struct{}{}
@@ -2293,7 +2323,7 @@ func productVisibleToUser(product CatalogProduct, user UserAccount, storeSet map
 	if product.Status == "disabled" {
 		return false
 	}
-	if user.DataScope == "org_all" {
+	if hasAllStoresScope(user.DataScope) {
 		return true
 	}
 	for _, storeID := range product.StoreIDs {
