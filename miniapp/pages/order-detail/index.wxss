@@ -369,5 +369,9 @@
 
 .danger-action {
   border-color: #f1c6c6;
-  color: #8a2626;
+  color: #ffffff;
+}
+
+.danger-action[disabled] {
+  color: #ffffff;
 }
