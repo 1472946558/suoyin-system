@@ -200,10 +200,7 @@
       <button class="primary-btn" loading="{{printing}}" disabled="{{printing}}" bindtap="printReceipt">打印小票</button>
       <button class="ghost-btn" loading="{{printing}}" disabled="{{printing}}" bindtap="printLabel">打印标签</button>
       <button wx:if="{{detailType === 'cashier'}}" class="ghost-btn danger-action" loading="{{refundSubmitting}}" disabled="{{refundSubmitting || record.status === 'refunded'}}" bindtap="refundCashierOrder">{{record.status === 'refunded' ? '已退单' : '退单'}}</button>
-    </view>
-
-    <view wx:if="{{!isDraft}}" class="print-reset-row">
-      <button class="text-btn print-reset-btn" bindtap="resetPrinter">重选蓝牙打印机</button>
+      <button class="ghost-btn print-reset-btn" bindtap="resetPrinter">重选蓝牙打印机</button>
     </view>
 
     <view wx:if="{{!isDraft && printPreviewText}}" class="card print-preview-card">

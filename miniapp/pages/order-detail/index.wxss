@@ -137,21 +137,8 @@
   margin-top: 14rpx;
 }
 
-.print-reset-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 18rpx;
-}
-
 .print-reset-btn {
-  width: 320rpx;
-  height: 68rpx;
-  border: 0.8rpx solid var(--line);
-  border-radius: 14rpx;
   color: #ffffff;
-  font-size: 26.4rpx;
-  font-weight: 900;
-  line-height: 68rpx;
   background: #866e23;
   background-color: #866e23;
 }
