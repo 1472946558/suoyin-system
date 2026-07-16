@@ -204,7 +204,10 @@ button text,
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-width: 0;
   height: 88rpx;
+  padding: 0 14rpx;
   border: 0.8rpx solid #f6e7a1;
   border-radius: 14rpx;
   color: #ffffff;
@@ -224,7 +227,10 @@ button text,
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-width: 0;
   height: 84rpx;
+  padding: 0 14rpx;
   border: 0.8rpx solid #f6e7a1;
   border-radius: 14rpx;
   color: #ffffff;
@@ -342,6 +348,22 @@ button text,
 .status-pill.danger {
   color: #8a2626;
   background: rgba(194, 65, 65, 0.12);
+}
+
+.action-grid,
+.main-actions,
+.detail-actions,
+.form-actions {
+  width: 100%;
+}
+
+.action-grid > button,
+.main-actions > button,
+.detail-actions > button,
+.form-actions > button {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .promise-grid {
