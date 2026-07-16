@@ -115,3 +115,10 @@
   line-height: 54rpx;
   background: #866e23;
 }
+
+.form-submit-btn {
+  width: 60%;
+  min-width: 300rpx;
+  max-width: 420rpx;
+  margin: 30rpx auto 0;
+}

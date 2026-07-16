@@ -88,6 +88,13 @@
   line-height: 54rpx;
 }
 
+.form-submit-btn {
+  width: 60%;
+  min-width: 300rpx;
+  max-width: 420rpx;
+  margin: 30rpx auto 0;
+}
+
 .record-card {
   margin-top: 0;
 }
