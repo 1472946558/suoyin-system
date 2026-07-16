@@ -70,6 +70,7 @@ const baseAppConfig = {
     quotePreview: "/api/v1/recycle/quote-preview",
     goldReferencePrices: "/api/v1/gold-prices/reference",
     cashierOrderDetail: "/api/v1/cashier/orders/:id",
+    refundCashierOrder: "/api/v1/cashier/orders/:id/refund",
     listMembers: "/api/v1/members",
     createMember: "/api/v1/members",
     memberDetail: "/api/v1/members/:id",

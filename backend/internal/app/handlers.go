@@ -831,12 +831,12 @@ func (a *App) handleAdminCashierOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method != http.MethodPost || !strings.HasSuffix(path, "/void") {
+	if r.Method != http.MethodPost || (!strings.HasSuffix(path, "/void") && !strings.HasSuffix(path, "/refund")) {
 		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
 		return
 	}
 
-	orderID := strings.TrimSuffix(path, "/void")
+	orderID := strings.TrimSuffix(strings.TrimSuffix(path, "/void"), "/refund")
 	orderID = strings.Trim(orderID, "/")
 	var req AdminActionReasonRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -847,16 +847,16 @@ func (a *App) handleAdminCashierOrder(w http.ResponseWriter, r *http.Request) {
 		a.writeError(w, r, http.StatusBadRequest, 40002, "reason is required")
 		return
 	}
-	order, err := a.store.voidAdminCashierOrder(user, orderID, req.Reason)
+	order, err := a.store.refundAdminCashierOrder(user, orderID, req.Reason)
 	switch {
 	case errors.Is(err, errUnauthorizedStore):
 		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
 	case errors.Is(err, errCashierNotFound):
 		a.writeError(w, r, http.StatusNotFound, 40402, "cashier order not found")
 	case errors.Is(err, errAdminOrderConflict):
-		a.writeError(w, r, http.StatusConflict, 40904, "cashier order cannot be voided")
+		a.writeError(w, r, http.StatusConflict, 40904, "cashier order cannot be refunded")
 	case err != nil:
-		a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to void cashier order")
+		a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to refund cashier order")
 	default:
 		a.writeJSON(w, r, http.StatusOK, 0, "ok", order)
 	}
@@ -1379,15 +1379,43 @@ func (a *App) handleCashierOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleCashierOrderDetail(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
-		return
-	}
 	user := currentUser(r.Context())
 	orderID := strings.TrimPrefix(r.URL.Path, "/api/v1/cashier/orders/")
 	orderID = strings.Trim(orderID, "/")
 	if orderID == "" {
 		a.writeError(w, r, http.StatusNotFound, 40401, "resource not found")
+		return
+	}
+
+	if r.Method == http.MethodPost && strings.HasSuffix(orderID, "/refund") {
+		orderID = strings.TrimSuffix(orderID, "/refund")
+		orderID = strings.Trim(orderID, "/")
+		var req AdminActionReasonRequest
+		if err := decodeJSON(r, &req); err != nil {
+			a.writeError(w, r, http.StatusBadRequest, 40001, "invalid request body")
+			return
+		}
+		if strings.TrimSpace(req.Reason) == "" {
+			a.writeError(w, r, http.StatusBadRequest, 40002, "reason is required")
+			return
+		}
+		order, err := a.store.refundCashierOrder(user, orderID, req.Reason)
+		switch {
+		case errors.Is(err, errUnauthorizedStore):
+			a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
+		case errors.Is(err, errCashierNotFound):
+			a.writeError(w, r, http.StatusNotFound, 40402, "cashier order not found")
+		case errors.Is(err, errAdminOrderConflict):
+			a.writeError(w, r, http.StatusConflict, 40904, "cashier order cannot be refunded")
+		case err != nil:
+			a.writeError(w, r, http.StatusInternalServerError, 50005, "failed to refund cashier order")
+		default:
+			a.writeJSON(w, r, http.StatusOK, 0, "ok", order)
+		}
+		return
+	}
+	if r.Method != http.MethodGet {
+		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
 		return
 	}
 

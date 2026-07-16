@@ -107,7 +107,7 @@ Page({
         if ((filter || "") === "pending") {
           return item.status === "draft" || item.status === "pending_confirm" || item.status === "pending";
         }
-        return item.status === "completed" || item.status === "confirmed" || item.status === "paid" || item.status === "refunded";
+        return item.status === "completed" || item.status === "confirmed" || item.status === "paid";
       });
     const filteredOrders = statusMatchedOrders.filter(function(item) {
       if (!keyword) return true;

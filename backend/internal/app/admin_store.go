@@ -484,9 +484,12 @@ func (s *MockStore) buildDynamicCashierOrderViewsLocked() []AdminCashierOrderVie
 			Remark:        order.Remark,
 			VoidReason:    strings.TrimSpace(order.VoidReason),
 			VoidedBy:      strings.TrimSpace(order.VoidedBy),
+			RefundReason:  strings.TrimSpace(order.VoidReason),
+			RefundedBy:    strings.TrimSpace(order.VoidedBy),
 		}
 		if order.VoidedAt != nil {
 			view.VoidedAt = order.VoidedAt.Format("2006-01-02 15:04")
+			view.RefundedAt = view.VoidedAt
 		}
 		items = append(items, view)
 	}
@@ -1237,7 +1240,7 @@ func (s *MockStore) getAdminCashierOrder(user UserAccount, orderID string) (Admi
 	return AdminCashierOrderView{}, errCashierNotFound
 }
 
-func (s *MockStore) voidAdminCashierOrder(user UserAccount, orderID, reason string) (AdminCashierOrderView, error) {
+func (s *MockStore) refundAdminCashierOrder(user UserAccount, orderID, reason string) (AdminCashierOrderView, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -1260,7 +1263,7 @@ func (s *MockStore) voidAdminCashierOrder(user UserAccount, orderID, reason stri
 		if s.persistence != nil {
 			_ = s.persistence.saveCashierOrder(context.Background(), order)
 		}
-		s.appendAuditLogLocked("收银单", "作废收银单", user.DisplayName, "warning", "high", fmt.Sprintf("%s 已作废，原因：%s", order.OrderNo, order.VoidReason))
+		s.appendAuditLogLocked("收银单", "退单", user.DisplayName, "warning", "high", fmt.Sprintf("%s 已退单，原因：%s", order.OrderNo, order.VoidReason))
 		for _, item := range s.buildDynamicCashierOrderViewsLocked() {
 			if item.ID == order.ID {
 				return item, nil
@@ -1269,6 +1272,10 @@ func (s *MockStore) voidAdminCashierOrder(user UserAccount, orderID, reason stri
 		return AdminCashierOrderView{}, errCashierNotFound
 	}
 	return AdminCashierOrderView{}, errCashierNotFound
+}
+
+func (s *MockStore) voidAdminCashierOrder(user UserAccount, orderID, reason string) (AdminCashierOrderView, error) {
+	return s.refundAdminCashierOrder(user, orderID, reason)
 }
 
 func (s *MockStore) listAdminRecycleOrders(user UserAccount, query AdminListQuery) AdminPagedItems[AdminRecycleOrderView] {

@@ -156,6 +156,9 @@ type CashierOrder struct {
 	VoidReason    string             `json:"voidReason,omitempty"`
 	VoidedBy      string             `json:"voidedBy,omitempty"`
 	VoidedAt      *time.Time         `json:"voidedAt,omitempty"`
+	RefundReason  string             `json:"refundReason,omitempty"`
+	RefundedBy    string             `json:"refundedBy,omitempty"`
+	RefundedAt    *time.Time         `json:"refundedAt,omitempty"`
 }
 
 type RecycleItem struct {

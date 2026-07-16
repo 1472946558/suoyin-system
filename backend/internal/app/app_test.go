@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"time"
 	"testing"
 )
 
@@ -131,6 +132,8 @@ func TestSaveCashierOrderStatementColumnPlaceholderCount(t *testing.T) {
 type dailyReportSummaryTestResult struct {
 	Date              string                   `json:"date"`
 	VisibleStoreCount int                      `json:"visibleStoreCount"`
+	CashierOrderCount int                      `json:"cashierOrderCount"`
+	CashierAmount     float64                  `json:"cashierAmount"`
 	StoreMetrics      []DailyReportStoreMetric `json:"storeMetrics"`
 }
 
@@ -602,6 +605,47 @@ func TestInventoryAndMaterialLedgerRealAPIs(t *testing.T) {
 	afterDelete := decodeResponse[MaterialLedgerSummary](t, performRequest(t, handler, http.MethodGet, "/api/admin/materials", boss.Token, nil), http.StatusOK)
 	if len(afterDelete.Items) != 0 {
 		t.Fatalf("deleted material should be hidden from ledger: %#v", afterDelete.Items)
+	}
+}
+
+func TestCashierRefundExcludesOrderFromReports(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+
+	mini := miniappLogin(t, handler, "manager")
+	admin := passwordLogin(t, handler, defaultBossUsername, defaultBossPassword)
+	today := time.Now().Format("2006-01-02")
+	before := decodeResponse[dailyReportSummaryTestResult](t, performRequest(t, handler, http.MethodGet, "/api/v1/reports/daily?date="+today, mini.Token, nil), http.StatusOK)
+
+	cashier := decodeResponse[CashierOrder](t, performRequest(t, handler, http.MethodPost, "/api/v1/cashier/orders", mini.Token, map[string]any{
+		"storeId":       mini.StoreID,
+		"customerName":  "退单客户",
+		"customerPhone": "13800138009",
+		"items": []map[string]any{
+			{"name": "退单测试商品", "quantity": 1, "unitPrice": 300},
+		},
+	}), http.StatusCreated)
+	afterCreate := decodeResponse[dailyReportSummaryTestResult](t, performRequest(t, handler, http.MethodGet, "/api/v1/reports/daily?date="+today, mini.Token, nil), http.StatusOK)
+	if afterCreate.CashierOrderCount != before.CashierOrderCount+1 || afterCreate.CashierAmount != before.CashierAmount+300 {
+		t.Fatalf("cashier order should be counted before refund: before=%#v after=%#v", before, afterCreate)
+	}
+
+	refunded := decodeResponse[CashierOrder](t, performRequest(t, handler, http.MethodPost, "/api/v1/cashier/orders/"+cashier.ID+"/refund", mini.Token, map[string]any{
+		"reason": "客户退单验收",
+	}), http.StatusOK)
+	if refunded.Status != "refunded" || refunded.RefundReason != "客户退单验收" || refunded.RefundedBy == "" || refunded.RefundedAt == nil {
+		t.Fatalf("cashier refund fields not populated: %#v", refunded)
+	}
+	afterRefund := decodeResponse[dailyReportSummaryTestResult](t, performRequest(t, handler, http.MethodGet, "/api/v1/reports/daily?date="+today, mini.Token, nil), http.StatusOK)
+	if afterRefund.CashierOrderCount != before.CashierOrderCount || afterRefund.CashierAmount != before.CashierAmount {
+		t.Fatalf("refunded cashier order should be excluded from report: before=%#v after=%#v", before, afterRefund)
+	}
+
+	conflict := decodeEnvelope(t, performRequest(t, handler, http.MethodPost, "/api/admin/cashier-orders/"+cashier.ID+"/refund", admin.Token, map[string]any{
+		"reason": "重复退单",
+	}), http.StatusConflict)
+	if conflict.Code != 40904 {
+		t.Fatalf("unexpected duplicate refund conflict: %#v", conflict)
 	}
 }
 

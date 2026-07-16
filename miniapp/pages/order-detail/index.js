@@ -18,6 +18,7 @@ const {
   createRecycleOrderOnline,
   getOrderByIdOnline,
   getCashierOrderByIdOnline,
+  refundCashierOrderOnline,
   statusMap,
   getPhotoValidation
 } = require("../../utils/orderStore");
@@ -51,7 +52,8 @@ Page({
     printPreviewText: "",
     printPendingType: "",
     printProtocol: "",
-    printStatusText: ""
+    printStatusText: "",
+    refundSubmitting: false
   },
 
   onLoad(query) {
@@ -219,6 +221,40 @@ Page({
       },
       complianceItems,
       timelineItems
+    });
+  },
+
+  refundCashierOrder() {
+    const record = this.data.record;
+    if (!record || this.data.detailType !== "cashier" || record.status === "refunded") {
+      return;
+    }
+    wx.showModal({
+      title: "确认退单",
+      editable: true,
+      placeholderText: "请输入退单原因",
+      confirmText: "退单",
+      confirmColor: "#8f6b13",
+      success: (res) => {
+        if (!res.confirm) return;
+        const reason = String(res.content || "").trim();
+        if (!reason) {
+          wx.showToast({ title: "请填写退单原因", icon: "none" });
+          return;
+        }
+        this.setData({ refundSubmitting: true });
+        refundCashierOrderOnline(record.id || record.orderNo, reason)
+          .then((nextRecord) => {
+            wx.showToast({ title: "退单成功", icon: "success" });
+            this.applyCashierRecord(nextRecord);
+          })
+          .catch((error) => {
+            wx.showToast({ title: formatRequestError(error), icon: "none" });
+          })
+          .finally(() => {
+            this.setData({ refundSubmitting: false });
+          });
+      }
     });
   },
 

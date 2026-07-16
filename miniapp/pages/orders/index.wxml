@@ -86,7 +86,7 @@
             <text class="order-id">{{item.orderNo || item.id}}</text>
           </view>
         </view>
-        <text class="status-pill {{item.status === 'completed' || item.status === 'confirmed' || item.status === 'paid' || item.status === 'refunded' ? 'done' : 'pending'}}">{{item.statusText}}</text>
+        <text class="status-pill {{item.status === 'completed' || item.status === 'confirmed' || item.status === 'paid' ? 'done' : (item.status === 'refunded' || item.status === 'cancelled' ? 'danger' : 'pending')}}">{{item.statusText}}</text>
       </view>
       <view class="route">
         <view class="route-row">

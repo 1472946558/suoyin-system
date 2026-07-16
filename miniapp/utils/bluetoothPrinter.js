@@ -396,6 +396,12 @@ function buildReceiptPrintText(record, detailType, quote, photoValidation) {
     });
     lines.push("------------------------");
     lines.push(`收款金额：￥${moneyText(source.totalAmount || source.amount)}`);
+    lines.push(`订单状态：${source.statusText || (source.status === "refunded" ? "已退单" : "已完成")}`);
+    if (source.status === "refunded") {
+      lines.push(`退单原因：${normalizeLine(source.refundReason || source.voidReason) || "-"}`);
+      lines.push(`退单人：${normalizeLine(source.refundedBy || source.voidedBy) || "-"}`);
+      lines.push(`退单时间：${normalizeLine(source.refundedAt || source.voidedAt) || "-"}`);
+    }
   } else {
     const nextQuote = quote || {};
     const nextPhotos = photoValidation || {};

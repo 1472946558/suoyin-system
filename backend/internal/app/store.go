@@ -1769,7 +1769,7 @@ func (s *MockStore) listCashierOrders(user UserAccount, storeID string) ([]Cashi
 		if !s.canAccessStore(user, order.StoreID) {
 			continue
 		}
-		orders = append(orders, order)
+		orders = append(orders, enrichCashierOrderRefundFields(order))
 	}
 	return orders, nil
 }
@@ -1783,10 +1783,51 @@ func (s *MockStore) getCashierOrder(user UserAccount, orderID string) (CashierOr
 			if !s.canAccessStore(user, order.StoreID) {
 				return CashierOrder{}, errUnauthorizedStore
 			}
-			return order, nil
+			return enrichCashierOrderRefundFields(order), nil
 		}
 	}
 	return CashierOrder{}, errCashierNotFound
+}
+
+func (s *MockStore) refundCashierOrder(user UserAccount, orderID, reason string) (CashierOrder, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for index, order := range s.cashierOrders {
+		if order.ID != orderID && order.OrderNo != orderID {
+			continue
+		}
+		if !s.canAccessStore(user, order.StoreID) {
+			return CashierOrder{}, errUnauthorizedStore
+		}
+		if normalizeCashierStatus(order.Status) == "refunded" {
+			return CashierOrder{}, errAdminOrderConflict
+		}
+		now := time.Now()
+		order.Status = "refunded"
+		order.VoidReason = strings.TrimSpace(reason)
+		order.VoidedBy = user.DisplayName
+		order.VoidedAt = &now
+		s.cashierOrders[index] = order
+		if s.persistence != nil {
+			_ = s.persistence.saveCashierOrder(context.Background(), order)
+		}
+		return enrichCashierOrderRefundFields(order), nil
+	}
+	return CashierOrder{}, errCashierNotFound
+}
+
+func enrichCashierOrderRefundFields(order CashierOrder) CashierOrder {
+	if order.RefundReason == "" {
+		order.RefundReason = strings.TrimSpace(order.VoidReason)
+	}
+	if order.RefundedBy == "" {
+		order.RefundedBy = strings.TrimSpace(order.VoidedBy)
+	}
+	if order.RefundedAt == nil {
+		order.RefundedAt = order.VoidedAt
+	}
+	return order
 }
 
 func (s *MockStore) findCatalogProductForCashierLine(user UserAccount, storeID, productID, sku string) (CatalogProduct, bool) {
@@ -1923,7 +1964,7 @@ func (s *MockStore) createCashierOrder(user UserAccount, storeID string, custome
 		}
 	}
 	s.cashierOrders = append(s.cashierOrders, order)
-	return order, nil
+	return enrichCashierOrderRefundFields(order), nil
 }
 
 func normalizePaymentMethod(value string) string {
@@ -2141,6 +2182,9 @@ func (s *MockStore) dashboardSummary(user UserAccount) DashboardSummary {
 		if _, ok := storeSet[order.StoreID]; !ok {
 			continue
 		}
+		if !isEffectiveCashierOrder(order) {
+			continue
+		}
 		if order.CreatedAt.Format("2006-01-02") == today {
 			summary.TodayCashierOrderCount++
 			summary.TodayCashierAmount += order.PaidAmount
@@ -2251,6 +2295,9 @@ func (s *MockStore) dailyReport(user UserAccount, date string) DailyReportSummar
 		if _, ok := storeSet[order.StoreID]; !ok || order.CreatedAt.Format("2006-01-02") != date {
 			continue
 		}
+		if !isEffectiveCashierOrder(order) {
+			continue
+		}
 		report.CashierOrderCount++
 		report.CashierAmount += order.PaidAmount
 		metric := storeMetrics[order.StoreID]
@@ -2294,6 +2341,10 @@ func (s *MockStore) dailyReport(user UserAccount, date string) DailyReportSummar
 		report.StoreMetrics = append(report.StoreMetrics, metric)
 	}
 	return report
+}
+
+func isEffectiveCashierOrder(order CashierOrder) bool {
+	return normalizeCashierStatus(order.Status) == "paid"
 }
 
 func visibleStoresForUserLocked(stores []StoreInfo, user UserAccount) ([]StoreInfo, map[string]struct{}) {

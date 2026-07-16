@@ -1195,7 +1195,7 @@ function memberStatusLabel(status: string) {
 }
 
 function orderStatusLabel(status: CashierOrderView["status"]) {
-  return { paid: "已完成", pending: "待复核", refunded: "已取消" }[status] || status;
+  return { paid: "已完成", pending: "待复核", refunded: "已退单" }[status] || status;
 }
 
 function recycleStatusLabel(status: RecycleOrderView["status"]) {
@@ -1205,7 +1205,7 @@ function recycleStatusLabel(status: RecycleOrderView["status"]) {
 function statusTone(status: string): MetricTone {
   if (["已完成", "已确认", "上架中", "营业中", "正常", "库存正常", "启用中"].includes(status)) return "emerald";
   if (["待复核", "待确认", "待完善", "待开业", "库存较低", "待激活"].includes(status)) return "gold";
-  if (["已取消", "已作废", "已删除", "无库存"].includes(status)) return "danger";
+  if (["已取消", "已作废", "已退单", "已删除", "无库存"].includes(status)) return "danger";
   return "slate";
 }
 
@@ -1622,11 +1622,11 @@ function showNextPreview(delta: number) {
 
 async function voidCurrentCashier() {
   if (!sessionToken.value || !currentCashierDetail.value || currentCashierDetail.value.status === "refunded") return;
-  const reason = window.prompt("请输入收银单作废原因");
+  const reason = window.prompt("请输入退单原因");
   if (!reason || !reason.trim()) return;
   await runAction(async () => {
     await voidCashierOrder(sessionToken.value, currentCashierDetail.value!.id, reason.trim());
-  }, "收银单已作废。", "cashier");
+  }, "退单已完成，统计会扣除这笔成交。", "cashier");
 }
 
 async function cancelCurrentRecycle() {
@@ -2303,7 +2303,7 @@ watchEffect(() => {
                 <option value="">全部</option>
                 <option value="paid">已完成</option>
                 <option value="pending">待复核</option>
-                <option value="refunded">已取消</option>
+                <option value="refunded">已退单</option>
               </select>
             </label>
             <label class="field compact-field"><span>开始日期</span><input v-model="cashierFilters.dateFrom" type="date" /></label>
@@ -2358,7 +2358,7 @@ watchEffect(() => {
                   :disabled="actionPending || currentCashierDetail.status === 'refunded'"
                   @click="voidCurrentCashier"
                 >
-                  {{ currentCashierDetail.status === "refunded" ? "已作废" : "作废收银单" }}
+                  {{ currentCashierDetail.status === "refunded" ? "已退单" : "退单" }}
                 </button>
               </div>
               <div class="detail-grid">
@@ -2378,9 +2378,9 @@ watchEffect(() => {
                 </p>
                 <p v-else>{{ currentCashierDetail.itemSummary || "暂无商品明细" }}</p>
               </div>
-              <div v-if="currentCashierDetail.voidReason" class="list-card warning-card">
-                <strong>作废信息</strong>
-                <p>{{ currentCashierDetail.voidReason }}<br />{{ currentCashierDetail.voidedBy || "-" }} · {{ currentCashierDetail.voidedAt || "-" }}</p>
+              <div v-if="currentCashierDetail.refundReason || currentCashierDetail.voidReason" class="list-card warning-card">
+                <strong>退单信息</strong>
+                <p>{{ currentCashierDetail.refundReason || currentCashierDetail.voidReason }}<br />{{ currentCashierDetail.refundedBy || currentCashierDetail.voidedBy || "-" }} · {{ currentCashierDetail.refundedAt || currentCashierDetail.voidedAt || "-" }}</p>
               </div>
               <div class="list-card">
                 <strong>备注</strong>
@@ -2542,7 +2542,7 @@ watchEffect(() => {
                 <option value="">全部</option>
                 <option value="paid">收银已完成</option>
                 <option value="pending">收银待复核</option>
-                <option value="refunded">收银已取消</option>
+                <option value="refunded">收银已退单</option>
                 <option value="draft">回收待确认</option>
                 <option value="confirmed">回收已确认</option>
                 <option value="cancelled">回收已作废</option>

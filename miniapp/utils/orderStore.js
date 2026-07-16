@@ -30,9 +30,9 @@ const statusMap = {
 const cashierStatusMap = {
   paid: "已完成",
   pending: "待复核",
-  refunded: "已取消",
+  refunded: "已退单",
   completed: "已完成",
-  cancelled: "已取消"
+  cancelled: "已退单"
 };
 
 function getOnlineStoreContext(profile) {
@@ -658,6 +658,12 @@ function buildCashierOrderRecord(source, overrides) {
     totalAmount: totalAmount,
     totalAmountText: totalAmount.toFixed(2),
     operatorName: source.createdBy || source.operatorName || "未填写",
+    refundReason: source.refundReason || source.voidReason || "",
+    refundedBy: source.refundedBy || source.voidedBy || "",
+    refundedAt: normalizeDateText(source.refundedAt || source.voidedAt) || "",
+    voidReason: source.voidReason || source.refundReason || "",
+    voidedBy: source.voidedBy || source.refundedBy || "",
+    voidedAt: normalizeDateText(source.voidedAt || source.refundedAt) || "",
     sourceChannel: source.sourceChannel || "门店收银",
     storeName: source.storeName || "",
     remark: source.remark || "",
@@ -666,6 +672,33 @@ function buildCashierOrderRecord(source, overrides) {
     items: items,
     photoCount: 0
   }, overrides || {});
+}
+
+function refundCashierOrder(id, reason) {
+  const normalizedId = String(id || "").trim();
+  const normalizedReason = String(reason || "").trim();
+  const orders = getCashierOrders();
+  const index = orders.findIndex((item) => item.id === normalizedId || item.orderNo === normalizedId);
+  if (index < 0) {
+    throw new Error("未找到收银单");
+  }
+  if (orders[index].status === "refunded") {
+    throw new Error("该收银单已退单");
+  }
+  const now = nowText();
+  const nextOrder = buildCashierOrderRecord(Object.assign({}, orders[index], {
+    status: "refunded",
+    refundReason: normalizedReason,
+    refundedBy: "当前操作员",
+    refundedAt: now,
+    voidReason: normalizedReason,
+    voidedBy: "当前操作员",
+    voidedAt: now,
+    updatedAt: now
+  }));
+  orders[index] = nextOrder;
+  saveCashierOrders(orders);
+  return nextOrder;
 }
 
 function normalizeLegacyStoreName(storeName) {
@@ -1044,8 +1077,41 @@ function getCashierOrderByIdOnline(id) {
   });
 }
 
+function refundCashierOrderOnline(id, reason) {
+  if (shouldUseLocalBusinessData()) {
+    try {
+      return Promise.resolve(refundCashierOrder(id, reason));
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  return request({
+    endpoint: appConfig.endpoints.refundCashierOrder,
+    method: "POST",
+    params: { id },
+    data: { reason }
+  }).then((payload) => {
+    const data = payload && payload.data ? payload.data : payload;
+    const order = buildCashierOrderRecord(data, {
+      id: data.id || data.orderNo || id,
+      orderNo: data.orderNo || data.id || id
+    });
+    const orders = [order].concat(getCashierOrders().filter((item) => item.id !== order.id));
+    saveCashierOrders(orders);
+    return order;
+  });
+}
+
 function getOrderAmount(order) {
+  if (order && (order.status === "refunded" || order.status === "cancelled")) {
+    return 0;
+  }
   return safeNumber(order.amount || order.totalAmount || order.estimatedAmount || order.confirmedAmount);
+}
+
+function isEffectiveDashboardOrder(order) {
+  return order && order.status !== "refunded" && order.status !== "cancelled";
 }
 
 function getScopedDashboardOrders(orders, profile) {
@@ -1090,11 +1156,12 @@ function getDashboardStats(profile) {
   const scopedRecycleOrders = getScopedDashboardOrders(recycleOrders, profile);
   const scopedCashierOrders = getScopedDashboardOrders(cashierOrders, profile);
   const orders = scopedRecycleOrders.concat(scopedCashierOrders);
+  const effectiveOrders = orders.filter(isEffectiveDashboardOrder);
   const today = todayPrefix();
-  const todayOrders = orders.filter((item) => (item.createdAt || "").indexOf(today) === 0);
-  const todayRecycleOrders = scopedRecycleOrders.filter((item) => (item.createdAt || "").indexOf(today) === 0);
-  const todayCashierOrders = scopedCashierOrders.filter((item) => (item.createdAt || "").indexOf(today) === 0);
-  const completedOrders = orders.filter((item) => item.status === "completed" || item.status === "confirmed" || item.status === "paid" || item.status === "refunded");
+  const todayOrders = effectiveOrders.filter((item) => (item.createdAt || "").indexOf(today) === 0);
+  const todayRecycleOrders = scopedRecycleOrders.filter((item) => isEffectiveDashboardOrder(item) && (item.createdAt || "").indexOf(today) === 0);
+  const todayCashierOrders = scopedCashierOrders.filter((item) => isEffectiveDashboardOrder(item) && (item.createdAt || "").indexOf(today) === 0);
+  const completedOrders = orders.filter((item) => item.status === "completed" || item.status === "confirmed" || item.status === "paid");
   const pendingOrders = orders.filter((item) => item.status === "pending_confirm" || item.status === "pending" || item.status === "draft");
   const storeBreakdown = buildStoreBreakdown(orders);
 
@@ -1131,18 +1198,19 @@ function getDashboardStatsOnline(profile) {
     const scopedRecycleOrders = getScopedDashboardOrders(recycleOrders, profile);
     const scopedCashierOrders = getScopedDashboardOrders(cashierOrders, profile);
     const allOrders = scopedRecycleOrders.concat(scopedCashierOrders);
+    const effectiveOrders = allOrders.filter(isEffectiveDashboardOrder);
     const today = todayPrefix();
-    const todayOrders = allOrders.filter(function(item) {
+    const todayOrders = effectiveOrders.filter(function(item) {
       return String(item.createdAt || "").indexOf(today) === 0;
     });
     const todayRecycleOrders = scopedRecycleOrders.filter(function(item) {
-      return String(item.createdAt || "").indexOf(today) === 0;
+      return isEffectiveDashboardOrder(item) && String(item.createdAt || "").indexOf(today) === 0;
     });
     const todayCashierOrders = scopedCashierOrders.filter(function(item) {
-      return String(item.createdAt || "").indexOf(today) === 0;
+      return isEffectiveDashboardOrder(item) && String(item.createdAt || "").indexOf(today) === 0;
     });
     const completedOrders = allOrders.filter(function(item) {
-      return item.status === "completed" || item.status === "confirmed" || item.status === "paid" || item.status === "refunded";
+      return item.status === "completed" || item.status === "confirmed" || item.status === "paid";
     });
     const pendingOrders = allOrders.filter(function(item) {
       return item.status === "pending_confirm" || item.status === "pending" || item.status === "draft";
@@ -1200,6 +1268,7 @@ module.exports = {
   getCashierOrderById,
   getOrderByIdOnline,
   getCashierOrderByIdOnline,
+  refundCashierOrderOnline,
   getDashboardStats,
   getDashboardStatsOnline,
   calculateCashierSummary

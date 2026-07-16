@@ -339,6 +339,11 @@ button text,
   background: rgba(119, 125, 136, 0.12);
 }
 
+.status-pill.danger {
+  color: #8a2626;
+  background: rgba(194, 65, 65, 0.12);
+}
+
 .promise-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

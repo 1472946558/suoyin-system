@@ -147,6 +147,11 @@
         <text class="info-label">备注</text>
         <text>{{record.remark || '无'}}</text>
       </view>
+      <view wx:if="{{record.refundReason || record.voidReason}}" class="refund-note">
+        <text class="refund-title">退单信息</text>
+        <text>{{record.refundReason || record.voidReason}}</text>
+        <text>{{record.refundedBy || record.voidedBy || '-'}} · {{record.refundedAt || record.voidedAt || '-'}}</text>
+      </view>
     </view>
 
     <view class="card">
@@ -194,6 +199,7 @@
       <button class="primary-btn" bindtap="startNew">再开一单</button>
       <button class="primary-btn" loading="{{printing}}" disabled="{{printing}}" bindtap="printReceipt">打印小票</button>
       <button class="ghost-btn" loading="{{printing}}" disabled="{{printing}}" bindtap="printLabel">打印标签</button>
+      <button wx:if="{{detailType === 'cashier'}}" class="ghost-btn danger-action" loading="{{refundSubmitting}}" disabled="{{refundSubmitting || record.status === 'refunded'}}" bindtap="refundCashierOrder">{{record.status === 'refunded' ? '已退单' : '退单'}}</button>
     </view>
 
     <view wx:if="{{!isDraft}}" class="print-reset-row">

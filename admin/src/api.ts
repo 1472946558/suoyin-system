@@ -327,6 +327,9 @@ export interface CashierOrderView {
   voidReason?: string;
   voidedBy?: string;
   voidedAt?: string;
+  refundReason?: string;
+  refundedBy?: string;
+  refundedAt?: string;
 }
 
 export interface RecycleItem {
@@ -845,7 +848,7 @@ export async function fetchCashierOrderDetail(token: string, id: string): Promis
 }
 
 export async function voidCashierOrder(token: string, id: string, reason: string): Promise<ResourceResult<CashierOrderView>> {
-  const data = await request<CashierOrderView>(`/admin/cashier-orders/${id}/void`, {
+  const data = await request<CashierOrderView>(`/admin/cashier-orders/${id}/refund`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify({ reason }),
