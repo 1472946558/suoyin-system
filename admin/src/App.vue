@@ -58,6 +58,7 @@ import {
   type AbilityGroup,
   type AdminOrderRow,
   type AttachmentAsset,
+  type CashierOrderLine,
   type CashierOrderView,
   type ConsoleBootstrap,
   type DataSource,
@@ -1281,6 +1282,58 @@ function selectProduct(item: ProductRecord) {
   productTagsText.value = item.tags.join("、");
 }
 
+function buildCashierProductSku(order: CashierOrderView, line: CashierOrderLine, index: number) {
+  const existingSku = String(line.sku || "").trim();
+  if (existingSku) return existingSku;
+  const sourceNo = String(order.orderNo || order.id || "cashier").replace(/[^a-zA-Z0-9]/g, "").slice(-12);
+  return `POS-${sourceNo}-${String(index + 1).padStart(2, "0")}`;
+}
+
+async function fillProductFromCashierItem(line: CashierOrderLine, index: number) {
+  const order = currentCashierDetail.value;
+  if (!sessionToken.value || !order || actionPending.value) return;
+  const store = stores.value.find((item) => item.id === order.storeId);
+  const storeIds = order.storeId ? [order.storeId] : store ? [store.id] : [];
+  const storeNames = store ? [store.name] : order.storeName ? [order.storeName] : [];
+  const sku = buildCashierProductSku(order, line, index);
+
+  actionPending.value = true;
+  clearNotice();
+  try {
+    const result = await createProductRecord(sessionToken.value);
+    const payload: ProductRecord = {
+      ...result.data,
+      name: line.name || "收银补录商品",
+      sku,
+      category: "客户自填",
+      categoryTab: "客户自填",
+      imageUrl: result.data.imageUrl || "",
+      price: Number(line.unitPrice || line.amount || 0),
+      gramWeight: 0,
+      status: "draft",
+      inventory: Number(line.quantity || 1),
+      stockStatus: "review",
+      storeIds,
+      storeNames,
+      tags: ["收银补录", order.orderNo],
+    };
+    const saved = await saveProductRecord(sessionToken.value, payload);
+    selectedProductId.value = result.data.id;
+    await loadPageData("products");
+    productDraft.value = cloneProduct(saved.data) || payload;
+    productTagsText.value = ["收银补录", order.orderNo].filter(Boolean).join("、");
+    productStoreSearch.value = "";
+    productStorePickerOpen.value = false;
+    activePage.value = "products";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    showNotice("info", "已带入商品维护，请补齐品类、成色/克重后保存商品。");
+  } catch (error) {
+    showNotice("warning", error instanceof Error ? error.message : "带入商品维护失败。");
+  } finally {
+    actionPending.value = false;
+  }
+}
+
 function toggleUserStore(storeId: string) {
   if (!userDraft.value) return;
   if (userDraft.value.roleKey === "boss") {
@@ -2371,11 +2424,17 @@ watchEffect(() => {
               </div>
               <div class="list-card">
                 <strong>商品明细</strong>
-                <p v-if="currentCashierDetail.items?.length">
-                  <span v-for="item in currentCashierDetail.items" :key="`${item.sku || item.name}-${item.quantity}`">
-                    {{ item.name }} x{{ item.quantity }} · {{ formatCurrency(item.amount) }}<br />
-                  </span>
-                </p>
+                <div v-if="currentCashierDetail.items?.length" class="cashier-item-stack">
+                  <div v-for="(item, index) in currentCashierDetail.items" :key="`${item.sku || item.name}-${item.quantity}-${index}`" class="cashier-item-row">
+                    <div>
+                      <b>{{ item.name }}</b>
+                      <span>{{ item.sku || "临时商品" }} · x{{ item.quantity }} · {{ formatCurrency(item.amount) }}</span>
+                    </div>
+                    <button class="secondary-btn small-btn" type="button" :disabled="actionPending" @click="fillProductFromCashierItem(item, index)">
+                      补商品资料
+                    </button>
+                  </div>
+                </div>
                 <p v-else>{{ currentCashierDetail.itemSummary || "暂无商品明细" }}</p>
               </div>
               <div v-if="currentCashierDetail.refundReason || currentCashierDetail.voidReason" class="list-card warning-card">

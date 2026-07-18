@@ -223,6 +223,34 @@ strong {
   gap: 12px;
 }
 
+.cashier-item-stack {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cashier-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf8;
+}
+
+.cashier-item-row b,
+.cashier-item-row span {
+  display: block;
+}
+
+.cashier-item-row span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .login-info-box {
   flex-wrap: wrap;
   padding: 18px 20px;
