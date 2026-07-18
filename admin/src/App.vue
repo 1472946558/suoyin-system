@@ -468,7 +468,7 @@ const productInventoryRows = computed<InventoryStockItem[]>(() =>
         purity,
         pieceCount,
         weightGram: Number(product.gramWeight || 0) * Math.max(pieceCount, 1),
-        unitCost: Number(product.price || 0),
+        unitCost: Number(product.costPrice || product.price || 0),
         status: product.stockStatus === "out" || pieceCount <= 0 ? "out" : product.stockStatus === "low" ? "low" : product.stockStatus === "review" ? "review" : "normal",
         source: "商品目录",
         createdAt: "",
@@ -699,6 +699,7 @@ function cloneProduct(product: ProductRecord | null | undefined): ProductRecord 
     ...product,
     categoryTab: product.categoryTab || product.category,
     imageUrl: product.imageUrl || "",
+    costPrice: Number(product.costPrice || 0),
     price: Number(product.price || 0),
     gramWeight: Number(product.gramWeight || 0),
     inventory: Number(product.inventory || 0),
@@ -1308,6 +1309,7 @@ async function fillProductFromCashierItem(line: CashierOrderLine, index: number)
       category: "客户自填",
       categoryTab: "客户自填",
       imageUrl: result.data.imageUrl || "",
+      costPrice: 0,
       price: Number(line.unitPrice || line.amount || 0),
       gramWeight: 0,
       status: "draft",
@@ -1835,6 +1837,7 @@ async function saveProduct() {
   syncProductStoreNames();
   const payload: ProductRecord = {
     ...productDraft.value,
+    costPrice: Number(productDraft.value.costPrice || 0),
     price: Number(productDraft.value.price || 0),
     gramWeight: Number(productDraft.value.gramWeight || 0),
     inventory: Number(productDraft.value.inventory || 0),
@@ -2789,7 +2792,7 @@ watchEffect(() => {
             <div>
               <p class="eyebrow">商品导入</p>
               <h3>按门店导入商品</h3>
-              <p class="header-copy">先选择门店并下载对应模板，再上传 Excel。最后一列可填门店名称或留空。</p>
+              <p class="header-copy">先选择门店并下载对应模板，再上传 Excel。模板包含成本和销售价格，最后一列可填门店名称或留空。</p>
             </div>
             <div class="import-controls">
               <label class="field compact-field">
@@ -2870,6 +2873,7 @@ watchEffect(() => {
                 <label class="field"><span>商品编号</span><input v-model="productDraft.sku" /></label>
                 <label class="field"><span>商品分类</span><input v-model="productDraft.category" /></label>
                 <label class="field"><span>页面分类</span><input v-model="productDraft.categoryTab" /></label>
+                <label class="field"><span>成本</span><input v-model.number="productDraft.costPrice" min="0" type="number" /></label>
                 <label class="field"><span>销售价格</span><input v-model.number="productDraft.price" min="0" type="number" /></label>
                 <label class="field"><span>克重</span><input v-model.number="productDraft.gramWeight" min="0" step="0.01" type="number" /></label>
                 <label class="field"><span>库存数量</span><input v-model.number="productDraft.inventory" min="0" type="number" /></label>

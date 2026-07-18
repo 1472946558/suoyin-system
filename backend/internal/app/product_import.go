@@ -23,7 +23,7 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-var productImportHeaders = []string{"商品名称", "SKU", "分类", "克重", "销售价格", "库存数量", "门店ID或名称"}
+var productImportHeaders = []string{"商品名称", "SKU", "分类", "克重", "成本", "销售价格", "库存数量", "门店ID或名称"}
 
 func (s *MockStore) buildProductImportTemplate(user UserAccount, storeID string) ([]byte, error) {
 	s.mu.RLock()
@@ -48,14 +48,14 @@ func (s *MockStore) buildProductImportTemplate(user UserAccount, storeID string)
 			sampleStoreID = visibleStores[0]
 		}
 	}
-	sample := []interface{}{"足金手镯标准款", "GJG-SZ-001", "金饰", 12.68, 786, 9, sampleStoreID}
+	sample := []interface{}{"足金手镯标准款", "GJG-SZ-001", "金饰", 12.68, 720, 786, 9, sampleStoreID}
 	for index, value := range sample {
 		cell, _ := excelize.CoordinatesToCellName(index+1, 2)
 		_ = file.SetCellValue(sheet, cell, value)
 	}
 	_ = file.SetColWidth(sheet, "A", "A", 22)
 	_ = file.SetColWidth(sheet, "B", "B", 18)
-	_ = file.SetColWidth(sheet, "C", "G", 14)
+	_ = file.SetColWidth(sheet, "C", "H", 14)
 	buf, err := file.WriteToBuffer()
 	if err != nil {
 		return nil, err
@@ -158,9 +158,16 @@ func (s *MockStore) parseProductImportRow(row []string, lineNo int, store StoreI
 	sku := value(1)
 	category := value(2)
 	gramText := value(3)
+	costText := ""
 	priceText := value(4)
 	inventoryText := value(5)
 	rowStore := value(6)
+	if len(row) >= len(productImportHeaders) {
+		costText = value(4)
+		priceText = value(5)
+		inventoryText = value(6)
+		rowStore = value(7)
+	}
 	if name == "" {
 		return CatalogProduct{}, &AdminProductImportFailure{Row: lineNo, Reason: "商品名称不能为空"}
 	}
@@ -181,6 +188,13 @@ func (s *MockStore) parseProductImportRow(row []string, lineNo int, store StoreI
 	if err != nil || price < 0 {
 		return CatalogProduct{}, &AdminProductImportFailure{Row: lineNo, Reason: "销售价格必须是非负数字"}
 	}
+	costPrice := 0.0
+	if costText != "" {
+		costPrice, err = strconv.ParseFloat(costText, 64)
+		if err != nil || costPrice < 0 {
+			return CatalogProduct{}, &AdminProductImportFailure{Row: lineNo, Reason: "成本必须是非负数字"}
+		}
+	}
 	inventory, err := strconv.Atoi(inventoryText)
 	if err != nil || inventory < 0 {
 		return CatalogProduct{}, &AdminProductImportFailure{Row: lineNo, Reason: "库存数量必须是非负整数"}
@@ -194,6 +208,7 @@ func (s *MockStore) parseProductImportRow(row []string, lineNo int, store StoreI
 		CategoryTab:      category,
 		ImageURL:         "/assets/ui/document.png",
 		Purity:           "足金999",
+		BenchPrice:       costPrice,
 		RetailPrice:      price,
 		GramWeight:       gramWeight,
 		Status:           "active",

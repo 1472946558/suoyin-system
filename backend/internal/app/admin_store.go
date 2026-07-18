@@ -934,6 +934,7 @@ func (s *MockStore) buildAdminProductRecordLocked(product CatalogProduct) AdminP
 		Category:    product.Category,
 		CategoryTab: product.CategoryTab,
 		ImageURL:    product.ImageURL,
+		CostPrice:   product.BenchPrice,
 		Price:       product.RetailPrice,
 		GramWeight:  product.GramWeight,
 		Status:      product.Status,
@@ -1642,6 +1643,9 @@ func (s *MockStore) updateAdminProduct(user UserAccount, productID string, updat
 		}
 		if update.Price >= 0 {
 			product.RetailPrice = update.Price
+		}
+		if update.CostPrice >= 0 {
+			product.BenchPrice = update.CostPrice
 		}
 		if update.GramWeight >= 0 {
 			product.GramWeight = update.GramWeight

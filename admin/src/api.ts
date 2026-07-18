@@ -180,6 +180,7 @@ export interface ProductRecord {
   category: string;
   categoryTab?: string;
   imageUrl?: string;
+  costPrice?: number;
   price: number;
   gramWeight: number;
   status: "active" | "draft" | "disabled";

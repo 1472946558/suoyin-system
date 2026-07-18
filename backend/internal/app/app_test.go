@@ -19,11 +19,14 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"time"
 	"testing"
+	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type apiEnvelope struct {
@@ -1029,6 +1032,81 @@ func TestAdminWriteFlowsPersistInBootstrap(t *testing.T) {
 	}
 	if len(after.AuditLogs) <= len(before.AuditLogs) {
 		t.Fatalf("expected audit log growth: before=%d after=%d", len(before.AuditLogs), len(after.AuditLogs))
+	}
+}
+
+func TestProductImportTemplateAndUploadIncludeCost(t *testing.T) {
+	app := newTestApp(t)
+	handler := app.Router()
+	admin := adminLogin(t, handler, "boss", "Boss123!")
+	storeID := "store-shenzhen-nanshan"
+
+	templateRR := performRequest(t, handler, http.MethodGet, "/api/admin/products/import-template?storeId="+storeID, admin.Token, nil)
+	if templateRR.Code != http.StatusOK {
+		t.Fatalf("download template failed: status=%d body=%s", templateRR.Code, templateRR.Body.String())
+	}
+	templateFile, err := excelize.OpenReader(bytes.NewReader(templateRR.Body.Bytes()))
+	if err != nil {
+		t.Fatalf("open template: %v", err)
+	}
+	defer templateFile.Close()
+	rows, err := templateFile.GetRows(templateFile.GetSheetName(0))
+	if err != nil {
+		t.Fatalf("read template rows: %v", err)
+	}
+	if len(rows) == 0 || len(rows[0]) < 8 || rows[0][4] != "成本" || rows[0][5] != "销售价格" {
+		t.Fatalf("template headers missing cost column: %#v", rows)
+	}
+
+	file := excelize.NewFile()
+	sheet := file.GetSheetName(0)
+	headers := []string{"商品名称", "SKU", "分类", "克重", "成本", "销售价格", "库存数量", "门店ID或名称"}
+	values := []any{"成本导入测试商品", "COST-IMPORT-001", "金饰", 8.88, 700.5, 899.9, 3, storeID}
+	for index, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(index+1, 1)
+		_ = file.SetCellValue(sheet, cell, header)
+	}
+	for index, value := range values {
+		cell, _ := excelize.CoordinatesToCellName(index+1, 2)
+		_ = file.SetCellValue(sheet, cell, value)
+	}
+	var xlsx bytes.Buffer
+	if _, err := file.WriteTo(&xlsx); err != nil {
+		t.Fatalf("write import xlsx: %v", err)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	if err := writer.WriteField("storeId", storeID); err != nil {
+		t.Fatalf("write store field: %v", err)
+	}
+	part, err := writer.CreateFormFile("file", "cost-import.xlsx")
+	if err != nil {
+		t.Fatalf("create form file: %v", err)
+	}
+	if _, err := part.Write(xlsx.Bytes()); err != nil {
+		t.Fatalf("write form file: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/products/import", &body)
+	req.Header.Set("Authorization", "Bearer "+admin.Token)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	result := decodeResponse[AdminProductImportResult](t, rr, http.StatusOK)
+	if result.SuccessCount != 1 || result.FailureCount != 0 {
+		t.Fatalf("unexpected import result: %#v", result)
+	}
+
+	list := decodeResponse[AdminPagedItems[AdminProductRecord]](t, performRequest(t, handler, http.MethodGet, "/api/admin/products?keyword=COST-IMPORT-001", admin.Token, nil), http.StatusOK)
+	if len(list.Items) != 1 {
+		t.Fatalf("imported product not found: %#v", list)
+	}
+	product := list.Items[0]
+	if product.CostPrice != 700.5 || product.Price != 899.9 || product.Inventory != 3 {
+		t.Fatalf("imported product cost/price/inventory mismatch: %#v", product)
 	}
 }
 

@@ -187,6 +187,7 @@ type AdminProductRecord struct {
 	Category    string   `json:"category"`
 	CategoryTab string   `json:"categoryTab"`
 	ImageURL    string   `json:"imageUrl"`
+	CostPrice   float64  `json:"costPrice"`
 	Price       float64  `json:"price"`
 	GramWeight  float64  `json:"gramWeight"`
 	Status      string   `json:"status"`
