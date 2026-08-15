@@ -517,3 +517,169 @@ Authorization: Bearer <operator_token>
 Redis key: `session:<token>`
 
 **两套 token 不可互用**，后端中间件校验 token 类型。
+
+---
+
+# 附：管理后台「顾客端内容管理」接口草案（2026-08-15 补充）
+
+> 详见 12_ADMIN_CONFIG_SPEC.md、13_UPLOAD_ASSET_SPEC.md。
+> **前缀定案（2026-08-15）**：后台管理接口统一沿用现有项目前缀 `/api/admin/`（不新增 `/api/admin/`）；顾客端接口继续用 `/api/v1/customer/*`。理由：现有权限中间件、路由与前端请求封装均按 `/api/admin/` 实现，沿用零兼容成本。
+> 所有接口 Auth 均为**管理员 token**（`session:` 前缀），顾客 token 一律 401/403。
+
+## 11. 图片上传（详见 13 号文档）
+
+```
+POST   /api/admin/uploads/images          multipart(file, scene, refId) → {id, url, path, ...}
+DELETE /api/admin/uploads/images/:id      软删除，被引用时 40013
+GET    /api/admin/uploads/images?scene=   素材库列表（分页）
+```
+
+## 12. Banner 管理
+
+```
+GET    /api/admin/customer-home/banners        列表（含禁用项，按 sortOrder）
+POST   /api/admin/customer-home/banners         新建
+PUT    /api/admin/customer-home/banners/:id     编辑（title/subtitle/imageUrl/linkType/linkTarget/sortOrder/enabled）
+DELETE /api/admin/customer-home/banners/:id     删除（二次确认由前端保证）
+```
+
+Banner 对象：`{id, title, subtitle, imageUrl, linkType(none|style_list|style_detail|store_list|store_detail|booking|external_page), linkTarget, sortOrder, enabled, updatedAt}`
+
+权限：GET=customer_content.view；POST/PUT/DELETE=customer_content.manage（仅 boss）。
+
+## 13. 首页文案配置
+
+```
+GET /api/admin/customer-home/config
+PUT /api/admin/customer-home/config
+```
+
+PUT Body：
+```json
+{
+  "brandName": "金匠倌",
+  "brandSlogan": "旧金换打新款 · 包损耗",
+  "serviceCopy": "黄金维修 · 到店回收 · 款式定制",
+  "entryStyleText": "款式图",
+  "entryFeeText": "工费",
+  "nearbyStoreRule": {"mode": "distance", "count": 3},
+  "servicePhone": "400-xxx-xxxx",
+  "appointmentNotes": "预约须知文本...",
+  "serviceIntro": "服务说明文本...",
+  "locationPermissionNote": "用于展示附近门店..."
+}
+```
+
+**不提供**"旧金回收独立入口"任何字段。店长入口文案不在此配置（固定值）。
+
+## 14. 款式/工费管理（复用商品管理扩展）
+
+```
+GET    /api/admin/customer-products?category=&status=&keyword=&page=&pageSize=
+POST   /api/admin/customer-products
+PUT    /api/admin/customer-products/:id
+DELETE /api/admin/customer-products/:id
+```
+
+> 实现说明：与现有 `/api/admin/products` 同一数据源（app_configs `catalog_products`）。建议直接扩展现有接口的请求/响应字段，`/api/admin/customer-products` 作为别名路由；禁止两套独立数据。
+
+对象扩展字段（在原商品字段之上）：
+```json
+{
+  "laborFeeRef": "35元/克 起",
+  "description": "款式说明...",
+  "laborFeeNote": "工费说明...",
+  "images": ["https://...主图", "https://...详情图2"],
+  "applicableServiceTypes": ["OLD_FOR_NEW", "REPAIR"],
+  "recommendedStoreRule": "nearest",
+  "sortOrder": 100,
+  "isRecommended": false,
+  "isHot": false
+}
+```
+
+辅助接口：
+```
+GET  /api/admin/customer-products/categories     款式分类列表
+POST /api/admin/customer-products/categories     新建分类 {name, sortOrder}
+PUT  /api/admin/customer-products/categories/:id 重命名/排序（删除时校验非空）
+GET/PUT /api/admin/customer-fee-note             全局工费说明 {content}
+```
+
+## 15. 门店扩展管理（复用门店管理扩展）
+
+```
+GET /api/admin/stores                            原有列表 + 扩展字段
+GET /api/admin/stores/:id/customer-config        读取顾客端扩展配置（2026-08-15 开发期补充）
+PUT /api/admin/stores/:id/customer-config        顾客端扩展配置
+```
+
+PUT Body（customer-config 仅顾客端相关字段；名称等原字段仍走原 `/api/admin/stores/:id`）：
+```json
+{
+  "imageUrl": "https://...门店图",
+  "appointmentEnabled": true,
+  "serviceTags": ["以旧换新", "维修"],
+  "sortOrder": 100,
+  "longitude": 116.404,
+  "latitude": 39.915,
+  "contactPhone": "010-12345678",
+  "businessHours": "09:30-21:30",
+  "address": "朝阳区xxx",
+  "status": "active"
+}
+```
+
+权限：boss 全部门店；shop_manager 仅本店（visibleStoreIDs 校验），且可改字段限于图片/电话/营业时间/经纬度/地址/预约开关/服务标签。
+
+## 16. 预约规则配置
+
+```
+GET /api/admin/appointment-rules
+PUT /api/admin/appointment-rules
+```
+
+PUT Body（全部带范围校验，越界 40014）：
+```json
+{
+  "bookableServiceTypes": ["OLD_FOR_NEW", "REPAIR", "CONSULT", "RECYCLE"],
+  "bookableDays": 7,
+  "slotMinutes": 30,
+  "openTime": "09:30",
+  "closeTime": "21:30",
+  "sameDayLeadMinutes": 60,
+  "cancelLeadMinutes": 120,
+  "slotCapacity": 2
+}
+```
+
+> 实现说明：当前这些规则硬编码在 customer_store.go，本接口落地时抽为配置（存 app_configs `appointment_rules`），slots 计算逻辑读配置。
+
+## 17. 预约记录管理（后台）
+
+```
+GET  /api/admin/customer-appointments?status=&storeId=&phone=&dateFrom=&dateTo=&serviceType=&page=&pageSize=
+GET  /api/admin/customer-appointments/:id
+POST /api/admin/customer-appointments/:id/confirm     PENDING → CONFIRMED
+POST /api/admin/customer-appointments/:id/arrive      PENDING/CONFIRMED → ARRIVED
+POST /api/admin/customer-appointments/:id/complete    ARRIVED → COMPLETED
+POST /api/admin/customer-appointments/:id/cancel      PENDING/CONFIRMED → CANCELLED（body: reason，必填；不受 2 小时限制）
+POST /api/admin/customer-appointments/:id/no-show     PENDING/CONFIRMED → NO_SHOW
+PUT  /api/admin/customer-appointments/:id/staff-note  内部备注（顾客端不可见）
+```
+
+状态机与 07 号文档第 3 节一致；非法转换 40008；越权门店 40301；预约不存在 40404。
+
+权限：appointment.manage（boss 全部；shop_manager 仅本店）。
+
+## 18. 新增错误码汇总
+
+| code | 说明 |
+|------|------|
+| 40010 | 未选择上传文件 |
+| 40011 | 图片格式不支持（魔数校验失败） |
+| 40012 | 图片超过大小限制（5MB） |
+| 40013 | 图片仍被业务引用，禁止删除 |
+| 40014 | 预约规则取值越界 |
+| 40015 | Banner 数量超上限（8 张启用中） |
+| 40301 | 无权操作（角色/门店越权） |

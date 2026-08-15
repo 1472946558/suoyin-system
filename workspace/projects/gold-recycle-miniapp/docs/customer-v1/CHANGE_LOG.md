@@ -1,5 +1,52 @@
 # 变更日志
 
+## 2026-08-15 页面开发说明文档（8 页完整规格）
+
+### 变更内容
+- 基于顾客端原型图，将 8 个页面拆解为可开发、可验收的页面实现说明
+- 每页含 10 节：页面目标、页面入口、信息结构、操作说明、交互说明、页面状态、数据字段、接口依赖、跳转关系、验收标准
+- 术语统一：管理端入口全部使用"店长入口"，不写"员工入口"
+
+### Files Created
+- `03_PAGE_INTERACTION_SPEC.md` — 交互规格文档（11 章：全局规则 + 8 页交互 + 状态矩阵 + 业务规则汇总）
+- `03_PAGE_DATA_FIELD_SPEC.md` — 数据字段文档（11 页字段表 + 19 接口总览 + 工具函数 + DTO 排除清单）
+- `03_PAGE_ACCEPTANCE_CHECKLIST.md` — 验收清单（188 条：8 页 + 3 辅助页 + 权限隔离 + 异常场景 + 回归）
+
+### Files Updated
+- `03_PAGE_SPEC.md` — 从简版页面清单重写为完整规格（8 页 × 10 节 + 3 辅助页 + 全局跳转图）
+
+### 覆盖页面
+1. 首页（pages/home/index）
+2. 款式列表页（pages/products/index）
+3. 款式详情页（pkg-customer/product-detail/index）
+4. 门店列表页（pages/stores/index）
+5. 到店预约页（pkg-customer/appointment-create/index）
+6. 我的预约页（pkg-customer/appointments/index）
+7. 预约详情页（pkg-customer/appointment-detail/index）
+8. 我的页/店长入口（pages/mine/index）
+- 辅助：门店详情页、预约备注页、回收介绍页
+
+### 验收项统计
+| 类别 | 数量 |
+|------|------|
+| 首页 | 14 |
+| 款式列表页 | 15 |
+| 款式详情页 | 13 |
+| 门店列表页 | 16 |
+| 门店详情页 | 8 |
+| 到店预约页 | 30 |
+| 我的预约页 | 12 |
+| 预约详情页 | 17 |
+| 预约备注页 | 6 |
+| 回收介绍页 | 7 |
+| 我的页 | 17 |
+| 权限隔离 | 8 |
+| 异常场景 | 15 |
+| 回归验收 | 10 |
+| **合计** | **188** |
+
+---
+
 ## 2026-08-15 N07 子阶段 3 顾客端开发完成
 
 ### 变更内容
@@ -20,7 +67,7 @@
 - 手机号授权使用 `button open-type="getPhoneNumber"` + `customerPhoneAuth`
 - 预约取消校验：PENDING/CONFIRMED 状态 + 距预约 > 2 小时
 - 预约备注修改：仅 PENDING/CONFIRMED 状态可改
-- 我的页面员工入口当前为占位提示（N08 员工端改造时对接）
+- 我的页面店长入口当前为占位提示（N08 员工端改造时对接）
 - 所有页面复用全局 CSS 变量（金色主题 #866E23）
 
 ### N07 子阶段完成状态
@@ -76,3 +123,64 @@
 - 部署：Docker Compose + Nginx 反代
 - AppID：wx3f564355bd5c0526
 - 生产域名：https://jinjiangguan.com
+
+---
+
+## 2026-08-15 后台「顾客端内容管理」需求与接口设计（文档补充，未写代码）
+
+### 变更内容
+- 新增 12_ADMIN_CONFIG_SPEC.md：后台菜单结构、首页配置/款式工费/门店/预约规则/预约记录五大模块字段规格、页面↔配置映射总表、权限矩阵、红线清单
+- 新增 13_UPLOAD_ASSET_SPEC.md：统一图片上传 /api/v1/admin/uploads/images 草案（OSS 优先、本地兜底、魔数校验、5MB、四格式、五场景）
+- 新增 14_ADMIN_ACCEPTANCE_CHECKLIST.md：9 大类验收清单（含反写死总检）
+- 更新 06_API_CONTRACT_DRAFT.md：追加 §11-§18 后台内容管理接口草案（上传/Banner/首页文案/款式/门店/预约规则/预约管理/错误码）
+- 更新 07_DATA_MODEL_DRAFT.md：追加 §8.1-§8.9 新增配置模型（HomeBanner、HomeConfig 扩展、款式/门店扩展字段、AppointmentRules、UploadAsset、预约扩展字段、ability 扩展）
+
+### 关键决策
+- 复用现有商品管理/门店管理扩展字段，不建第二套数据
+- 预约规则由硬编码迁入 app_configs `appointment_rules`
+- 管理后台路由前缀 /api/v1/admin/ vs 现有 /api/admin/ 列为 Open Question，N09 前定案
+- 红线：首页无旧金回收独立入口；店长入口文案固定；详情页仅咨询门店+到店预约
+
+---
+
+## 2026-08-15 决策补丁节点：后台前缀定案 + 开放问题关闭
+
+### 定案
+1. 后台管理接口统一沿用现有前缀 `/api/admin/`，不新增 `/api/v1/admin/`；顾客端接口继续 `/api/v1/customer/*`
+2. Banner 最多 8 张（启用中）；建议尺寸 750×300，单张 ≤2MB
+3. 店长可改本店预约开关，仅限本店（visibleStoreIDs 校验）
+4. 预约规则变更必须记录操作日志
+5. 服务说明 V1 不做富文本，多行文本 + 图片；富文本留 V2
+
+### 文档更新
+- 06_API_CONTRACT_DRAFT.md：附注改为定案，全部 `/api/v1/admin/` → `/api/admin/`
+- 12_ADMIN_CONFIG_SPEC.md：§10 开放问题改为决策记录表
+- 13_UPLOAD_ASSET_SPEC.md、14_ADMIN_ACCEPTANCE_CHECKLIST.md：前缀同步
+- CHANGE_LOG.md：历史记录中一处"员工入口"指代改为"店长入口"（各文档中"不得出现员工入口字样"为禁令表述，保留）
+
+### 最终口径
+顾客端接口：/api/v1/customer/*；后台管理接口：/api/admin/*
+
+---
+
+## 2026-08-15 后台内容管理开发（后端接口 + 管理后台页面）
+
+### 后端（backend/internal/app/）
+- 新增 admin_customer_types.go / admin_customer_store.go / admin_customer_handlers.go
+- 新路由（前缀 /api/admin/）：uploads/images、customer-home/banners(+/:id)、customer-home/config、customer-products(+/:id, /categories)、appointment-rules、customer-appointments(+/:id/action)、stores/:id/customer-config（GET+PUT）
+- /assets/ 静态文件服务（ASSETS_DIR / ASSETS_PUBLIC_BASE_URL 环境变量）
+- 预约规则全部参数化（原硬编码 09:30-21:30/30min/容量2/提前1h/7天/取消2h → AppointmentRules 可配置），规则变更记审计日志
+- 顾客端 DTO 暴露后台配置字段：商品(laborFeeRef/description/images/isHot 等)、门店(imageUrl/serviceTags/appointmentEnabled)、首页(ServiceCopy/Entry*/AppointmentNotes 等)
+- persistence：customer_appointments 增加 service_type、staff_note 列（ensureColumn 自动补列）
+- 权限：新增 customer_content.view/manage、appointment.manage；存量 boss 角色自动补全新权限
+- 新增测试 admin_customer_test.go：首页文案/Banner 上限/停用过滤、款式扩展字段、门店预约开关、预约规则校验与时段粒度联动
+
+### 管理后台（admin/）
+- api.ts：顾客端内容管理 API 全套（首页配置/Banner/款式/门店扩展/图片上传）；request() 支持 FormData
+- App.vue：新增「顾客端配置」「款式工费管理」两个页面 + Banner/款式编辑弹窗 + 图片上传（场景化、前端体积校验）
+- 门店页新增「顾客端展示配置」卡片（门店图片/预约开关/服务标签/排序）
+- 预约管理页此前已完成（列表/详情/状态流转/内部备注/规则配置）
+
+### 待办
+- 顾客端小程序对接新字段（home config 新文案、款式工费、门店服务标签）
+- 部署与生产验证（需用户确认后执行）

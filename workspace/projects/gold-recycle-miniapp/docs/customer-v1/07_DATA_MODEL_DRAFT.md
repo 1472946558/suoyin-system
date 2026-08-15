@@ -289,3 +289,142 @@ CREATE TABLE customer_profiles (
 - 查询效率随数据量增长下降
 
 **建议**：V1 先用 JSON 存储（快速上线），V2 迁移到独立 MySQL 表（如果预约量增长）。
+
+---
+
+# 附：管理后台「顾客端内容管理」新增模型（2026-08-15 补充，均为草案未实现）
+
+> 详细字段语义见 12_ADMIN_CONFIG_SPEC.md、13_UPLOAD_ASSET_SPEC.md。均沿用 app_configs JSON 存储，无需数据库迁移。
+
+## 8.1 HomeBanner（首页轮播）
+
+存储位置：`app_configs`，key `customer_home_config`（在原有 home config 对象内新增/结构化 `banners` 数组）。
+
+```go
+type HomeBanner struct {
+    ID         string `json:"id"`         // banner-{seq}
+    OrgID      string `json:"orgId"`
+    Title      string `json:"title"`
+    Subtitle   string `json:"subtitle"`
+    ImageURL   string `json:"imageUrl"`   // 可访问 URL
+    LinkType   string `json:"linkType"`   // none|style_list|style_detail|store_list|store_detail|booking|external_page
+    LinkTarget string `json:"linkTarget"`
+    SortOrder  int    `json:"sortOrder"`
+    Enabled    bool   `json:"enabled"`
+    UpdatedAt  time.Time `json:"updatedAt"`
+}
+```
+
+## 8.2 CustomerHomeConfig 扩展（首页文案）
+
+在现有 `customer_home_config` 中扩展字段：
+
+```go
+type CustomerHomeConfig struct {
+    Banners                []HomeBanner `json:"banners"`
+    BrandName              string       `json:"brandName"`         // 金匠倌
+    BrandSlogan            string       `json:"brandSlogan"`       // 旧金换打新款 · 包损耗
+    ServiceCopy            string       `json:"serviceCopy"`       // 黄金维修 · 到店回收 · 款式定制
+    EntryStyleText         string       `json:"entryStyleText"`    // 款式图
+    EntryFeeText           string       `json:"entryFeeText"`      // 工费
+    NearbyStoreRule        NearbyRule   `json:"nearbyStoreRule"`   // {mode, count}
+    ServicePhone           string       `json:"servicePhone"`
+    AppointmentNotes       string       `json:"appointmentNotes"`
+    ServiceIntro           string       `json:"serviceIntro"`
+    LocationPermissionNote string       `json:"locationPermissionNote"`
+    // 红线：无"旧金回收独立入口"字段；店长入口文案为前端固定值不入库
+}
+
+type NearbyRule struct {
+    Mode  string `json:"mode"`  // distance | city | all
+    Count int    `json:"count"` // 1-5
+}
+```
+
+## 8.3 CatalogProduct 款式扩展字段
+
+在现有 `catalog_products`（app_configs）每条记录上追加（不新建第二套款式数据）：
+
+```go
+// CatalogProduct 新增字段
+LaborFeeRef            string   `json:"laborFeeRef"`            // 工费参考
+Description            string   `json:"description"`            // 款式说明
+LaborFeeNote           string   `json:"laborFeeNote"`           // 工费说明
+Images                 []string `json:"images"`                 // 多图（首图=主图，与 imageUrl 同步）
+ApplicableServiceTypes []string `json:"applicableServiceTypes"` // OLD_FOR_NEW/REPAIR/CONSULT/RECYCLE
+RecommendedStoreRule   string   `json:"recommendedStoreRule"`   // nearest|product_stores|all
+SortOrder              int      `json:"sortOrder"`
+IsRecommended          bool     `json:"isRecommended"`
+IsHot                  bool     `json:"isHot"`
+```
+
+顾客端 DTO 同步白名单扩充上述公开字段；SKU / inventory / benchPrice / storeIDs 仍不返回。
+
+## 8.4 StoreInfo 顾客端扩展字段
+
+在现有 `stores`（app_configs）每条记录上追加：
+
+```go
+// StoreInfo 新增字段
+ImageURL           string   `json:"imageUrl"`           // 门店图片
+AppointmentEnabled bool     `json:"appointmentEnabled"` // 是否支持预约（默认 true）
+ServiceTags        []string `json:"serviceTags"`        // 服务标签
+SortOrder          int      `json:"sortOrder"`          // 门店排序
+```
+
+## 8.5 AppointmentRules（预约规则，替换硬编码）
+
+存储位置：`app_configs`，key `appointment_rules`。当前 customer_store.go 中硬编码的 6 项常量全部迁入：
+
+```go
+type AppointmentRules struct {
+    OrgID                string   `json:"orgId"`
+    BookableServiceTypes []string `json:"bookableServiceTypes"` // 至少 1 种
+    BookableDays         int      `json:"bookableDays"`         // 1-30
+    SlotMinutes          int      `json:"slotMinutes"`          // 15|30|60
+    OpenTime             string   `json:"openTime"`             // HH:MM
+    CloseTime            string   `json:"closeTime"`            // HH:MM > openTime
+    SameDayLeadMinutes   int      `json:"sameDayLeadMinutes"`   // ≥0
+    CancelLeadMinutes    int      `json:"cancelLeadMinutes"`    // ≥0（顾客取消；后台取消不受限）
+    SlotCapacity         int      `json:"slotCapacity"`         // 1-20
+    UpdatedAt            time.Time `json:"updatedAt"`
+}
+```
+
+## 8.6 UploadAsset（上传素材）
+
+存储位置：`app_configs`，key `upload_assets`。结构见 13_UPLOAD_ASSET_SPEC.md §6。
+
+## 8.7 CustomerAppointment 扩展字段
+
+```go
+// CustomerAppointment 新增字段
+ServiceType string `json:"serviceType"` // OLD_FOR_NEW/REPAIR/CONSULT/RECYCLE
+StaffNote   string `json:"staffNote"`   // 内部备注，顾客端 DTO 不返回
+ArrivedAt   *time.Time `json:"arrivedAt"`
+NoShowAt    *time.Time `json:"noShowAt"`
+```
+
+> 状态机不变（7 态，见第 3 节）；后台取消走 CANCELLED 但不受 CancelLeadMinutes 限制。
+
+## 8.8 配置键清单（更新）
+
+| config_key | 说明 | 状态 |
+|------------|------|------|
+| `customer_home_config` | 首页配置（banners + 文案，结构化扩展） | 扩展 |
+| `customer_recycle_info` | 回收介绍文案（已有，纳入后台可编辑） | 已有 |
+| `customer_fee_note` | 全局工费说明 | 新增 |
+| `appointment_rules` | 预约规则（替换硬编码） | 新增 |
+| `upload_assets` | 上传素材登记 | 新增 |
+| `stores` | 门店（+imageUrl/appointmentEnabled/serviceTags/sortOrder） | 扩展 |
+| `catalog_products` | 款式（+8 个扩展字段） | 扩展 |
+
+## 8.9 权限模型（ability 扩展）
+
+| 新增 ability | 说明 |
+|--------------|------|
+| `customer_content.view` | 查看顾客端配置（boss + shop_manager 只读） |
+| `customer_content.manage` | 修改顾客端配置（仅 boss） |
+| `appointment.manage` | 预约记录操作（boss 全部；shop_manager 限本店，复用 visibleStoreIDs） |
+
+门店基础资料（图片/电话/营业时间/经纬度/预约开关）复用现有 `store.manage` + DataScope 机制。
