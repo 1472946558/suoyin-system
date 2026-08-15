@@ -1,33 +1,29 @@
 <!--
   Copyright (c) 2026 北京纵横时空科技有限责任公司
   文件名: index.wxml
-  功能描述: 修改预约备注页
+  功能描述: 预约备注修改页
   作者: 廖心慈
   创建日期: 2026-08-15
 -->
 <view class="page notes-page">
+
   <view class="card notes-card">
     <view class="notes-label">预约备注</view>
-    <view class="notes-input-wrap">
+    <view class="notes-area">
       <textarea
-        class="notes-input"
+        class="notes-textarea"
         placeholder="可填写您的需求描述，如旧金品类、大致克重、期望到店时间等（选填）"
-        placeholder-class="notes-placeholder"
         value="{{remark}}"
         bindinput="onInput"
         maxlength="200"
         auto-height
-        show-confirm-bar="{{false}}"
-        adjust-position="{{true}}"
-      />
+      ></textarea>
     </view>
-    <view class="notes-counter">{{remark.length}} / 200</view>
+    <view class="notes-count">{{remark.length}} / 200</view>
   </view>
 
   <view class="notes-actions">
-    <view class="btn-outline notes-btn-clear" bindtap="onClear" wx:if="{{remark}}">清空</view>
-    <view class="btn-primary notes-btn-save {{saving ? 'btn-disabled' : ''}}" bindtap="onSave">
-      {{saving ? '保存中...' : '保存'}}
-    </view>
+    <view class="btn-outline notes-btn-clear" bindtap="onClear">清空</view>
+    <view class="btn-primary notes-btn-save" bindtap="onSave">保存</view>
   </view>
 </view>

@@ -8,53 +8,57 @@
 <view class="page ac-page">
 
   <!-- 门店加载中 -->
-  <view wx:if="{{storeLoading}}" class="empty">
+  <view wx:if="{{storeLoading}}" class="ac-loading">
     <text>加载中...</text>
   </view>
 
   <block wx:else>
     <!-- 1. 门店信息 -->
     <view class="card ac-section">
-      <view class="ac-section-num">1</view>
-      <view class="ac-section-title">门店</view>
+      <view class="ac-sec-head">
+        <view class="ac-sec-num">1</view>
+        <view class="ac-sec-title">门店</view>
+      </view>
       <view class="ac-store-card" bindtap="onSelectStore">
         <view class="ac-store-img">
-          <view class="ac-store-img-placeholder center">
-            <text class="ac-store-img-text">金匠倌</text>
-          </view>
+          <view class="ac-store-img-text">金匠倌</view>
         </view>
         <view class="ac-store-info">
           <view class="ac-store-name-row">
             <text class="ac-store-name">{{store.name || '请选择门店'}}</text>
-            <text wx:if="{{store && store.address}}" class="ac-store-change">更换</text>
+            <text wx:if="{{store && store.address}}" class="ac-store-change">更换 ›</text>
           </view>
-          <view class="ac-store-addr" wx:if="{{store && store.address}}">📍 {{store.address}}</view>
+          <view class="ac-store-addr" wx:if="{{store && store.address}}">{{store.address}}</view>
         </view>
       </view>
     </view>
 
     <!-- 2. 服务类型 -->
     <view class="card ac-section">
-      <view class="ac-section-num">2</view>
-      <view class="ac-section-title">选择服务类型</view>
-      <view class="ac-service-grid">
+      <view class="ac-sec-head">
+        <view class="ac-sec-num">2</view>
+        <view class="ac-sec-title">选择服务类型</view>
+      </view>
+      <view class="ac-svc-grid">
         <view
-          class="ac-service-item {{selectedService === item.code ? 'ac-service-active' : ''}}"
+          class="ac-svc-item {{selectedService === item.code ? 'ac-svc-active' : ''}}"
           wx:for="{{serviceTypes}}"
           wx:key="code"
           data-code="{{item.code}}"
           bindtap="onSelectService"
         >
-          <view class="ac-service-icon">{{item.icon}}</view>
-          <view class="ac-service-text">{{item.text}}</view>
+          <view class="ac-svc-icon">{{item.icon}}</view>
+          <view class="ac-svc-text">{{item.text}}</view>
         </view>
       </view>
     </view>
 
     <!-- 3. 选择日期 -->
     <view class="card ac-section">
-      <view class="ac-section-num">3</view>
-      <view class="ac-section-title">选择预约日期</view>
+      <view class="ac-sec-head">
+        <view class="ac-sec-num">3</view>
+        <view class="ac-sec-title">选择预约日期</view>
+      </view>
       <scroll-view scroll-x class="ac-date-scroll" show-scrollbar="{{false}}">
         <view class="ac-date-list">
           <view
@@ -73,10 +77,10 @@
 
     <!-- 4. 选择时段 -->
     <view class="card ac-section">
-      <view class="ac-section-num">4</view>
-      <view class="ac-section-title-row">
-        <text>选择预约时段</text>
-        <text class="ac-section-hint">30分钟/段</text>
+      <view class="ac-sec-head">
+        <view class="ac-sec-num">4</view>
+        <view class="ac-sec-title">选择预约时段</view>
+        <view class="ac-sec-hint">30分钟/段</view>
       </view>
       <view wx:if="{{slots.length > 0}}" class="ac-slot-grid">
         <view
@@ -84,11 +88,13 @@
           wx:for="{{slots}}"
           wx:key="startTime"
           data-slot="{{item.startTime}}"
+          data-disabled="{{item.disabled}}"
           bindtap="onSelectSlot"
         >
           <view class="ac-slot-time">{{item.startTime}}</view>
-          <view class="ac-slot-status" wx:if="{{item.isFull}}">已约满</view>
+          <view class="ac-slot-status" wx:if="{{item.isFull}}">约满</view>
           <view class="ac-slot-status" wx:elif="{{item.isPast}}">已过</view>
+          <view class="ac-slot-status ac-slot-avail" wx:elif="{{selectedSlot === item.startTime}}">已选</view>
           <view class="ac-slot-status ac-slot-avail" wx:else>可预约</view>
         </view>
       </view>
@@ -99,10 +105,12 @@
 
     <!-- 5. 联系人信息 -->
     <view class="card ac-section">
-      <view class="ac-section-num">5</view>
-      <view class="ac-section-title">联系人信息</view>
+      <view class="ac-sec-head">
+        <view class="ac-sec-num">5</view>
+        <view class="ac-sec-title">联系人信息</view>
+      </view>
       <view class="ac-input-row">
-        <view class="ac-input-icon">👤</view>
+        <text class="ac-input-icon">👤</text>
         <input
           class="ac-input"
           type="text"
@@ -115,7 +123,7 @@
       </view>
       <view class="ac-input-divider"></view>
       <view class="ac-input-row">
-        <view class="ac-input-icon">📱</view>
+        <text class="ac-input-icon">📱</text>
         <input
           class="ac-input"
           type="number"
@@ -134,7 +142,7 @@
             plain="{{false}}">获取手机号</button>
         </block>
         <block wx:else>
-          <view class="ac-input-btn ac-input-btn-verified">✓ 已验证</view>
+          <view class="ac-input-btn-verified">✓ 已验证</view>
         </block>
       </view>
       <view class="ac-input-tip">用于门店联系确认</view>
@@ -142,10 +150,10 @@
 
     <!-- 6. 备注 -->
     <view class="card ac-section">
-      <view class="ac-section-num">6</view>
-      <view class="ac-section-title-row">
-        <text>备注</text>
-        <text class="ac-section-hint">选填</text>
+      <view class="ac-sec-head">
+        <view class="ac-sec-num">6</view>
+        <view class="ac-sec-title">备注</view>
+        <view class="ac-sec-hint">选填</view>
       </view>
       <textarea
         class="ac-remark-input"
@@ -167,7 +175,7 @@
       <text class="ac-agreement-link" bindtap="onTapAgreement">《预约须知》</text>
     </view>
 
-    <!-- 提交按钮 -->
+    <!-- 底部提交 -->
     <view class="ac-submit-wrap">
       <view
         class="btn-primary ac-submit-btn {{submitting ? 'btn-disabled' : ''}}"

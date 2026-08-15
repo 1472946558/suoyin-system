@@ -1,19 +1,16 @@
-// pkg-customer/appointment-notes/index.js - 修改预约备注
+// pkg-customer/appointment-notes/index.js - 预约备注修改页
 const { api } = require('../../utils/request.js');
 
 Page({
   data: {
-    appointmentId: '',
-    remark: '',
-    originalRemark: '',
-    saving: false
+    id: '',
+    remark: ''
   },
 
   onLoad(query) {
     this.setData({
-      appointmentId: query.id || '',
-      remark: query.remark ? decodeURIComponent(query.remark) : '',
-      originalRemark: query.remark ? decodeURIComponent(query.remark) : ''
+      id: query.id || '',
+      remark: decodeURIComponent(query.remark || '')
     });
   },
 
@@ -21,27 +18,25 @@ Page({
     this.setData({ remark: e.detail.value });
   },
 
+  onClear() {
+    this.setData({ remark: '' });
+  },
+
   onSave() {
-    const remark = (this.data.remark || '').trim();
-    if (remark.length > 200) {
-      wx.showToast({ title: '备注不超过200字', icon: 'none' });
+    if (!this.data.id) {
+      wx.showToast({ title: '参数错误', icon: 'none' });
       return;
     }
-    this.setData({ saving: true });
-    api.updateAppointmentNotes(this.data.appointmentId, remark)
+    wx.showLoading({ title: '保存中...' });
+    api.updateAppointmentNotes(this.data.id, this.data.remark)
       .then(() => {
-        wx.showToast({ title: '保存成功', icon: 'success' });
+        wx.hideLoading();
+        wx.showToast({ title: '已保存', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 800);
       })
       .catch(err => {
+        wx.hideLoading();
         wx.showToast({ title: err.message || '保存失败', icon: 'none' });
-      })
-      .then(() => {
-        this.setData({ saving: false });
       });
-  },
-
-  onClear() {
-    this.setData({ remark: '' });
   }
 });

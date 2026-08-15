@@ -13,20 +13,20 @@
       <view class="mine-avatar">
         <view class="mine-avatar-text">{{profile.phone ? profile.phone.substr(-4) : '顾'}}</view>
       </view>
-      <view class="mine-user-info">
-        <view class="mine-user-name">{{profile.phone || '尊贵顾客'}}</view>
-        <view class="mine-user-tip">欢迎使用金匠倌收银</view>
+      <view class="mine-user">
+        <view class="mine-name">{{profile.phone || '尊贵顾客'}}</view>
+        <view class="mine-tip">欢迎使用金匠倌收银</view>
       </view>
     </block>
     <block wx:else>
       <view class="mine-avatar mine-avatar-guest">
         <view class="mine-avatar-text">游</view>
       </view>
-      <view class="mine-user-info">
-        <view class="mine-user-name">游客模式</view>
-        <view class="mine-user-tip">授权手机号后可预约到店</view>
+      <view class="mine-user">
+        <view class="mine-name">游客模式</view>
+        <view class="mine-tip">授权手机号后可预约到店</view>
       </view>
-      <button class="mine-login-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetPhone">
+      <button class="mine-login" open-type="getPhoneNumber" bindgetphonenumber="onGetPhone">
         授权登录
       </button>
     </block>
@@ -59,27 +59,27 @@
     </view>
 
     <!-- 店长入口 -->
-    <view class="card mine-menu-card mine-staff-card">
+    <view class="card mine-menu-card mine-staff">
       <view class="mine-menu-item" bindtap="onStaffEntrance">
         <view class="mine-menu-icon">👔</view>
-        <view class="mine-menu-body">
+        <view class="mine-staff-body">
           <view class="mine-menu-text">店长入口</view>
-          <view class="mine-menu-sub">门店店长 / 管理员登录</view>
+          <view class="mine-staff-sub">门店店长 / 管理员登录</view>
         </view>
         <view class="mine-menu-arrow">›</view>
       </view>
     </view>
   </view>
 
-  <!-- 登出 -->
+  <!-- 退出登录 -->
   <view class="mine-logout" wx:if="{{isLoggedIn}}">
-    <view class="btn-outline mine-logout-btn" bindtap="onLogout">退出登录</view>
+    <view class="btn-danger mine-logout-btn" bindtap="onLogout">退出登录</view>
   </view>
 
   <!-- 底部信息 -->
   <view class="mine-footer">
     <view class="mine-footer-brand">金匠倌</view>
-    <view class="mine-footer-version">V1.0.0</view>
+    <view class="mine-footer-ver">V1.0.0</view>
     <view class="mine-footer-copy">© 2026 北京纵横时空科技有限责任公司</view>
   </view>
 </view>

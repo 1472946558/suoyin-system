@@ -13,15 +13,15 @@ function serviceTypeText(code) {
   return m ? m.text : code;
 }
 
-// 预约状态 → 文字 + 颜色
+// 预约状态 → 文字 + 颜色 + 浅色背景
 const APPOINTMENT_STATUS = {
-  PENDING:    { text: '待确认', color: '#FF9800' },
-  CONFIRMED:  { text: '已确认', color: '#4CAF50' },
-  ARRIVED:    { text: '已到店', color: '#1976D2' },
-  COMPLETED:  { text: '已完成', color: '#8A8F99' },
-  CANCELLED:  { text: '已取消', color: '#B0B5BD' },
-  NO_SHOW:    { text: '未到店', color: '#F44336' },
-  TERMINATED: { text: '已终止', color: '#F44336' }
+  PENDING:    { text: '待确认', color: '#FF9800', bgColor: '#FFF3E0' },
+  CONFIRMED:  { text: '已确认', color: '#4CAF50', bgColor: '#E8F5E9' },
+  ARRIVED:    { text: '已到店', color: '#1976D2', bgColor: '#E3F2FD' },
+  COMPLETED:  { text: '已完成', color: '#8A8F99', bgColor: '#F5F5F5' },
+  CANCELLED:  { text: '已取消', color: '#B0B5BD', bgColor: '#F5F5F5' },
+  NO_SHOW:    { text: '未到店', color: '#F44336', bgColor: '#FFEBEE' },
+  TERMINATED: { text: '已终止', color: '#F44336', bgColor: '#FFEBEE' }
 };
 
 function appointmentStatusText(status) {
@@ -32,6 +32,11 @@ function appointmentStatusText(status) {
 function appointmentStatusColor(status) {
   const m = APPOINTMENT_STATUS[status];
   return m ? m.color : '#8A8F99';
+}
+
+function appointmentStatusBgColor(status) {
+  const m = APPOINTMENT_STATUS[status];
+  return m ? m.bgColor : '#F5F5F5';
 }
 
 // 商品分类
@@ -61,6 +66,7 @@ module.exports = {
   APPOINTMENT_STATUS,
   appointmentStatusText,
   appointmentStatusColor,
+  appointmentStatusBgColor,
   PRODUCT_CATEGORIES,
   fmtPrice,
   absUrl

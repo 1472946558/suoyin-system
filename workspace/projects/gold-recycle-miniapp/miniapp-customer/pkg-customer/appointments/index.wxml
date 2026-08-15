@@ -8,11 +8,11 @@
 <view class="page apt-page">
 
   <!-- 未登录 -->
-  <view wx:if="{{!isLoggedIn}}" class="apt-not-logged">
-    <view class="apt-nl-icon">📅</view>
-    <view class="apt-nl-title">查看我的预约</view>
-    <view class="apt-nl-desc">登录后可查看您的预约记录</view>
-    <view class="btn-primary apt-nl-btn" bindtap="onLogin">去预约 / 登录</view>
+  <view wx:if="{{!isLoggedIn}}" class="apt-empty">
+    <view class="apt-empty-icon">📅</view>
+    <view class="apt-empty-text">查看我的预约</view>
+    <view class="apt-empty-sub">登录后可查看您的预约记录</view>
+    <view class="btn-primary apt-empty-btn" bindtap="onLogin">去预约 / 登录</view>
   </view>
 
   <block wx:else>
@@ -30,7 +30,7 @@
     </view>
 
     <!-- 加载中 -->
-    <view wx:if="{{loading}}" class="empty">
+    <view wx:if="{{loading}}" class="apt-loading">
       <text>加载中...</text>
     </view>
 
@@ -44,34 +44,34 @@
     <!-- 预约列表 -->
     <view wx:else class="apt-list">
       <view
-        class="card apt-item"
+        class="card apt-card"
         wx:for="{{filteredList}}"
         wx:key="id"
         data-id="{{item.id}}"
         bindtap="onTapItem"
       >
-        <view class="apt-item-top">
-          <view class="apt-item-store">{{item.storeName || '门店'}}</view>
-          <view class="apt-item-status" style="color: {{item.statusColor}};">{{item.statusText}}</view>
+        <view class="apt-card-top">
+          <text class="apt-store">{{item.storeName || '门店'}}</text>
+          <view class="apt-status" style="background: {{item.statusBgColor}}; color: {{item.statusColor}};">{{item.statusText}}</view>
         </view>
-        <view class="apt-item-service">
+        <view class="apt-svc">
           <text class="tag">{{item.serviceText}}</text>
         </view>
-        <view class="apt-item-time">
-          <text class="apt-item-date">{{item.appointmentDate}}</text>
-          <text class="apt-item-slot">{{item.timeRange}}</text>
+        <view class="apt-time">
+          <text class="apt-date">{{item.appointmentDate}}</text>
+          <text class="apt-slot">{{item.timeRange}}</text>
         </view>
-        <view class="apt-item-addr" wx:if="{{item.storeAddress}}">{{item.storeAddress}}</view>
-        <view class="apt-item-cancel" wx:if="{{item.status === 'CANCELLED' && item.cancelReason}}">
+        <view class="apt-addr" wx:if="{{item.storeAddress}}">{{item.storeAddress}}</view>
+        <view class="apt-cancel" wx:if="{{item.status === 'CANCELLED' && item.cancelReason}}">
           取消原因：{{item.cancelReason}}
         </view>
-        <view class="apt-item-arrow">›</view>
+        <view class="apt-arrow">›</view>
       </view>
     </view>
 
     <!-- 新建预约 FAB -->
     <view class="apt-fab" bindtap="onNewAppointment">
-      <text class="apt-fab-text">+ 预约</text>
+      <text>+ 预约</text>
     </view>
   </block>
 </view>

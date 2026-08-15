@@ -8,14 +8,14 @@
 /* 用户头部 */
 .mine-header {
   background: linear-gradient(135deg, #866E23 0%, #BFA15F 100%);
-  padding: 60rpx 40rpx 48rpx;
+  padding: 96rpx 40rpx 72rpx;
   display: flex;
   align-items: center;
 }
 
 .mine-avatar {
-  width: 100rpx;
-  height: 100rpx;
+  width: 128rpx;
+  height: 128rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.25);
   display: flex;
@@ -29,41 +29,42 @@
 }
 
 .mine-avatar-text {
+  font-size: 48rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.mine-user {
+  flex: 1;
+  margin-left: 32rpx;
+}
+
+.mine-name {
   font-size: 36rpx;
   font-weight: 600;
   color: #fff;
 }
 
-.mine-user-info {
-  flex: 1;
-  margin-left: 24rpx;
-}
-
-.mine-user-name {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: #fff;
-}
-
-.mine-user-tip {
+.mine-tip {
   font-size: 24rpx;
   color: rgba(255, 255, 255, 0.8);
   margin-top: 8rpx;
 }
 
-.mine-login-btn {
+.mine-login {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
   border: 2rpx solid rgba(255, 255, 255, 0.5);
   border-radius: 999rpx;
-  padding: 12rpx 28rpx;
+  padding: 16rpx 32rpx;
   font-size: 24rpx;
   line-height: 1.4;
+  flex-shrink: 0;
 }
 
 /* 菜单 */
 .mine-menu {
-  padding: 24rpx 32rpx;
+  padding: 32rpx 32rpx;
 }
 
 .mine-menu-card {
@@ -75,13 +76,13 @@
 .mine-menu-item {
   display: flex;
   align-items: center;
-  padding: 28rpx 32rpx;
+  padding: 32rpx 40rpx;
 }
 
 .mine-menu-icon {
-  font-size: 36rpx;
-  margin-right: 20rpx;
-  width: 40rpx;
+  font-size: 40rpx;
+  margin-right: 28rpx;
+  width: 56rpx;
   text-align: center;
 }
 
@@ -100,38 +101,38 @@
   background: var(--color-danger);
   color: #fff;
   font-size: 22rpx;
-  min-width: 36rpx;
-  height: 36rpx;
-  line-height: 36rpx;
+  min-width: 40rpx;
+  height: 40rpx;
+  line-height: 40rpx;
   border-radius: 999rpx;
   text-align: center;
-  padding: 0 10rpx;
-  margin-right: 8rpx;
+  padding: 0 12rpx;
+  margin-right: 12rpx;
 }
 
 .mine-menu-arrow {
-  font-size: 36rpx;
+  font-size: 40rpx;
   color: var(--color-text-tip);
-  margin-left: 12rpx;
+  margin-left: 16rpx;
 }
 
 .mine-divider {
   height: 1rpx;
   background: var(--color-border);
-  margin-left: 92rpx;
+  margin-left: 124rpx;
 }
 
 /* 店长入口特殊样式 */
-.mine-staff-card {
+.mine-staff {
   border: 2rpx solid var(--color-primary-light);
   background: linear-gradient(135deg, #FBF6E5 0%, #ffffff 100%);
 }
 
-.mine-menu-body {
+.mine-staff-body {
   flex: 1;
 }
 
-.mine-menu-sub {
+.mine-staff-sub {
   font-size: 22rpx;
   color: var(--color-text-sub);
   margin-top: 4rpx;
@@ -143,24 +144,35 @@
 }
 
 .mine-logout-btn {
+  width: 100%;
+  text-align: center;
+  padding: 28rpx 0;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+/* btn-danger 局部样式 */
+.btn-danger {
+  background: #fff;
   color: var(--color-danger);
-  border-color: var(--color-danger);
+  border: 2rpx solid var(--color-danger);
+  border-radius: 999rpx;
 }
 
 /* 底部信息 */
 .mine-footer {
   text-align: center;
-  padding: 48rpx 0 32rpx;
+  padding: 64rpx 0 32rpx;
 }
 
 .mine-footer-brand {
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: var(--color-primary);
-  letter-spacing: 4rpx;
+  letter-spacing: 6rpx;
 }
 
-.mine-footer-version {
+.mine-footer-ver {
   font-size: 22rpx;
   color: var(--color-text-tip);
   margin-top: 8rpx;

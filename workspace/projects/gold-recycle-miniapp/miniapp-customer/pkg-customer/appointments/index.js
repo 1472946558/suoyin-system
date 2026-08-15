@@ -1,6 +1,6 @@
 // pkg-customer/appointments/index.js - 我的预约列表
 const { api } = require('../../utils/request.js');
-const { appointmentStatusText, appointmentStatusColor, serviceTypeText } = require('../../utils/customer-services.js');
+const { appointmentStatusText, appointmentStatusColor, appointmentStatusBgColor, serviceTypeText } = require('../../utils/customer-services.js');
 const { getCustomerToken } = require('../../utils/customer-auth.js');
 
 const STATUS_TABS = [
@@ -58,6 +58,7 @@ Page({
           // 后端已提供 statusText / serviceTypeText，缺失时本地兜底
           statusText: item.statusText || appointmentStatusText(item.status),
           statusColor: appointmentStatusColor(item.status),
+          statusBgColor: appointmentStatusBgColor(item.status),
           serviceText: item.serviceTypeText || serviceTypeText(item.serviceType)
         }));
         // 按预约时间倒序排列（最新的在前）
