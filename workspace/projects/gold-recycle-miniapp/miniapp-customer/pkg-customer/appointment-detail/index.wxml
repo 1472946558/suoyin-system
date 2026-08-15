@@ -1,0 +1,99 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 预约详情页
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page ad-page">
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="empty">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 错误 -->
+  <view wx:elif="{{error}}" class="empty">
+    <text>{{error}}</text>
+  </view>
+
+  <block wx:elif="{{detail}}">
+    <!-- 状态头部 -->
+    <view class="ad-status-bar" style="background: linear-gradient(135deg, {{statusColor}} 0%, {{statusColor}}DD 100%);">
+      <view class="ad-status-icon">
+        <text wx:if="{{detail.status === 'PENDING'}}">⏳</text>
+        <text wx:elif="{{detail.status === 'CONFIRMED'}}">✓</text>
+        <text wx:elif="{{detail.status === 'ARRIVED'}}">🏪</text>
+        <text wx:elif="{{detail.status === 'COMPLETED'}}">✓</text>
+        <text wx:elif="{{detail.status === 'CANCELLED'}}">✕</text>
+        <text wx:elif="{{detail.status === 'NO_SHOW'}}">!</text>
+        <text wx:elif="{{detail.status === 'TERMINATED'}}">✕</text>
+      </view>
+      <view class="ad-status-text">{{statusText}}</view>
+      <view class="ad-status-no">预约号：{{detail.appointmentNo || detail.id}}</view>
+    </view>
+
+    <!-- 预约信息 -->
+    <view class="card ad-section">
+      <view class="ad-row">
+        <text class="ad-label">服务类型</text>
+        <text class="ad-value">{{serviceText}}</text>
+      </view>
+      <view class="ad-row">
+        <text class="ad-label">预约门店</text>
+        <text class="ad-value">{{detail.storeName}}</text>
+      </view>
+      <view class="ad-row">
+        <text class="ad-label">预约日期</text>
+        <text class="ad-value">{{detail.appointmentDate}}</text>
+      </view>
+      <view class="ad-row">
+        <text class="ad-label">预约时段</text>
+        <text class="ad-value">{{detail.startTime}} - {{detail.endTime}}</text>
+      </view>
+    </view>
+
+    <!-- 门店操作 -->
+    <view class="card ad-section" wx:if="{{detail.storePhone || (detail.storeLongitude && detail.storeLatitude)}}">
+      <view class="ad-store-actions">
+        <view class="btn-outline ad-store-btn" bindtap="onCallStore" wx:if="{{detail.storePhone}}">
+          <text>📞 联系门店</text>
+        </view>
+        <view class="btn-outline ad-store-btn" bindtap="onNavigate" wx:if="{{detail.storeLongitude && detail.storeLatitude}}">
+          <text>📍 地图导航</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="card ad-section">
+      <view class="ad-remark-head">
+        <text class="ad-label">备注</text>
+        <text class="ad-edit-notes" bindtap="onEditNotes" wx:if="{{canEditNotes}}">修改 ›</text>
+      </view>
+      <view class="ad-remark-body">
+        <text wx:if="{{detail.remark}}">{{detail.remark}}</text>
+        <text class="ad-remark-empty" wx:else>无备注</text>
+      </view>
+    </view>
+
+    <!-- 创建信息 -->
+    <view class="card ad-section ad-meta">
+      <view class="ad-row">
+        <text class="ad-label">创建时间</text>
+        <text class="ad-value ad-value-sub">{{detail.createdAt || '-'}}</text>
+      </view>
+      <view class="ad-row" wx:if="{{detail.updatedAt}}">
+        <text class="ad-label">更新时间</text>
+        <text class="ad-value ad-value-sub">{{detail.updatedAt}}</text>
+      </view>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="ad-cta" wx:if="{{canCancel}}">
+      <view class="btn-outline ad-cancel-btn" bindtap="onCancel">
+        <text>取消预约</text>
+      </view>
+    </view>
+  </block>
+</view>

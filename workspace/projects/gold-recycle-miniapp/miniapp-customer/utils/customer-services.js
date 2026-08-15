@@ -37,11 +37,31 @@ function appointmentStatusColor(status) {
 // 商品分类
 const PRODUCT_CATEGORIES = ['戒指', '项链', '手镯', '吊坠', '耳饰', '其他'];
 
+/** 金额千分位格式化（保留最多 2 位小数） */
+function fmtPrice(n) {
+  if (n == null || isNaN(n)) return '0';
+  const s = (Math.round(n * 100) / 100).toString();
+  const parts = s.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
+}
+
+/** 相对路径图片补全为绝对地址（后端 imageUrl 为 /assets/... 相对路径） */
+function absUrl(url) {
+  if (!url) return '';
+  if (/^https?:\/\//.test(url)) return url;
+  const app = typeof getApp === 'function' ? getApp() : null;
+  const base = (app && app.globalData && app.globalData.apiBase) || 'https://jinjiangguan.com';
+  return base + url;
+}
+
 module.exports = {
   SERVICE_TYPES,
   serviceTypeText,
   APPOINTMENT_STATUS,
   appointmentStatusText,
   appointmentStatusColor,
-  PRODUCT_CATEGORIES
+  PRODUCT_CATEGORIES,
+  fmtPrice,
+  absUrl
 };

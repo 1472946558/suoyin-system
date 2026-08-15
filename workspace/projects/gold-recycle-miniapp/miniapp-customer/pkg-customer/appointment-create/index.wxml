@@ -1,0 +1,136 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 到店预约创建页
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page ac-page">
+
+  <!-- 门店加载中 -->
+  <view wx:if="{{storeLoading}}" class="empty">
+    <text>加载中...</text>
+  </view>
+
+  <block wx:else>
+    <!-- 门店信息 -->
+    <view class="card ac-store-card" bindtap="onSelectStore">
+      <view class="ac-store-row">
+        <view class="ac-store-icon">📍</view>
+        <view class="ac-store-info">
+          <view class="ac-store-name">{{store.name || '请选择门店'}}</view>
+          <view class="ac-store-addr" wx:if="{{store.address}}">{{store.address}}</view>
+        </view>
+        <view class="ac-store-arrow">›</view>
+      </view>
+    </view>
+
+    <!-- 服务类型 -->
+    <view class="card ac-section">
+      <view class="ac-section-title">选择服务类型</view>
+      <view class="ac-service-grid">
+        <view
+          class="ac-service-item {{selectedService === item.code ? 'ac-service-active' : ''}}"
+          wx:for="{{serviceTypes}}"
+          wx:key="code"
+          data-code="{{item.code}}"
+          bindtap="onSelectService"
+        >
+          <view class="ac-service-icon">{{item.icon}}</view>
+          <view class="ac-service-text">{{item.text}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 选择日期 -->
+    <view class="card ac-section">
+      <view class="ac-section-title">选择日期</view>
+      <scroll-view scroll-x class="ac-date-scroll" show-scrollbar="{{false}}">
+        <view class="ac-date-list">
+          <view
+            class="ac-date-item {{selectedDate === item.date ? 'ac-date-active' : ''}}"
+            wx:for="{{days}}"
+            wx:key="date"
+            data-date="{{item.date}}"
+            bindtap="onSelectDate"
+          >
+            <view class="ac-date-label">{{item.label}}</view>
+            <view class="ac-date-sub">{{item.shortLabel}}</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 选择时段 -->
+    <view class="card ac-section">
+      <view class="ac-section-title">选择时段</view>
+      <view wx:if="{{slots.length > 0}}" class="ac-slot-grid">
+        <view
+          class="ac-slot-item {{selectedSlot === item.startTime ? 'ac-slot-active' : ''}} {{item.disabled ? 'ac-slot-disabled' : ''}}"
+          wx:for="{{slots}}"
+          wx:key="startTime"
+          data-slot="{{item.startTime}}"
+          bindtap="onSelectSlot"
+        >
+          <view class="ac-slot-time">{{item.startTime}}</view>
+          <view class="ac-slot-status" wx:if="{{item.isFull}}">已满</view>
+          <view class="ac-slot-status" wx:elif="{{item.isPast}}">已过</view>
+          <view class="ac-slot-status ac-slot-avail" wx:elif="{{item.available !== undefined}}">可约{{item.available}}</view>
+        </view>
+      </view>
+      <view wx:else class="ac-slot-empty">
+        <text>该日期暂无可约时段</text>
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="card ac-section">
+      <view class="ac-section-title">备注（选填）</view>
+      <textarea
+        class="ac-remark-input"
+        placeholder="可填写需求描述，如旧金品类、大致克重等"
+        placeholder-class="ac-placeholder"
+        value="{{remark}}"
+        bindinput="onRemarkInput"
+        maxlength="200"
+        auto-height
+        show-confirm-bar="{{false}}"
+      />
+      <view class="ac-remark-counter">{{remark.length}} / 200</view>
+    </view>
+
+    <!-- 手机号授权 -->
+    <view class="card ac-section" wx:if="{{!phoneVerified}}">
+      <view class="ac-auth-tip">
+        <view class="ac-auth-icon">📞</view>
+        <view class="ac-auth-body">
+          <view class="ac-auth-title">手机号授权</view>
+          <view class="ac-auth-desc">预约到店需要验证手机号，方便门店与您联系</view>
+        </view>
+      </view>
+      <button class="btn-primary ac-auth-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetPhone">
+        微信授权手机号
+      </button>
+    </view>
+
+    <!-- 已授权手机号 -->
+    <view class="card ac-section ac-phone-verified" wx:if="{{phoneVerified}}">
+      <view class="ac-phone-row">
+        <view class="ac-phone-icon">✓</view>
+        <view class="ac-phone-text">手机号已验证</view>
+        <view class="ac-phone-num">{{profile.phone}}</view>
+      </view>
+    </view>
+
+    <!-- 提交按钮 -->
+    <view class="ac-submit-wrap">
+      <view
+        class="btn-primary ac-submit-btn {{submitting ? 'btn-disabled' : ''}}"
+        bindtap="onSubmit"
+      >
+        {{submitting ? '提交中...' : '提交预约'}}
+      </view>
+      <view class="ac-submit-tip">提交后门店将确认您的预约</view>
+    </view>
+  </block>
+</view>

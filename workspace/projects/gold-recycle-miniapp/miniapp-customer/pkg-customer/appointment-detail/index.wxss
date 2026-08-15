@@ -1,0 +1,121 @@
+/* pkg-customer/appointment-detail/index.wxss - 预约详情页 */
+
+.ad-page {
+  min-height: 100vh;
+  padding-bottom: 160rpx;
+}
+
+/* 状态头部 */
+.ad-status-bar {
+  padding: 60rpx 40rpx 48rpx;
+  color: #fff;
+  text-align: center;
+}
+
+.ad-status-icon {
+  font-size: 64rpx;
+  margin-bottom: 16rpx;
+}
+
+.ad-status-text {
+  font-size: 36rpx;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+}
+
+.ad-status-no {
+  font-size: 24rpx;
+  margin-top: 12rpx;
+  opacity: 0.85;
+}
+
+/* section */
+.ad-section {
+  margin: 24rpx 32rpx;
+  padding: 28rpx 32rpx;
+}
+
+.ad-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 14rpx 0;
+}
+
+.ad-label {
+  width: 160rpx;
+  font-size: 26rpx;
+  color: var(--color-text-sub);
+  flex-shrink: 0;
+}
+
+.ad-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--color-text-main);
+  line-height: 1.5;
+}
+
+.ad-value-sub {
+  font-size: 24rpx;
+  color: var(--color-text-sub);
+}
+
+/* 门店操作 */
+.ad-store-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.ad-store-btn {
+  flex: 1;
+  padding: 20rpx 0;
+  font-size: 26rpx;
+}
+
+/* 备注 */
+.ad-remark-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.ad-edit-notes {
+  font-size: 26rpx;
+  color: var(--color-primary);
+}
+
+.ad-remark-body {
+  font-size: 28rpx;
+  color: var(--color-text-main);
+  line-height: 1.6;
+  min-height: 40rpx;
+}
+
+.ad-remark-empty {
+  color: var(--color-text-tip);
+}
+
+/* meta */
+.ad-meta {
+  background: transparent;
+  box-shadow: none;
+  padding: 12rpx 32rpx;
+}
+
+/* 底部取消 */
+.ad-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 12rpx rgba(134, 110, 35, 0.08);
+}
+
+.ad-cancel-btn {
+  width: 100%;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}

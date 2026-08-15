@@ -72,7 +72,7 @@
       </view>
     </view>
     <view wx:if="{{nearestStore}}" class="store-card" bindtap="onTapStore" data-store="{{nearestStore}}">
-      <image class="store-thumb" src="{{nearestStore.thumb || '/assets/store-placeholder.png'}}" mode="aspectFill" />
+      <image class="store-thumb" src="{{nearestStore.thumb || ''}}" mode="aspectFill" />
       <view class="store-info">
         <view class="store-name">{{nearestStore.name}}</view>
         <view class="store-distance" wx:if="{{nearestStore.distance}}">距您 {{nearestStore.distanceText}}</view>

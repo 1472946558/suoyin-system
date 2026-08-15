@@ -22,8 +22,8 @@
 | 我的预约 | ✗ | ✓ | ✗ | ✗ | ✗ |
 | 预约详情 | ✗ | ✓ | ✗ | ✗ | ✗ |
 | 我的（顾客） | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 员工入口 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 员工登录 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 店长入口 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 店长登录 | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 员工工作台 | ✗ | ✗ | ✓ | ✓ | ✓ |
 | 预约管理（员工） | ✗ | ✗ | ✓ | ✓ | ✓ |
 | 管理后台 | ✗ | ✗ | ✗ | ✓ | ✓ |
@@ -57,8 +57,8 @@
 
 | 接口 | 权限 | 说明 |
 |------|------|------|
-| POST /api/v1/auth/login | guest | 员工登录 |
-| POST /api/v1/auth/wechat-login | guest | 微信员工登录 |
+| POST /api/v1/auth/login | guest | 店长登录 |
+| POST /api/v1/auth/wechat-login | guest | 微信店长登录 |
 | GET /api/v1/dashboard/summary | store_staff+ | 工作台首页 |
 | GET /api/v1/appointments | store_staff+ | 预约列表 |
 | PUT /api/v1/appointments/:id/status | store_staff+ | 更新预约状态 |

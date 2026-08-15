@@ -166,6 +166,7 @@ func (a *App) handleCustomerProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	category := strings.TrimSpace(r.URL.Query().Get("category"))
+	keyword := strings.TrimSpace(r.URL.Query().Get("keyword"))
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
 	if page <= 0 {
@@ -175,7 +176,7 @@ func (a *App) handleCustomerProducts(w http.ResponseWriter, r *http.Request) {
 		pageSize = 20
 	}
 
-	items, total := a.store.customerProductList(category, page, pageSize)
+	items, total := a.store.customerProductList(category, keyword, page, pageSize)
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]interface{}{
 		"items":    items,
 		"total":    total,

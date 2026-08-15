@@ -1,0 +1,292 @@
+/* pkg-customer/appointment-create/index.wxss - 到店预约创建页 */
+
+.ac-page {
+  min-height: 100vh;
+  padding: 24rpx 32rpx 160rpx;
+}
+
+/* 门店卡 */
+.ac-store-card {
+  margin-bottom: 24rpx;
+  padding: 28rpx 32rpx;
+}
+
+.ac-store-row {
+  display: flex;
+  align-items: center;
+}
+
+.ac-store-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+
+.ac-store-info {
+  flex: 1;
+}
+
+.ac-store-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.ac-store-addr {
+  font-size: 24rpx;
+  color: var(--color-text-sub);
+  margin-top: 6rpx;
+}
+
+.ac-store-arrow {
+  font-size: 36rpx;
+  color: var(--color-text-tip);
+}
+
+/* section */
+.ac-section {
+  margin-bottom: 24rpx;
+  padding: 28rpx 32rpx;
+}
+
+.ac-section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text-main);
+  margin-bottom: 20rpx;
+}
+
+/* 服务类型 */
+.ac-service-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.ac-service-item {
+  width: calc(50% - 10rpx);
+  background: #F9F9F9;
+  border-radius: 16rpx;
+  padding: 28rpx 20rpx;
+  text-align: center;
+  border: 4rpx solid transparent;
+  transition: all 0.2s;
+}
+
+.ac-service-active {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+}
+
+.ac-service-icon {
+  font-size: 40rpx;
+  margin-bottom: 8rpx;
+}
+
+.ac-service-text {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--color-text-main);
+}
+
+/* 日期选择 */
+.ac-date-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.ac-date-list {
+  display: flex;
+  gap: 16rpx;
+  padding: 4rpx;
+}
+
+.ac-date-item {
+  flex-shrink: 0;
+  width: 120rpx;
+  padding: 20rpx 0;
+  background: #F9F9F9;
+  border-radius: 16rpx;
+  text-align: center;
+  border: 4rpx solid transparent;
+}
+
+.ac-date-active {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+}
+
+.ac-date-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.ac-date-sub {
+  font-size: 22rpx;
+  color: var(--color-text-sub);
+  margin-top: 6rpx;
+}
+
+/* 时段 */
+.ac-slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.ac-slot-item {
+  width: calc(33.333% - 12rpx);
+  padding: 20rpx 0;
+  background: #F9F9F9;
+  border-radius: 12rpx;
+  text-align: center;
+  border: 4rpx solid transparent;
+  position: relative;
+}
+
+.ac-slot-active {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+}
+
+.ac-slot-disabled {
+  opacity: 0.4;
+}
+
+.ac-slot-time {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.ac-slot-status {
+  font-size: 20rpx;
+  color: var(--color-text-tip);
+  margin-top: 4rpx;
+}
+
+.ac-slot-avail {
+  color: var(--color-success);
+}
+
+.ac-slot-empty {
+  padding: 40rpx 0;
+  text-align: center;
+  color: var(--color-text-tip);
+  font-size: 26rpx;
+}
+
+/* 备注 */
+.ac-remark-input {
+  width: 100%;
+  min-height: 120rpx;
+  font-size: 28rpx;
+  color: var(--color-text-main);
+  line-height: 1.6;
+  background: #F9F9F9;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.ac-placeholder {
+  color: var(--color-text-tip);
+  font-size: 26rpx;
+}
+
+.ac-remark-counter {
+  text-align: right;
+  font-size: 22rpx;
+  color: var(--color-text-tip);
+  margin-top: 8rpx;
+}
+
+/* 手机号授权 */
+.ac-auth-tip {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
+}
+
+.ac-auth-icon {
+  font-size: 40rpx;
+  margin-right: 16rpx;
+}
+
+.ac-auth-body {
+  flex: 1;
+}
+
+.ac-auth-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.ac-auth-desc {
+  font-size: 24rpx;
+  color: var(--color-text-sub);
+  margin-top: 6rpx;
+  line-height: 1.5;
+}
+
+.ac-auth-btn {
+  width: 100%;
+}
+
+.ac-phone-verified {
+  padding: 24rpx 32rpx;
+}
+
+.ac-phone-row {
+  display: flex;
+  align-items: center;
+}
+
+.ac-phone-icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: var(--color-success);
+  color: #fff;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12rpx;
+}
+
+.ac-phone-text {
+  font-size: 28rpx;
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+.ac-phone-num {
+  margin-left: auto;
+  font-size: 28rpx;
+  color: var(--color-text-main);
+  font-weight: 600;
+}
+
+/* 提交 */
+.ac-submit-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 12rpx rgba(134, 110, 35, 0.08);
+}
+
+.ac-submit-btn {
+  width: 100%;
+}
+
+.ac-submit-tip {
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--color-text-tip);
+  margin-top: 12rpx;
+}

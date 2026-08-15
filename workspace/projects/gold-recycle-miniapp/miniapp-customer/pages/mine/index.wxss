@@ -1,0 +1,161 @@
+/* pages/mine/index.wxss - 我的页面 */
+
+.mine-page {
+  min-height: 100vh;
+  padding-bottom: 40rpx;
+}
+
+/* 用户头部 */
+.mine-header {
+  background: linear-gradient(135deg, #866E23 0%, #BFA15F 100%);
+  padding: 60rpx 40rpx 48rpx;
+  display: flex;
+  align-items: center;
+}
+
+.mine-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mine-avatar-guest {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mine-avatar-text {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.mine-user-info {
+  flex: 1;
+  margin-left: 24rpx;
+}
+
+.mine-user-name {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.mine-user-tip {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 8rpx;
+}
+
+.mine-login-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 2rpx solid rgba(255, 255, 255, 0.5);
+  border-radius: 999rpx;
+  padding: 12rpx 28rpx;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+/* 菜单 */
+.mine-menu {
+  padding: 24rpx 32rpx;
+}
+
+.mine-menu-card {
+  margin-bottom: 24rpx;
+  padding: 0;
+  overflow: hidden;
+}
+
+.mine-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 32rpx;
+}
+
+.mine-menu-icon {
+  font-size: 36rpx;
+  margin-right: 20rpx;
+  width: 40rpx;
+  text-align: center;
+}
+
+.mine-menu-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--color-text-main);
+}
+
+.mine-menu-val {
+  font-size: 24rpx;
+  color: var(--color-text-sub);
+}
+
+.mine-menu-arrow {
+  font-size: 36rpx;
+  color: var(--color-text-tip);
+  margin-left: 12rpx;
+}
+
+.mine-divider {
+  height: 1rpx;
+  background: var(--color-border);
+  margin-left: 92rpx;
+}
+
+/* 店长入口特殊样式 */
+.mine-staff-card {
+  border: 2rpx solid var(--color-primary-light);
+  background: linear-gradient(135deg, #FBF6E5 0%, #ffffff 100%);
+}
+
+.mine-menu-body {
+  flex: 1;
+}
+
+.mine-menu-sub {
+  font-size: 22rpx;
+  color: var(--color-text-sub);
+  margin-top: 4rpx;
+}
+
+/* 登出 */
+.mine-logout {
+  padding: 0 32rpx;
+}
+
+.mine-logout-btn {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* 底部信息 */
+.mine-footer {
+  text-align: center;
+  padding: 48rpx 0 32rpx;
+}
+
+.mine-footer-brand {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: 4rpx;
+}
+
+.mine-footer-version {
+  font-size: 22rpx;
+  color: var(--color-text-tip);
+  margin-top: 8rpx;
+}
+
+.mine-footer-copy {
+  font-size: 20rpx;
+  color: var(--color-text-tip);
+  margin-top: 12rpx;
+  line-height: 1.5;
+}

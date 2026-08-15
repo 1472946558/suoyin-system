@@ -1,0 +1,73 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 我的预约列表页
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page apt-page">
+
+  <!-- 未登录 -->
+  <view wx:if="{{!isLoggedIn}}" class="apt-not-logged">
+    <view class="apt-nl-icon">📅</view>
+    <view class="apt-nl-title">查看我的预约</view>
+    <view class="apt-nl-desc">登录后可查看您的预约记录</view>
+    <view class="btn-primary apt-nl-btn" bindtap="onLogin">去预约 / 登录</view>
+  </view>
+
+  <block wx:else>
+    <!-- 状态筛选 -->
+    <view class="apt-tabs">
+      <view
+        class="apt-tab {{activeTab === item.key ? 'apt-tab-active' : ''}}"
+        wx:for="{{tabs}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="onTabChange"
+      >
+        {{item.label}}
+      </view>
+    </view>
+
+    <!-- 加载中 -->
+    <view wx:if="{{loading}}" class="empty">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 空列表 -->
+    <view wx:elif="{{filteredList.length === 0}}" class="apt-empty">
+      <view class="apt-empty-icon">📋</view>
+      <view class="apt-empty-text">暂无预约记录</view>
+      <view class="btn-outline apt-empty-btn" bindtap="onNewAppointment">去预约</view>
+    </view>
+
+    <!-- 预约列表 -->
+    <view wx:else class="apt-list">
+      <view
+        class="card apt-item"
+        wx:for="{{filteredList}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onTapItem"
+      >
+        <view class="apt-item-top">
+          <view class="apt-item-store">{{item.storeName || '门店'}}</view>
+          <view class="apt-item-status" style="color: {{item.statusColor}};">{{item.statusText}}</view>
+        </view>
+        <view class="apt-item-service">
+          <text class="tag">{{item.serviceText}}</text>
+        </view>
+        <view class="apt-item-time">
+          <text class="apt-item-date">{{item.appointmentDate}}</text>
+          <text class="apt-item-slot">{{item.startTime}} - {{item.endTime}}</text>
+        </view>
+        <view class="apt-item-arrow">›</view>
+      </view>
+    </view>
+
+    <!-- 新建预约 FAB -->
+    <view class="apt-fab" bindtap="onNewAppointment">
+      <text class="apt-fab-text">+ 预约</text>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,66 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 黄金回收服务介绍页
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page recycle-page">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="empty">
+    <text>加载中...</text>
+  </view>
+
+  <block wx:elif="{{recycleInfo}}">
+    <!-- 顶部 Banner -->
+    <view class="ri-hero">
+      <view class="ri-hero-icon">💎</view>
+      <view class="ri-hero-title">{{recycleInfo.title || '黄金回收服务'}}</view>
+      <view class="ri-hero-sub">{{recycleInfo.intro}}</view>
+    </view>
+
+    <!-- 服务类型 -->
+    <view class="card ri-section">
+      <view class="ri-section-title">服务类型</view>
+      <view class="ri-services">
+        <view class="ri-service-item" wx:for="{{recycleInfo.services}}" wx:key="title">
+          <view class="ri-service-icon">{{item.icon}}</view>
+          <view class="ri-service-name">{{item.title}}</view>
+          <view class="ri-service-desc">{{item.desc}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 回收流程 -->
+    <view class="card ri-section">
+      <view class="ri-section-title">回收流程</view>
+      <view class="ri-process">
+        <view class="ri-step" wx:for="{{recycleInfo.process}}" wx:key="step">
+          <view class="ri-step-num">{{item.step}}</view>
+          <view class="ri-step-body">
+            <view class="ri-step-title">{{item.title}}</view>
+            <view class="ri-step-desc">{{item.desc}}</view>
+          </view>
+          <view class="ri-step-arrow" wx:if="{{index < recycleInfo.process.length - 1}}">›</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 注意事项 -->
+    <view class="card ri-section">
+      <view class="ri-section-title">注意事项</view>
+      <view class="ri-notice" wx:for="{{recycleInfo.notices}}" wx:key="*this">
+        <text class="ri-notice-dot">·</text>
+        <text class="ri-notice-text">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- 预约 CTA -->
+    <view class="ri-cta-wrap">
+      <view class="btn-primary ri-cta-btn" bindtap="onAppointment">
+        <text>📅 预约到店咨询</text>
+      </view>
+      <view class="ri-cta-tip">预约后门店将为您安排专属服务</view>
+    </view>
+  </block>
+</view>

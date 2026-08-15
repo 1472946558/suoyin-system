@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -199,7 +200,7 @@ func (s *MockStore) persistCustomerProfilesLocked() error {
 
 // --- 顾客公开数据 ---
 
-func (s *MockStore) customerProductList(category string, page, pageSize int) ([]CustomerProductDTO, int) {
+func (s *MockStore) customerProductList(category, keyword string, page, pageSize int) ([]CustomerProductDTO, int) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -210,6 +211,16 @@ func (s *MockStore) customerProductList(category string, page, pageSize int) ([]
 		}
 		if category != "" && p.Category != category {
 			continue
+		}
+		if keyword != "" {
+			k := strings.ToLower(keyword)
+			hit := strings.Contains(strings.ToLower(p.Name), k) ||
+				strings.Contains(strings.ToLower(p.Category), k) ||
+				strings.Contains(strings.ToLower(p.Purity), k) ||
+				strings.Contains(strings.ToLower(p.RecommendedScene), k)
+			if !hit {
+				continue
+			}
 		}
 		items = append(items, CustomerProductDTO{
 			ID:               p.ID,

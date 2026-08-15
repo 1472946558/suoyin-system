@@ -16,6 +16,10 @@ output/
 # Agent workspace
 .workbuddy/
 
+# Local preview files
+preview-*.html
+project.private.config.json
+
 # OS files
 .DS_Store
 Thumbs.db
