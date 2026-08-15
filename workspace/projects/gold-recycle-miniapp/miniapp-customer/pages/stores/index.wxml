@@ -47,17 +47,19 @@
       <text>离你最近</text>
     </view>
     <view class="card nearest-card">
-      <view class="nearest-head" bindtap="onTapStore" data-id="{{nearestStore.id}}">
-        <view class="nearest-img">
-          <view class="nearest-img-placeholder center">
-            <text class="nearest-img-text">金匠倌</text>
+        <view class="nearest-head" bindtap="onTapStore" data-id="{{nearestStore.id}}">
+          <view class="nearest-img">
+            <image wx:if="{{nearestStore.thumb}}" class="nearest-img-pic" src="{{nearestStore.thumb}}" mode="aspectFill" />
+            <view wx:else class="nearest-img-placeholder center">
+              <text class="nearest-img-text">金匠倌</text>
+            </view>
           </view>
-        </view>
-        <view class="nearest-main">
-          <view class="nearest-row1">
-            <text class="nearest-name">{{nearestStore.name}}</text>
-            <text class="nearest-tag" wx:if="{{nearestStore.isOpen}}">可预约</text>
-          </view>
+          <view class="nearest-main">
+            <view class="nearest-row1">
+              <text class="nearest-name">{{nearestStore.name}}</text>
+              <text class="nearest-tag" wx:if="{{nearestStore.appointmentEnabled !== false && nearestStore.isOpen}}">可预约</text>
+              <text class="nearest-tag nearest-tag-off" wx:elif="{{nearestStore.appointmentEnabled === false}}">暂未开放</text>
+            </view>
           <view class="nearest-addr">📍 {{nearestStore.address}}</view>
           <view class="nearest-hours" wx:if="{{nearestStore.businessHours}}">🕘 {{nearestStore.businessHours}}</view>
         </view>
@@ -89,7 +91,8 @@
       >
         <view class="store-head" bindtap="onTapStore" data-id="{{item.id}}">
           <view class="store-img">
-            <view class="store-img-placeholder center">
+            <image wx:if="{{item.thumb}}" class="store-img-pic" src="{{item.thumb}}" mode="aspectFill" />
+            <view wx:else class="store-img-placeholder center">
               <text class="store-img-text">金匠倌</text>
             </view>
           </view>
@@ -100,6 +103,9 @@
             </view>
             <view class="store-addr">📍 {{item.address}}</view>
             <view class="store-hours" wx:if="{{item.businessHours}}">🕘 {{item.businessHours}}</view>
+            <view class="store-appt" wx:if="{{item.appointmentEnabled === false}}">
+              <text class="store-appt-off">暂未开放预约</text>
+            </view>
           </view>
         </view>
         <view class="store-actions">

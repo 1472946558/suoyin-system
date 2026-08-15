@@ -1,6 +1,7 @@
 // pkg-customer/store-detail/index.js - 门店详情页
 const { api } = require('../../utils/request.js');
 const { distanceKm, fmtDistance } = require('../../utils/customer-distance.js');
+const { absUrl, serviceTypeText } = require('../../utils/customer-services.js');
 
 function todayStr() {
   const d = new Date();
@@ -29,7 +30,10 @@ Page({
       .then(store => this.enrichStore(store))
       .then(store => {
         this.setData({ store, loading: false });
-        this.loadTodaySlots();
+        // 预约关闭时不加载时段
+        if (store.appointmentEnabled !== false) {
+          this.loadTodaySlots();
+        }
       })
       .catch(err => {
         this.setData({ loading: false, error: err.message || '网络异常' });
@@ -45,7 +49,36 @@ Page({
       const d = distanceKm(loc.latitude, loc.longitude, store.latitude, store.longitude);
       distanceText = fmtDistance(d);
     }
-    return { ...store, hasCoordinate, distanceText };
+    // 补全门店图片 URL
+    let thumb = '';
+    if (store.imageUrl) {
+      thumb = absUrl(store.imageUrl);
+    }
+    // 服务标签：优先使用后端 serviceTags，否则用默认
+    let serviceTags = [];
+    if (Array.isArray(store.serviceTags) && store.serviceTags.length > 0) {
+      serviceTags = store.serviceTags.map(tag => ({
+        text: tag,
+        icon: this.tagIcon(tag)
+      }));
+    } else {
+      serviceTags = [
+        { text: '旧金换新', icon: '♻' },
+        { text: '黄金维修', icon: '🔧' },
+        { text: '款式咨询', icon: '💬' },
+        { text: '到店回收', icon: '💎' }
+      ];
+    }
+    return { ...store, hasCoordinate, distanceText, thumb, serviceTags };
+  },
+
+  tagIcon(tag) {
+    const t = (tag || '').toLowerCase();
+    if (t.indexOf('换') >= 0) return '♻';
+    if (t.indexOf('修') >= 0) return '🔧';
+    if (t.indexOf('咨询') >= 0 || t.indexOf('工费') >= 0) return '💬';
+    if (t.indexOf('回收') >= 0) return '💎';
+    return '✦';
   },
 
   loadTodaySlots() {
@@ -96,6 +129,11 @@ Page({
   // 预约到店
   onAppointment() {
     const store = this.data.store;
+    if (!store) return;
+    if (store.appointmentEnabled === false) {
+      wx.showToast({ title: '该门店暂未开放预约', icon: 'none' });
+      return;
+    }
     wx.navigateTo({
       url: '/pkg-customer/appointment-create/index?storeId=' + store.id,
       fail: () => wx.showToast({ title: '预约功能建设中', icon: 'none' })

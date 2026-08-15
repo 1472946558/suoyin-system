@@ -22,7 +22,7 @@
   <!-- Banner 轮播 -->
   <view class="banner-wrap" wx:if="{{homeData.banners && homeData.banners.length > 0}}">
     <swiper class="banner-swiper" indicator-dots autoplay interval="3500" duration="500" circular>
-      <swiper-item wx:for="{{homeData.banners}}" wx:key="imageUrl" bindtap="onBannerTap" data-index="{{index}}">
+      <swiper-item wx:for="{{homeData.banners}}" wx:key="id" bindtap="onBannerTap" data-index="{{index}}">
         <image class="banner-image" src="{{item.imageUrl}}" mode="aspectFill" />
       </swiper-item>
     </swiper>
@@ -39,15 +39,14 @@
     <view class="slogan-brand">{{homeData.brandName || '金匠倌'}}</view>
     <view class="slogan-divider"></view>
     <view class="slogan-line1">{{homeData.brandSlogan1 || '旧金换打新款'}} · {{homeData.brandSlogan2 || '包损耗'}}</view>
-    <view class="slogan-line2">黄金维修 · 到店回收 · 款式定制</view>
+    <view class="slogan-line2">{{homeData.serviceCopy || '黄金维修 · 到店回收 · 款式定制'}}</view>
   </view>
 
   <!-- 款式图 / 工费 入口 -->
   <view class="card entry-card" bindtap="onTapProducts">
     <view class="entry-left">
-      <view class="entry-title">款式图 / 工费</view>
-      <view class="entry-sub">海量款式 · 工费透明</view>
-      <view class="entry-sub">一目了然</view>
+      <view class="entry-title">{{homeData.entryStyleText || '款式图 / 工费'}}</view>
+      <view class="entry-sub">{{homeData.entryFeeText || '海量款式 · 工费透明'}}</view>
       <view class="btn-primary entry-btn">点击查看 ›</view>
     </view>
     <view class="entry-right">
@@ -75,7 +74,7 @@
       <image class="store-thumb" src="{{nearestStore.thumb || ''}}" mode="aspectFill" />
       <view class="store-info">
         <view class="store-name">{{nearestStore.name}}</view>
-        <view class="store-distance" wx:if="{{nearestStore.distance}}">距您 {{nearestStore.distanceText}}</view>
+        <view class="store-distance" wx:if="{{nearestStore.distanceText}}">距您 {{nearestStore.distanceText}}</view>
         <view class="store-address">📍 {{nearestStore.address}}</view>
         <view class="store-actions">
           <view class="btn-primary store-action-btn" catchtap="onTapAppointment" data-store="{{nearestStore}}">
@@ -92,7 +91,7 @@
     </view>
   </view>
 
-  <view class="home-footer">
+  <view class="home-footer" wx:if="{{servicePhone}}">
     <text>客服电话：{{servicePhone}}</text>
   </view>
 </view>

@@ -54,6 +54,8 @@
         <view wx:else class="p-img p-img-placeholder center">
           <text class="p-placeholder-text">金匠倌</text>
         </view>
+        <view wx:if="{{item.showHot}}" class="p-badge p-badge-hot">热门</view>
+        <view wx:elif="{{item.showRecommended}}" class="p-badge p-badge-rec">推荐</view>
       </view>
       <view class="p-body">
         <view class="p-name">{{item.name}}</view>
@@ -65,6 +67,11 @@
           <text class="p-price">{{item.priceText}}</text>
           <text class="p-gram" wx:if="{{item.gramText}}">{{item.gramText}}</text>
         </view>
+        <view class="p-labor" wx:if="{{item.laborFeeText}}">
+          <text class="p-labor-label">工费参考</text>
+          <text class="p-labor-val">{{item.laborFeeText}}</text>
+        </view>
+        <view class="p-tagline" wx:if="{{item.tagText}}">{{item.tagText}}</view>
         <view class="p-action" catchtap="onProductTap" data-id="{{item.id}}">
           <text>查看详情</text>
           <text class="p-action-arrow"> ›</text>

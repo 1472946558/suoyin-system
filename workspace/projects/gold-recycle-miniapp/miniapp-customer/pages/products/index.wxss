@@ -142,6 +142,57 @@
   opacity: 0.9;
 }
 
+/* 徽章 */
+.p-badge {
+  position: absolute;
+  top: 12rpx;
+  left: 12rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  color: #fff;
+  z-index: 2;
+}
+
+.p-badge-hot {
+  background: #FF5722;
+}
+
+.p-badge-rec {
+  background: #FF9800;
+}
+
+/* 工费参考 */
+.p-labor {
+  margin-top: 10rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.p-labor-label {
+  font-size: 20rpx;
+  color: var(--color-text-tip);
+  background: #F5F5F5;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+}
+
+.p-labor-val {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.p-tagline {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: var(--color-text-tip);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .p-body {
   padding: 20rpx;
 }

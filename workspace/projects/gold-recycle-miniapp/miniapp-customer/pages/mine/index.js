@@ -7,12 +7,17 @@ Page({
     isLoggedIn: false,
     profile: null,
     servicePhone: '',
+    serviceIntro: '',
     pendingCount: 0
   },
 
   onLoad() {
     const app = getApp();
-    this.setData({ servicePhone: app.globalData.servicePhone });
+    const homeConfig = app.globalData.homeConfig || {};
+    this.setData({
+      servicePhone: homeConfig.servicePhone || app.globalData.servicePhone || '',
+      serviceIntro: homeConfig.serviceIntro || ''
+    });
   },
 
   onShow() {
@@ -22,6 +27,15 @@ Page({
   refreshProfile() {
     const token = getCustomerToken();
     const stored = getStoredProfile();
+    // 同步首页配置中的 servicePhone / serviceIntro
+    const app = getApp();
+    const homeConfig = app.globalData.homeConfig || {};
+    if (homeConfig.servicePhone || app.globalData.servicePhone) {
+      this.setData({
+        servicePhone: homeConfig.servicePhone || app.globalData.servicePhone || '',
+        serviceIntro: homeConfig.serviceIntro || this.data.serviceIntro
+      });
+    }
     if (token && stored) {
       this.setData({ isLoggedIn: true, profile: stored });
       // 静默刷新 profile
@@ -76,15 +90,28 @@ Page({
     wx.navigateTo({ url: '/pkg-customer/recycle-info/index' });
   },
 
+  // 隐私保护指引
+  onPrivacy() {
+    wx.navigateTo({ url: '/pages/legal/privacy' });
+  },
+
   // 店长入口
   onStaffEntrance() {
-    // N08 员工端改造时对接
-    // 当前提示店长入口功能
-    wx.showModal({
-      title: '店长入口',
-      content: '门店管理功能正在升级中，请咨询门店管理人员或使用原管理端小程序。',
-      showCancel: false,
-      confirmText: '知道了'
+    var staffAppId = 'wx3f564355bd5c0526';
+    wx.navigateToMiniProgram({
+      appId: staffAppId,
+      path: 'pages/home/index',
+      envVersion: 'release',
+      success: function() {},
+      fail: function(err) {
+        // 同 AppID 或未发布时无法跳转，提示用户
+        wx.showModal({
+          title: '店长入口',
+          content: '正在跳转门店管理端，如未自动跳转，请扫描门店管理端小程序码进入。',
+          showCancel: false,
+          confirmText: '知道了'
+        });
+      }
     });
   },
 

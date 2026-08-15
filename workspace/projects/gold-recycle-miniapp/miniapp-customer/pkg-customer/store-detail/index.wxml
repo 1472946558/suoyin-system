@@ -21,6 +21,7 @@
   <block wx:elif="{{store}}">
     <!-- 头部 Hero -->
     <view class="s-hero">
+      <image wx:if="{{store.thumb}}" class="s-hero-img" src="{{store.thumb}}" mode="aspectFill" />
       <view class="s-hero-bg">
         <view class="s-hero-tag">{{store.city || '金匠倌'}}</view>
         <view class="s-hero-name">{{store.name}}</view>
@@ -65,7 +66,7 @@
     </view>
 
     <!-- 今日可预约时段 -->
-    <view class="card s-card s-slots" wx:if="{{todaySlots.length > 0}}">
+    <view class="card s-card s-slots" wx:if="{{todaySlots.length > 0 && store.appointmentEnabled !== false}}">
       <view class="s-slots-head">
         <text class="s-section-title">今日可预约时段</text>
         <text class="s-slots-more" bindtap="onAppointment">去预约 ›</text>
@@ -86,21 +87,9 @@
     <view class="card s-card s-service">
       <view class="s-section-title">本店服务</view>
       <view class="s-service-tags">
-        <view class="s-tag">
-          <text class="s-tag-icon">♻</text>
-          <text>旧金换新</text>
-        </view>
-        <view class="s-tag">
-          <text class="s-tag-icon">🔧</text>
-          <text>黄金维修</text>
-        </view>
-        <view class="s-tag">
-          <text class="s-tag-icon">💬</text>
-          <text>款式咨询</text>
-        </view>
-        <view class="s-tag">
-          <text class="s-tag-icon">💎</text>
-          <text>到店回收</text>
+        <view class="s-tag" wx:for="{{store.serviceTags}}" wx:key="text">
+          <text class="s-tag-icon">{{item.icon}}</text>
+          <text>{{item.text}}</text>
         </view>
       </view>
     </view>
@@ -118,7 +107,7 @@
     <view class="s-cta">
       <button class="btn-outline s-btn" bindtap="onCall">📞 拨打电话</button>
       <button class="btn-outline s-btn" bindtap="onNavigate">↗ 地图导航</button>
-      <button class="btn-primary s-btn" bindtap="onAppointment">📅 到店预约</button>
+      <button wx:if="{{store.appointmentEnabled !== false}}" class="btn-primary s-btn" bindtap="onAppointment">📅 到店预约</button>
     </view>
   </block>
 </view>

@@ -5,7 +5,8 @@ App({
   globalData: {
     apiBase: 'https://jinjiangguan.com',
     brandName: '金匠倌',
-    servicePhone: '155****5010',
+    servicePhone: '',
+    homeConfig: null,  // 缓存首页配置（含 appointmentNotes, appointmentRules 等）
     userLocation: null
   },
 

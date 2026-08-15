@@ -2,17 +2,16 @@
 const { api } = require('../../utils/request.js');
 const { ensureCustomerSession } = require('../../utils/customer-auth.js');
 const { distanceKm, fmtDistance } = require('../../utils/customer-distance.js');
+const { absUrl } = require('../../utils/customer-services.js');
 
 Page({
   data: {
     homeData: {},
     nearestStore: null,
-    servicePhone: '155****5010'
+    servicePhone: ''
   },
 
   onLoad() {
-    const app = getApp();
-    this.setData({ servicePhone: app.globalData.servicePhone });
     ensureCustomerSession().catch(() => {});
   },
 
@@ -23,7 +22,15 @@ Page({
 
   loadHome() {
     api.getHome()
-      .then(data => this.setData({ homeData: data || {} }))
+      .then(data => {
+        const homeData = data || {};
+        this.setData({ homeData, servicePhone: homeData.servicePhone || '' });
+        // 缓存到 globalData 供其他页面使用
+        const app = getApp();
+        app.globalData.homeConfig = homeData;
+        app.globalData.servicePhone = homeData.servicePhone || '';
+        app.globalData.brandName = homeData.brandName || app.globalData.brandName;
+      })
       .catch(err => {
         console.warn('加载首页失败', err);
         this.setData({ homeData: { brandName: '金匠倌', brandSlogan1: '旧金换打新款', brandSlogan2: '包损耗' } });
@@ -37,10 +44,22 @@ Page({
           this.setData({ nearestStore: null });
           return;
         }
-        // 取第一家作为最近门店（实际应按距离排序）
+        // 取第一家作为最近门店
         const first = stores[0];
-        first.distance = 0.8;
-        first.distanceText = fmtDistance(0.8);
+        // 使用真实距离（如果有经纬度）
+        const app = getApp();
+        const loc = app.globalData.userLocation;
+        if (loc && first.latitude && first.longitude) {
+          first.distance = distanceKm(loc.latitude, loc.longitude, first.latitude, first.longitude);
+          first.distanceText = fmtDistance(first.distance);
+        } else {
+          first.distance = 0;
+          first.distanceText = '';
+        }
+        // 补全门店图片 URL
+        if (first.imageUrl) {
+          first.thumb = absUrl(first.imageUrl);
+        }
         this.setData({ nearestStore: first });
       })
       .catch(err => {
@@ -61,16 +80,37 @@ Page({
     const idx = e.currentTarget.dataset.index;
     const banner = this.data.homeData.banners[idx];
     if (!banner) return;
-    if (banner.linkType === 'products') {
-      wx.switchTab({ url: '/pages/products/index' });
-    } else if (banner.linkType === 'stores') {
-      wx.switchTab({ url: '/pages/stores/index' });
-    } else if (banner.linkType === 'recycle') {
-      wx.navigateTo({ url: '/pkg-customer/recycle-info/index' });
-    } else if (banner.linkType === 'appointment') {
-      this.goAppointment();
-    } else if (banner.linkUrl) {
-      wx.navigateTo({ url: banner.linkUrl });
+    const linkType = banner.linkType;
+    const target = banner.linkTarget;
+    // 兼容旧值 + 新值
+    switch (linkType) {
+      case 'products':
+      case 'style_list':
+        wx.switchTab({ url: '/pages/products/index' });
+        break;
+      case 'stores':
+      case 'store_list':
+        wx.switchTab({ url: '/pages/stores/index' });
+        break;
+      case 'recycle':
+        wx.navigateTo({ url: '/pkg-customer/recycle-info/index' });
+        break;
+      case 'appointment':
+      case 'booking':
+        this.goAppointment();
+        break;
+      case 'style_detail':
+        if (target) wx.navigateTo({ url: '/pkg-customer/product-detail/index?id=' + target });
+        break;
+      case 'store_detail':
+        if (target) wx.navigateTo({ url: '/pkg-customer/store-detail/index?id=' + target });
+        break;
+      case 'external_page':
+        if (banner.linkUrl) wx.navigateTo({ url: banner.linkUrl });
+        break;
+      default:
+        if (banner.linkUrl) wx.navigateTo({ url: banner.linkUrl });
+        break;
     }
   },
 
@@ -91,6 +131,11 @@ Page({
     const store = e.currentTarget.dataset.store;
     if (!store) {
       this.goAppointment();
+      return;
+    }
+    // 检查门店预约开关
+    if (store.appointmentEnabled === false) {
+      wx.showToast({ title: '该门店暂未开放预约', icon: 'none' });
       return;
     }
     wx.navigateTo({ url: '/pkg-customer/appointment-create/index?storeId=' + store.id });

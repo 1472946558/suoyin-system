@@ -15,7 +15,7 @@
       </view>
       <view class="mine-user">
         <view class="mine-name">{{profile.phone || '尊贵顾客'}}</view>
-        <view class="mine-tip">欢迎使用金匠倌收银</view>
+        <view class="mine-tip">{{serviceIntro || '欢迎使用金匠倌收银'}}</view>
       </view>
     </block>
     <block wx:else>
@@ -24,7 +24,7 @@
       </view>
       <view class="mine-user">
         <view class="mine-name">游客模式</view>
-        <view class="mine-tip">授权手机号后可预约到店</view>
+        <view class="mine-tip">{{serviceIntro || '授权手机号后可预约到店'}}</view>
       </view>
       <button class="mine-login" open-type="getPhoneNumber" bindgetphonenumber="onGetPhone">
         授权登录
@@ -54,6 +54,12 @@
         <view class="mine-menu-icon">📞</view>
         <view class="mine-menu-text">客服电话</view>
         <view class="mine-menu-val">{{servicePhone}}</view>
+        <view class="mine-menu-arrow">›</view>
+      </view>
+      <view class="mine-divider"></view>
+      <view class="mine-menu-item" bindtap="onPrivacy">
+        <view class="mine-menu-icon">🔒</view>
+        <view class="mine-menu-text">隐私保护指引</view>
         <view class="mine-menu-arrow">›</view>
       </view>
     </view>

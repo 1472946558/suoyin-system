@@ -21,7 +21,8 @@
       </view>
       <view class="ac-store-card" bindtap="onSelectStore">
         <view class="ac-store-img">
-          <view class="ac-store-img-text">金匠倌</view>
+          <image wx:if="{{store.imageUrl}}" class="ac-store-img-pic" src="{{store.imageUrl}}" mode="aspectFill" />
+          <view wx:else class="ac-store-img-text">金匠倌</view>
         </view>
         <view class="ac-store-info">
           <view class="ac-store-name-row">
@@ -80,7 +81,7 @@
       <view class="ac-sec-head">
         <view class="ac-sec-num">4</view>
         <view class="ac-sec-title">选择预约时段</view>
-        <view class="ac-sec-hint">30分钟/段</view>
+        <view class="ac-sec-hint">{{slotMinutes}}分钟/段</view>
       </view>
       <view wx:if="{{slots.length > 0}}" class="ac-slot-grid">
         <view

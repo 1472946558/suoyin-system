@@ -1,8 +1,8 @@
 // pkg-customer/appointment-create/index.js - 到店预约创建页
 const { api } = require('../../utils/request.js');
 const { ensureCustomerSession, customerPhoneAuth, getStoredProfile, getCustomerToken } = require('../../utils/customer-auth.js');
-const { SERVICE_TYPES } = require('../../utils/customer-services.js');
-const { next7Days, fmtDate, isPastTime, timePlusMin } = require('../../utils/customer-date.js');
+const { SERVICE_TYPES, serviceTypeText } = require('../../utils/customer-services.js');
+const { nextNDays, fmtDate, isPastTime, timePlusMin } = require('../../utils/customer-date.js');
 
 Page({
   data: {
@@ -22,6 +22,7 @@ Page({
     // 时段
     slots: [],
     selectedSlot: '',
+    slotMinutes: 30,
 
     // 联系人
     contactName: '',
@@ -39,14 +40,37 @@ Page({
     profile: null,
 
     // 提交
-    submitting: false
+    submitting: false,
+
+    // 预约须知文案（从后端配置取）
+    appointmentNotes: ''
   },
 
   onLoad(query) {
+    // 从首页配置读取预约规则
+    const app = getApp();
+    const homeConfig = app.globalData.homeConfig || {};
+    const rules = homeConfig.appointmentRules || {};
+    const bookableDays = rules.bookableDays || 7;
+    const slotMinutes = rules.slotMinutes || 30;
+    const bookableServiceTypes = rules.bookableServiceTypes || [];
+
+    // 过滤服务类型（后端配置了可预约类型时仅展示配置项）
+    let serviceTypes = SERVICE_TYPES;
+    if (bookableServiceTypes.length > 0) {
+      serviceTypes = SERVICE_TYPES.filter(s => bookableServiceTypes.indexOf(s.code) >= 0);
+    }
+
+    // 预约须知
+    const appointmentNotes = homeConfig.appointmentNotes || '';
+
     this.setData({
       storeId: query.storeId || '',
-      days: next7Days(),
-      selectedDate: fmtDate(new Date())
+      days: nextNDays(bookableDays),
+      selectedDate: fmtDate(new Date()),
+      serviceTypes,
+      slotMinutes,
+      appointmentNotes
     });
 
     // 检查登录状态
@@ -85,6 +109,17 @@ Page({
     this.setData({ storeLoading: true });
     api.getStoreDetail(this.data.storeId)
       .then(store => {
+        // 检查门店预约开关
+        if (store.appointmentEnabled === false) {
+          wx.showModal({
+            title: '提示',
+            content: '该门店暂未开放预约',
+            showCancel: false,
+            confirmText: '返回',
+            success: () => wx.navigateBack()
+          });
+          return;
+        }
         this.setData({ store, storeLoading: false });
         this.loadSlots();
       })
@@ -104,7 +139,7 @@ Page({
         const todayStr = fmtDate(new Date());
         const processed = raw.map(s => {
           const startTime = s.time;
-          const endTime = timePlusMin(startTime, 30);
+          const endTime = timePlusMin(startTime, this.data.slotMinutes);
           const isPast = (this.data.selectedDate === todayStr) && isPastTime(this.data.selectedDate, startTime);
           const isFull = s.available === false || s.state === 'full';
           const isClosed = s.state === 'closed';
@@ -174,9 +209,10 @@ Page({
 
   // 查看协议
   onTapAgreement() {
+    const notes = this.data.appointmentNotes || '1. 预约成功后，门店将通过电话与您确认。\n2. 请按时到店，如需取消请提前操作。\n3. 同一时段同一门店仅可预约一次。';
     wx.showModal({
       title: '预约须知',
-      content: '1. 预约成功后，门店将通过电话与您确认。\n2. 请按时到店，如需取消请提前 2 小时操作。\n3. 同一时段同一门店仅可预约一次。',
+      content: notes,
       showCancel: false,
       confirmText: '我知道了'
     });

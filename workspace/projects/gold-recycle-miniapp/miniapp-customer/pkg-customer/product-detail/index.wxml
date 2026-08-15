@@ -30,7 +30,7 @@
       duration="300"
     >
       <swiper-item wx:for="{{product.images}}" wx:key="*this">
-        <image class="d-hero-img" src="{{item}}" mode="aspectFill" />
+        <image class="d-hero-img" src="{{item}}" mode="aspectFill" bindtap="onTapImage" data-idx="{{index}}" />
       </swiper-item>
     </swiper>
 
@@ -40,6 +40,7 @@
       <view class="d-tags" wx:if="{{product.category || product.purity}}">
         <text class="tag" wx:if="{{product.category}}">{{product.category}}</text>
         <text class="tag" wx:if="{{product.purity}}">{{product.purity}}</text>
+        <text class="tag tag-service" wx:for="{{product.serviceTypeTexts}}" wx:key="*this">{{item}}</text>
       </view>
       <view class="d-divider"></view>
       <view class="d-price-block">
@@ -49,7 +50,7 @@
           <text class="d-price-value">{{product.priceMain}}</text>
           <text class="d-price-unit">起</text>
         </view>
-        <view class="d-price-tip">ⓘ 工费以店铺确认为准</view>
+        <view class="d-price-tip">ⓘ {{product.laborFeeNote || '工费以店铺确认为准'}}</view>
       </view>
     </view>
 
@@ -99,7 +100,8 @@
       </view>
       <view wx:if="{{product.nearestStore}}" class="d-store-row" bindtap="onTapNearestStore" data-id="{{product.nearestStore.id}}">
         <view class="d-store-img">
-          <view class="d-store-img-placeholder center">
+          <image wx:if="{{product.nearestStore.thumb}}" class="d-store-img-pic" src="{{product.nearestStore.thumb}}" mode="aspectFill" />
+          <view wx:else class="d-store-img-placeholder center">
             <text class="d-store-img-text">金匠倌</text>
           </view>
         </view>
@@ -122,5 +124,6 @@
       <button class="btn-outline d-cta-btn" bindtap="onConsult">咨询门店</button>
       <button class="btn-primary d-cta-btn" bindtap="onAppointment">到店预约</button>
     </view>
+    <view class="d-cta-disclaimer">商品仅供参考，到店咨询详情</view>
   </block>
 </view>

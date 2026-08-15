@@ -1,6 +1,7 @@
 // pages/stores/index.js - 附近门店列表页
 const { api } = require('../../utils/request.js');
 const { distanceKm, fmtDistance } = require('../../utils/customer-distance.js');
+const { absUrl } = require('../../utils/customer-services.js');
 
 Page({
   data: {
@@ -51,7 +52,8 @@ Page({
       return stores.map(s => ({
         ...s,
         longitude: s.longitude || (map[s.id] ? map[s.id].longitude : 0),
-        latitude: s.latitude || (map[s.id] ? map[s.id].latitude : 0)
+        latitude: s.latitude || (map[s.id] ? map[s.id].latitude : 0),
+        thumb: s.imageUrl ? absUrl(s.imageUrl) : ''
       }));
     });
   },
@@ -130,7 +132,9 @@ Page({
           resolve();
         },
         fail: () => {
-          this.setData({ locError: '定位服务未开启，无法获取附近门店' });
+          const app = getApp();
+          const note = (app.globalData.homeConfig && app.globalData.homeConfig.locationPermissionNote) || '定位服务未开启，无法获取附近门店';
+          this.setData({ locError: note });
           resolve();
         }
       });
@@ -177,6 +181,11 @@ Page({
 
   onTapAppointment(e) {
     const id = e.currentTarget.dataset.id;
+    const s = this.data.stores.find(x => x.id === id);
+    if (s && s.appointmentEnabled === false) {
+      wx.showToast({ title: '该门店暂未开放预约', icon: 'none' });
+      return;
+    }
     wx.navigateTo({ url: '/pkg-customer/appointment-create/index?storeId=' + id });
   },
 

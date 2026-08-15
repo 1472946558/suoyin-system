@@ -1,5 +1,14 @@
 // pkg-customer/recycle-info/index.js - 黄金回收服务介绍页
 const { api } = require('../../utils/request.js');
+const { absUrl } = require('../../utils/customer-services.js');
+
+// 后台配置的服务项图标 code → emoji 映射
+const ICON_MAP = {
+  recycle: '♻',
+  repair: '🔧',
+  consult: '💎',
+  custom: '✨',
+};
 
 Page({
   data: {
@@ -12,11 +21,28 @@ Page({
     this.loadRecycleInfo();
   },
 
+  normalizeInfo(info) {
+    if (!info) return null;
+    const services = (info.services || []).map(s => ({
+      icon: ICON_MAP[s.icon] || s.icon || '💎',
+      title: s.title,
+      desc: s.desc
+    }));
+    return {
+      title: info.title || '黄金回收服务',
+      intro: info.intro || '',
+      imageUrl: info.imageUrl ? absUrl(info.imageUrl) : '',
+      process: info.process || [],
+      services,
+      notices: info.notices || []
+    };
+  },
+
   loadRecycleInfo() {
     this.setData({ loading: true, error: null });
     api.getRecycleInfo()
       .then(data => {
-        this.setData({ recycleInfo: data || this.defaultInfo(), loading: false });
+        this.setData({ recycleInfo: this.normalizeInfo(data) || this.defaultInfo(), loading: false });
       })
       .catch(err => {
         // 降级：后端无数据时用本地默认文案

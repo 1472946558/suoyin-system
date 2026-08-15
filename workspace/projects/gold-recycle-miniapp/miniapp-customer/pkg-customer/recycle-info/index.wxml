@@ -14,7 +14,8 @@
   <block wx:elif="{{recycleInfo}}">
     <!-- 顶部 Banner -->
     <view class="ri-hero">
-      <view class="ri-hero-icon">💎</view>
+      <image wx:if="{{recycleInfo.imageUrl}}" class="ri-hero-img" src="{{recycleInfo.imageUrl}}" mode="aspectFill" />
+      <view class="ri-hero-icon" wx:else>💎</view>
       <view class="ri-hero-title">{{recycleInfo.title || '黄金回收服务'}}</view>
       <view class="ri-hero-sub">{{recycleInfo.intro}}</view>
     </view>
@@ -61,6 +62,7 @@
         <text>📅 预约到店咨询</text>
       </view>
       <view class="ri-cta-tip">预约后门店将为您安排专属服务</view>
+      <view class="ri-cta-disclaimer">最终回收价格以门店线下检测为准</view>
     </view>
   </block>
 </view>

@@ -70,10 +70,13 @@ function isPastTime(date, time) {
   return t.getTime() <= now.getTime();
 }
 
-/** 7 天日期范围（用于预约可选日期） */
-function next7Days() {
+/** N 天日期范围（用于预约可选日期），默认 7 天 */
+function nextNDays(n) {
+  n = n || 7;
+  if (n < 1) n = 1;
+  if (n > 30) n = 30;
   const days = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < n; i++) {
     const d = addDays(new Date(), i);
     days.push({
       date: fmtDate(d),
@@ -83,6 +86,11 @@ function next7Days() {
     });
   }
   return days;
+}
+
+/** 7 天日期范围（兼容旧调用） */
+function next7Days() {
+  return nextNDays(7);
 }
 
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -97,5 +105,6 @@ module.exports = {
   minToTime,
   timePlusMin,
   isPastTime,
+  nextNDays,
   next7Days
 };

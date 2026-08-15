@@ -62,14 +62,18 @@ Page({
       });
   },
 
-  // 检查是否可取消（PENDING/CONFIRMED 且距预约 > 2 小时）
+  // 检查是否可取消（PENDING/CONFIRMED 且距预约 > cancelLeadMinutes）
   checkCanCancel(detail) {
     if (CANCELLABLE.indexOf(detail.status) === -1) return false;
     var apptTime = new Date(detail.appointmentDate + 'T' + detail.appointmentTime + ':00');
     if (isNaN(apptTime.getTime())) return true;
     var now = new Date();
+    // 从后端配置读取取消提前量（分钟），默认 120
+    var app = getApp();
+    var rules = (app.globalData.homeConfig && app.globalData.homeConfig.appointmentRules) || {};
+    var cancelLeadMinutes = rules.cancelLeadMinutes || 120;
     var diff = apptTime.getTime() - now.getTime();
-    return diff > 2 * 60 * 60 * 1000;
+    return diff > cancelLeadMinutes * 60 * 1000;
   },
 
   // 取消预约

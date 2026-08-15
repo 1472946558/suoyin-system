@@ -3,7 +3,8 @@
     "pages/home/index",
     "pages/products/index",
     "pages/stores/index",
-    "pages/mine/index"
+    "pages/mine/index",
+    "pages/legal/privacy"
   ],
   "subpackages": [
     {
@@ -67,5 +68,6 @@
   "requiredPrivateInfos": [
     "getLocation"
   ],
+  "__usePrivacyCheck__": true,
   "sitemapLocation": "sitemap.json"
 }

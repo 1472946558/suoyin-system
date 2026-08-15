@@ -60,11 +60,16 @@ Page({
   },
 
   formatProduct(p) {
+    const tags = Array.isArray(p.tags) ? p.tags : [];
     return {
       ...p,
       imageUrl: absUrl(p.imageUrl),
       priceText: p.retailPrice > 0 ? '¥' + fmtPrice(p.retailPrice) : '面议',
-      gramText: p.gramWeight > 0 ? p.gramWeight + 'g' : ''
+      gramText: p.gramWeight > 0 ? p.gramWeight + 'g' : '',
+      laborFeeText: p.laborFeeRef || '',
+      showHot: !!p.isHot,
+      showRecommended: !!p.isRecommended,
+      tagText: tags.length > 0 ? tags.join(' · ') : ''
     };
   },
 

@@ -80,6 +80,12 @@
   letter-spacing: 2rpx;
 }
 
+.ac-store-img-pic {
+  width: 100%;
+  height: 100%;
+  border-radius: 16rpx;
+}
+
 .ac-store-info {
   flex: 1;
   min-width: 0;

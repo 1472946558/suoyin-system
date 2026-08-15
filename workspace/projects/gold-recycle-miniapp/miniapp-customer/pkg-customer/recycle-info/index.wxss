@@ -7,10 +7,26 @@
 
 /* 顶部 Banner */
 .ri-hero {
+  position: relative;
   background: linear-gradient(135deg, #866E23 0%, #BFA15F 100%);
   padding: 80rpx 40rpx 60rpx;
   color: #fff;
   text-align: center;
+  overflow: hidden;
+}
+
+.ri-hero-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.35;
+}
+
+.ri-hero > view:not(.ri-hero-img) {
+  position: relative;
+  z-index: 1;
 }
 
 .ri-hero-icon {
@@ -161,4 +177,10 @@
   font-size: 24rpx;
   color: var(--color-text-tip);
   margin-top: 16rpx;
+}
+
+.ri-cta-disclaimer {
+  font-size: 22rpx;
+  color: #b0b0b0;
+  margin-top: 10rpx;
 }
