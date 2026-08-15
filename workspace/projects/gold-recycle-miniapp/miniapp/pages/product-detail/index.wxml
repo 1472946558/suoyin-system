@@ -1,0 +1,79 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-06
+-->
+
+<view class="page product-detail-page">
+  <view class="detail-hero">
+    <view class="detail-image-box">
+      <image class="detail-image" src="{{product.imageUrl || '/assets/ui/price.png'}}" mode="aspectFit" />
+    </view>
+    <view class="detail-hero-copy">
+      <text class="detail-title">{{product.name}}</text>
+      <text class="detail-code">{{product.sku}} · {{product.purity}}</text>
+      <text class="detail-status {{product.status}}">{{product.statusText}}</text>
+    </view>
+  </view>
+
+  <view class="detail-section">
+    <text class="section-title-text">报价与数量</text>
+    <view class="detail-grid">
+      <view class="detail-cell">
+        <text class="detail-label">参考回收价</text>
+        <text class="detail-value">{{product.benchPriceText}}</text>
+      </view>
+      <view class="detail-cell">
+        <text class="detail-label">销售参考价</text>
+        <text class="detail-value">{{product.retailPriceText}}</text>
+      </view>
+      <view class="detail-cell">
+        <text class="detail-label">商品数量</text>
+        <text class="detail-value">{{product.inventory}}</text>
+      </view>
+      <view class="detail-cell">
+        <text class="detail-label">克重模板</text>
+        <text class="detail-value">{{product.gramWeightText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="detail-section">
+    <text class="section-title-text">商品信息</text>
+    <view class="info-list">
+      <view class="info-row">
+        <text class="detail-label">分类</text>
+        <text class="info-value">{{product.category}}</text>
+      </view>
+      <view class="info-row">
+        <text class="detail-label">可见门店</text>
+        <text class="info-value">{{product.storesText}}</text>
+      </view>
+      <view class="info-row">
+        <text class="detail-label">报价时效</text>
+        <text class="info-value">{{product.quoteLeadTime}}</text>
+      </view>
+    </view>
+    <view class="tag-row">
+      <text wx:for="{{product.tags}}" wx:key="*this" class="detail-tag">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="detail-section">
+    <text class="section-title-text">使用说明</text>
+    <text class="detail-note">{{product.recommendedScene}}</text>
+  </view>
+
+  <view class="detail-actions">
+    <button class="detail-secondary-btn" bindtap="copySku">复制 SKU</button>
+    <button class="detail-secondary-btn" bindtap="editProduct">编辑</button>
+    <button class="detail-primary-btn" bindtap="useForRecycle">带入录单</button>
+  </view>
+</view>

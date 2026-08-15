@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=375, initial-scale=1.0">
+  <title>金匠倌顾客端首页 - 预览</title>
+  <link rel="stylesheet" href="app.wxss">
+  <style>
+    body { margin: 0; padding: 0; background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+    .preview-frame {
+      width: 375px;
+      margin: 20px auto;
+      background: #FDFBE7;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+      border-radius: 32px;
+      overflow: hidden;
+      position: relative;
+      min-height: 812px;
+    }
+    .preview-frame::before {
+      content: '金匠倌顾客端 V1';
+      position: fixed;
+      top: 16px;
+      left: 24px;
+      font-size: 14px;
+      color: #888;
+    }
+    .preview-frame::after {
+      content: '预览版本';
+      position: fixed;
+      top: 16px;
+      right: 24px;
+      font-size: 12px;
+      color: #fff;
+      background: #866E23;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+    .placeholder-thumb-lg {
+      background: linear-gradient(135deg, #F4D58D 0%, #BFA15F 100%);
+    }
+    .placeholder-thumb-sm {
+      background: linear-gradient(135deg, #F4D58D 0%, #BFA15F 100%);
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-frame">
+    <div class="page home-page">
+
+      <!-- 顶部品牌栏 -->
+      <div class="home-topbar" style="position:relative;">
+        <div class="home-topbar-title">金匠倌</div>
+        <div class="home-topbar-icons">
+          <div class="home-topbar-icon">···</div>
+          <div class="home-topbar-icon">⊙</div>
+        </div>
+      </div>
+
+      <!-- Banner -->
+      <div class="banner-wrap">
+        <div class="banner-placeholder">
+          <div class="banner-brand">金匠倌</div>
+          <div class="banner-tag">匠心传承 精工品质</div>
+        </div>
+      </div>
+
+      <!-- 品牌标语 -->
+      <div class="slogan">
+        <div class="slogan-brand">金匠倌</div>
+        <div class="slogan-divider"></div>
+        <div class="slogan-line1">旧金换打新款 · 包损耗</div>
+        <div class="slogan-line2">黄金维修 · 到店回收 · 款式定制</div>
+      </div>
+
+      <!-- 款式图 / 工费 -->
+      <div class="card entry-card">
+        <div class="entry-left">
+          <div class="entry-title">款式图 / 工费</div>
+          <div class="entry-sub">海量款式 · 工费透明</div>
+          <div class="entry-sub">一目了然</div>
+          <div class="btn-primary entry-btn">点击查看 ›</div>
+        </div>
+        <div class="entry-right">
+          <div class="entry-thumb placeholder-thumb-lg entry-thumb-lg"></div>
+          <div class="entry-thumb-stack">
+            <div class="entry-thumb placeholder-thumb-sm entry-thumb-sm"></div>
+            <div class="entry-thumb placeholder-thumb-sm entry-thumb-sm"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 附近门店 -->
+      <div class="card stores-card">
+        <div class="section-head">
+          <div class="row">
+            <div class="section-icon">📍</div>
+            <div class="section-title">附近门店</div>
+          </div>
+          <div class="section-more">更多门店 ›</div>
+        </div>
+        <div class="store-card">
+          <div class="store-thumb" style="background:linear-gradient(135deg,#3a2a0c 0%,#6b4f1d 100%);"></div>
+          <div class="store-info">
+            <div class="store-name">金匠倌 · 天河旗舰店</div>
+            <div class="store-distance">距您 0.8km</div>
+            <div class="store-address">📍 广州市天河区天河路228号正佳广场东塔1楼</div>
+            <div class="store-actions">
+              <div class="btn-primary store-action-btn">📅 到店预约</div>
+              <div class="btn-outline store-action-btn">➤ 地图导航</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-footer">
+        客服电话：155****5010
+      </div>
+
+      <!-- TabBar (模拟) -->
+      <div style="position:sticky;bottom:0;display:flex;background:#fff;border-top:1px solid #eee;padding:8px 0;">
+        <div style="flex:1;text-align:center;color:#866E23;font-size:12px;">🏠<br/>首页</div>
+        <div style="flex:1;text-align:center;color:#8A8F99;font-size:12px;">💍<br/>款式</div>
+        <div style="flex:1;text-align:center;color:#8A8F99;font-size:12px;">🏬<br/>门店</div>
+        <div style="flex:1;text-align:center;color:#8A8F99;font-size:12px;">👤<br/>我的</div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

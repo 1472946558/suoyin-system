@@ -1,0 +1,751 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: customer_store.go
+ * 功能描述: 顾客端数据访问层
+ * 作者: 廖心慈
+ * 创建日期: 2026-08-15
+ */
+
+package app
+
+import (
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"time"
+)
+
+var (
+	errCustomerNotFound       = errors.New("customer not found")
+	errAppointmentNotFound    = errors.New("appointment not found")
+	errAppointmentCancelled   = errors.New("appointment already cancelled")
+	errAppointmentTimeTooLate = errors.New("cannot cancel within 2 hours of appointment")
+	errDuplicateAppointment   = errors.New("duplicate appointment for same store and time slot")
+	errInvalidAppointmentTime = errors.New("invalid appointment time")
+	errAppointmentStatusFlow  = errors.New("appointment status transition not allowed")
+)
+
+// --- 顾客会话 ---
+
+func (s *MockStore) getCustomerByToken(token string) (CustomerSession, CustomerProfile, bool) {
+	s.mu.RLock()
+	session, ok := s.customerSessions[token]
+	profile := s.findCustomerProfileLocked(session.CustomerID)
+	s.mu.RUnlock()
+
+	if ok && !session.ExpiresAt.Before(time.Now()) && profile.ID != "" {
+		return session, profile, true
+	}
+
+	if s.persistence != nil {
+		persisted, found, err := s.persistence.loadCustomerSession(context.Background(), token)
+		if err != nil || !found || persisted.ExpiresAt.Before(time.Now()) {
+			return CustomerSession{}, CustomerProfile{}, false
+		}
+		s.mu.Lock()
+		s.customerSessions[token] = persisted
+		profile = s.findCustomerProfileLocked(persisted.CustomerID)
+		s.mu.Unlock()
+		if profile.ID != "" {
+			return persisted, profile, true
+		}
+	}
+	return CustomerSession{}, CustomerProfile{}, false
+}
+
+func (s *MockStore) createCustomerSession(secret string, profile CustomerProfile) (CustomerSession, error) {
+	payload := fmt.Sprintf("customer:%s:%d", profile.ID, time.Now().UnixNano())
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(payload))
+	token := hex.EncodeToString(mac.Sum(nil))
+
+	now := time.Now()
+	session := CustomerSession{
+		Token:      token,
+		CustomerID: profile.ID,
+		OrgID:      profile.OrgID,
+		Phone:      profile.Phone,
+		LoginAt:    now,
+		ExpiresAt:  now.Add(12 * time.Hour),
+	}
+
+	s.mu.Lock()
+	s.customerSessions[token] = session
+	s.mu.Unlock()
+
+	if s.persistence != nil {
+		if err := s.persistence.saveCustomerSession(context.Background(), session); err != nil {
+			return CustomerSession{}, err
+		}
+	}
+	return session, nil
+}
+
+func (s *MockStore) deleteCustomerSession(token string) {
+	s.mu.Lock()
+	delete(s.customerSessions, token)
+	s.mu.Unlock()
+	if s.persistence != nil {
+		_ = s.persistence.deleteCustomerSession(context.Background(), token)
+	}
+}
+
+// --- 顾客档案 ---
+
+func (s *MockStore) findCustomerProfileLocked(id string) CustomerProfile {
+	for _, p := range s.customerProfiles {
+		if p.ID == id {
+			return p
+		}
+	}
+	return CustomerProfile{}
+}
+
+func (s *MockStore) findCustomerByOpenID(openID string) (CustomerProfile, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, p := range s.customerProfiles {
+		if p.OpenID == openID {
+			return p, true
+		}
+	}
+	return CustomerProfile{}, false
+}
+
+func (s *MockStore) findOrCreateCustomerByOpenID(orgID, openID, unionID, nickname, avatarURL string) (CustomerProfile, bool) {
+	if profile, ok := s.findCustomerByOpenID(openID); ok {
+		changed := false
+		if unionID != "" && profile.UnionID == "" {
+			profile.UnionID = unionID
+			changed = true
+		}
+		if nickname != "" && profile.Nickname == "" {
+			profile.Nickname = nickname
+			changed = true
+		}
+		if avatarURL != "" && profile.AvatarURL == "" {
+			profile.AvatarURL = avatarURL
+			changed = true
+		}
+		if changed {
+			profile.UpdatedAt = time.Now()
+			s.mu.Lock()
+			s.updateCustomerProfileLocked(profile)
+			s.mu.Unlock()
+		}
+		return profile, false
+	}
+
+	now := time.Now()
+	profile := CustomerProfile{
+		ID:        fmt.Sprintf("customer-%s", generateID()),
+		OrgID:     orgID,
+		OpenID:    openID,
+		UnionID:   unionID,
+		Nickname:  nickname,
+		AvatarURL: avatarURL,
+		Status:    "active",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	s.mu.Lock()
+	s.customerProfiles = append(s.customerProfiles, profile)
+	if s.persistence != nil {
+		_ = s.persistCustomerProfilesLocked()
+	}
+	s.mu.Unlock()
+	return profile, true
+}
+
+func (s *MockStore) updateCustomerPhone(customerID, phone string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, p := range s.customerProfiles {
+		if p.ID == customerID {
+			s.customerProfiles[i].Phone = phone
+			s.customerProfiles[i].UpdatedAt = time.Now()
+			if s.persistence != nil {
+				return s.persistCustomerProfilesLocked()
+			}
+			return nil
+		}
+	}
+	return errCustomerNotFound
+}
+
+func (s *MockStore) updateCustomerProfileLocked(profile CustomerProfile) {
+	for i, p := range s.customerProfiles {
+		if p.ID == profile.ID {
+			s.customerProfiles[i] = profile
+			if s.persistence != nil {
+				_ = s.persistCustomerProfilesLocked()
+			}
+			return
+		}
+	}
+}
+
+func (s *MockStore) persistCustomerProfilesLocked() error {
+	return s.persistence.saveConfig(context.Background(), configKeyCustomerProfiles, s.customerProfiles)
+}
+
+// --- 顾客公开数据 ---
+
+func (s *MockStore) customerProductList(category string, page, pageSize int) ([]CustomerProductDTO, int) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var items []CustomerProductDTO
+	for _, p := range s.catalogProducts {
+		if p.Status != "active" {
+			continue
+		}
+		if category != "" && p.Category != category {
+			continue
+		}
+		items = append(items, CustomerProductDTO{
+			ID:               p.ID,
+			Name:             p.Name,
+			ImageURL:         p.ImageURL,
+			Category:         p.Category,
+			Purity:           p.Purity,
+			RetailPrice:      p.RetailPrice,
+			GramWeight:       p.GramWeight,
+			RecommendedScene: p.RecommendedScene,
+			Tags:             p.Tags,
+		})
+	}
+
+	total := len(items)
+	start := (page - 1) * pageSize
+	if start >= total {
+		return []CustomerProductDTO{}, total
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	return items[start:end], total
+}
+
+func (s *MockStore) customerProductDetail(id string) (CustomerProductDTO, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, p := range s.catalogProducts {
+		if p.ID == id && p.Status == "active" {
+			return CustomerProductDTO{
+				ID:               p.ID,
+				Name:             p.Name,
+				ImageURL:         p.ImageURL,
+				Category:         p.Category,
+				Purity:           p.Purity,
+				RetailPrice:      p.RetailPrice,
+				GramWeight:       p.GramWeight,
+				RecommendedScene: p.RecommendedScene,
+				Tags:             p.Tags,
+			}, true
+		}
+	}
+	return CustomerProductDTO{}, false
+}
+
+func (s *MockStore) customerProductCategories() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	seen := make(map[string]bool)
+	var categories []string
+	for _, p := range s.catalogProducts {
+		if p.Status != "active" {
+			continue
+		}
+		if p.Category != "" && !seen[p.Category] {
+			seen[p.Category] = true
+			categories = append(categories, p.Category)
+		}
+	}
+	return categories
+}
+
+func (s *MockStore) customerStoreList() []CustomerStoreDTO {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var items []CustomerStoreDTO
+	for _, st := range s.stores {
+		if st.Status != "active" {
+			continue
+		}
+		items = append(items, CustomerStoreDTO{
+			ID:            st.ID,
+			Name:          st.Name,
+			City:          st.City,
+			Address:       st.Address,
+			ContactPhone:  st.ContactPhone,
+			BusinessHours: st.BusinessHours,
+		})
+	}
+	return items
+}
+
+func (s *MockStore) customerStoreDetail(id string) (CustomerStoreDetailDTO, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, st := range s.stores {
+		if st.ID == id && st.Status == "active" {
+			return CustomerStoreDetailDTO{
+				ID:            st.ID,
+				Name:          st.Name,
+				City:          st.City,
+				Address:       st.Address,
+				ContactPhone:  st.ContactPhone,
+				BusinessHours: st.BusinessHours,
+				Longitude:     st.Longitude,
+				Latitude:      st.Latitude,
+			}, true
+		}
+	}
+	return CustomerStoreDetailDTO{}, false
+}
+
+func (s *MockStore) customerHomeData() CustomerHomeResponse {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if len(s.customerHomeConfig.Banners) == 0 && s.customerHomeConfig.BrandName == "" {
+		return defaultCustomerHomeConfig()
+	}
+	return s.customerHomeConfig
+}
+
+func (s *MockStore) customerRecycleInfoData() CustomerRecycleInfo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.customerRecycleInfo.Title == "" {
+		return defaultCustomerRecycleInfo()
+	}
+	return s.customerRecycleInfo
+}
+
+// --- 顾客预约 ---
+
+func (s *MockStore) createCustomerAppointment(customer CustomerProfile, req CreateAppointmentRequest) (CustomerAppointment, error) {
+	now := time.Now()
+
+	// 服务类型校验
+	if !validServiceType(req.ServiceType) {
+		return CustomerAppointment{}, errors.New("invalid service type")
+	}
+
+	// 解析预约时间
+	apptTime, err := time.ParseInLocation("2006-01-02 15:04", req.AppointmentDate+" "+req.AppointmentTime, time.Local)
+	if err != nil {
+		return CustomerAppointment{}, errInvalidAppointmentTime
+	}
+
+	// 当天预约至少提前 1 小时
+	if apptTime.Before(now.Add(1 * time.Hour)) {
+		return CustomerAppointment{}, errInvalidAppointmentTime
+	}
+
+	// 可预约范围：未来 7 天
+	if apptTime.After(now.Add(7 * 24 * time.Hour)) {
+		return CustomerAppointment{}, errInvalidAppointmentTime
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// 查找门店
+	var store StoreInfo
+	storeFound := false
+	for _, st := range s.stores {
+		if st.ID == req.StoreID && st.Status == "active" {
+			store = st
+			storeFound = true
+			break
+		}
+	}
+	if !storeFound {
+		return CustomerAppointment{}, errAppointmentNotFound
+	}
+
+	// 重复预约检查：同一手机号 + 同一门店 + 同一日期 + 同一时间
+	for _, a := range s.customerAppointments {
+		if a.CustomerPhone == req.ContactPhone && a.StoreID == req.StoreID &&
+			a.AppointmentDate == req.AppointmentDate && a.AppointmentTime == req.AppointmentTime &&
+			(a.Status == AppointmentStatusPending || a.Status == AppointmentStatusConfirmed) {
+			return CustomerAppointment{}, errDuplicateAppointment
+		}
+	}
+
+	// 时段容量检查：同一门店同一时段最多 2 单（满则拒）
+	const slotCapacity = 2
+	slotCount := 0
+	for _, a := range s.customerAppointments {
+		if a.StoreID == req.StoreID &&
+			a.AppointmentDate == req.AppointmentDate &&
+			a.AppointmentTime == req.AppointmentTime &&
+			(a.Status == AppointmentStatusPending || a.Status == AppointmentStatusConfirmed) {
+			slotCount++
+		}
+	}
+	if slotCount >= slotCapacity {
+		return CustomerAppointment{}, errors.New("time slot is full")
+	}
+
+	s.customerSeq++
+	apptID := fmt.Sprintf("appt-%d-%s", s.customerSeq, generateID())
+	apptNo := generateAppointmentNo(req.AppointmentDate, s.customerSeq)
+
+	appt := CustomerAppointment{
+		ID:              apptID,
+		AppointmentNo:   apptNo,
+		OrgID:           customer.OrgID,
+		CustomerID:      customer.ID,
+		CustomerName:    req.ContactName,
+		CustomerPhone:   req.ContactPhone,
+		StoreID:         store.ID,
+		StoreName:       store.Name,
+		StoreAddress:    store.City + store.Address,
+		StorePhone:      store.ContactPhone,
+		ServiceType:     req.ServiceType,
+		AppointmentDate: req.AppointmentDate,
+		AppointmentTime: req.AppointmentTime,
+		Status:          AppointmentStatusPending,
+		Remark:          req.Remark,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+
+	s.customerAppointments = append(s.customerAppointments, appt)
+	if s.persistence != nil {
+		_ = s.persistence.saveCustomerAppointment(context.Background(), appt)
+	}
+	return appt, nil
+}
+
+// listCustomerAppointmentSlots 查询门店某日所有时段可用性
+func (s *MockStore) listCustomerAppointmentSlots(storeID, date string) ([]CustomerStoreSlotDTO, error) {
+	if _, err := time.ParseInLocation("2006-01-02", date, time.Local); err != nil {
+		return nil, errors.New("invalid date format")
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// 查找门店
+	var store *StoreInfo
+	for i := range s.stores {
+		if s.stores[i].ID == storeID && s.stores[i].Status == "active" {
+			store = &s.stores[i]
+			break
+		}
+	}
+	if store == nil {
+		return nil, errAppointmentNotFound
+	}
+
+	// 营业时间 09:30 - 21:30，按 30 分钟粒度
+	startHour, startMin := 9, 30
+	endHour, endMin := 21, 30
+
+	const slotCapacity = 2 // 单时段容量
+
+	// 统计每个时段已预约数
+	slotBooked := map[string]int{}
+	for _, a := range s.customerAppointments {
+		if a.StoreID != storeID || a.AppointmentDate != date {
+			continue
+		}
+		if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
+			continue
+		}
+		slotBooked[a.AppointmentTime]++
+	}
+
+	// 生成所有时段
+	cur := time.Date(0, 1, 1, startHour, startMin, 0, 0, time.UTC)
+	end := time.Date(0, 1, 1, endHour, endMin, 0, 0, time.UTC)
+	var slots []CustomerStoreSlotDTO
+
+	for !cur.After(end) {
+		timeStr := cur.Format("15:04")
+		booked := slotBooked[timeStr]
+		state := "open"
+		available := booked < slotCapacity
+		if !available {
+			state = "full"
+		}
+		slots = append(slots, CustomerStoreSlotDTO{
+			Time:      timeStr,
+			Available: available,
+			State:     state,
+		})
+		cur = cur.Add(30 * time.Minute)
+	}
+
+	return slots, nil
+}
+
+// updateCustomerAppointmentNotes 顾客修改预约备注（仅修改备注）
+func (s *MockStore) updateCustomerAppointmentNotes(customerID, appointmentID, remark string) error {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, a := range s.customerAppointments {
+		if a.ID == appointmentID && a.CustomerID == customerID {
+			if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
+				return errAppointmentStatusFlow
+			}
+			s.customerAppointments[i].Remark = remark
+			s.customerAppointments[i].UpdatedAt = now
+			if s.persistence != nil {
+				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			}
+			return nil
+		}
+	}
+	return errAppointmentNotFound
+}
+
+// buildCustomerAppointmentDTO 构造顾客预约 DTO
+func buildCustomerAppointmentDTO(a CustomerAppointment) CustomerAppointmentDTO {
+	endMin := addMinutes(a.AppointmentTime, 30)
+	return CustomerAppointmentDTO{
+		ID:              a.ID,
+		AppointmentNo:   a.AppointmentNo,
+		StoreID:         a.StoreID,
+		StoreName:       a.StoreName,
+		StoreAddress:    a.StoreAddress,
+		StorePhone:      a.StorePhone,
+		ServiceType:     a.ServiceType,
+		ServiceTypeText: serviceTypeText(a.ServiceType),
+		AppointmentDate: a.AppointmentDate,
+		AppointmentTime: a.AppointmentTime,
+		TimeRange:       a.AppointmentTime + "-" + endMin,
+		Status:          a.Status,
+		StatusText:      appointmentStatusText(a.Status),
+		Remark:          a.Remark,
+		CreatedAt:       a.CreatedAt,
+		CancelledAt:     a.CancelledAt,
+		CancelReason:    a.CancelReason,
+		ConfirmedAt:     a.ConfirmedAt,
+	}
+}
+
+// buildStaffAppointmentDTO 构造员工端预约 DTO
+func buildStaffAppointmentDTO(a CustomerAppointment) StaffAppointmentDTO {
+	return StaffAppointmentDTO{
+		ID:              a.ID,
+		AppointmentNo:   a.AppointmentNo,
+		CustomerName:    a.CustomerName,
+		CustomerPhone:   a.CustomerPhone,
+		StoreID:         a.StoreID,
+		StoreName:       a.StoreName,
+		ServiceType:     a.ServiceType,
+		ServiceTypeText: serviceTypeText(a.ServiceType),
+		AppointmentDate: a.AppointmentDate,
+		AppointmentTime: a.AppointmentTime,
+		Status:          a.Status,
+		StatusText:      appointmentStatusText(a.Status),
+		Remark:          a.Remark,
+		CreatedAt:       a.CreatedAt,
+		ConfirmedAt:     a.ConfirmedAt,
+		ConfirmedBy:     a.ConfirmedBy,
+	}
+}
+
+// addMinutes 给 HH:MM 加分钟返回 HH:MM
+func addMinutes(t string, minutes int) string {
+	parsed, err := time.Parse("15:04", t)
+	if err != nil {
+		return t
+	}
+	return parsed.Add(time.Duration(minutes) * time.Minute).Format("15:04")
+}
+
+// generateAppointmentNo 生成预约编号 YY+YYYYMMDD+4 位序号
+func generateAppointmentNo(date string, seq int) string {
+	t, err := time.ParseInLocation("2006-01-02", date, time.Local)
+	if err != nil {
+		return fmt.Sprintf("YY%s%04d", date, seq)
+	}
+	year2 := t.Format("06") // 后两位年份
+	day := t.Format("20060102")
+	return fmt.Sprintf("YY%s%s%04d", year2, day, seq)
+}
+
+func (s *MockStore) listCustomerAppointments(customerID string) []CustomerAppointment {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var items []CustomerAppointment
+	for _, a := range s.customerAppointments {
+		if a.CustomerID == customerID {
+			items = append(items, a)
+		}
+	}
+	// 按时间倒序
+	for i := 0; i < len(items); i++ {
+		for j := i + 1; j < len(items); j++ {
+			if items[i].CreatedAt.Before(items[j].CreatedAt) {
+				items[i], items[j] = items[j], items[i]
+			}
+		}
+	}
+	return items
+}
+
+func (s *MockStore) getCustomerAppointment(customerID, appointmentID string) (CustomerAppointment, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, a := range s.customerAppointments {
+		if a.ID == appointmentID && a.CustomerID == customerID {
+			return a, true
+		}
+	}
+	return CustomerAppointment{}, false
+}
+
+func (s *MockStore) cancelCustomerAppointment(customerID, appointmentID, reason string) error {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, a := range s.customerAppointments {
+		if a.ID == appointmentID && a.CustomerID == customerID {
+			if a.Status == AppointmentStatusCancelled || a.Status == AppointmentStatusCompleted {
+				return errAppointmentCancelled
+			}
+			if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
+				return errAppointmentStatusFlow
+			}
+			if !canCancelAppointment(a, now) {
+				return errAppointmentTimeTooLate
+			}
+			s.customerAppointments[i].Status = AppointmentStatusCancelled
+			s.customerAppointments[i].CancelledAt = &now
+			s.customerAppointments[i].CancelReason = reason
+			s.customerAppointments[i].UpdatedAt = now
+			if s.persistence != nil {
+				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			}
+			return nil
+		}
+	}
+	return errAppointmentNotFound
+}
+
+// --- 员工预约管理 ---
+
+func (s *MockStore) listStaffAppointments(user UserAccount) []CustomerAppointment {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var items []CustomerAppointment
+	for _, a := range s.customerAppointments {
+		if s.canAccessStore(user, a.StoreID) {
+			items = append(items, a)
+		}
+	}
+	return items
+}
+
+func (s *MockStore) staffGetAppointment(user UserAccount, appointmentID string) (CustomerAppointment, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, a := range s.customerAppointments {
+		if a.ID == appointmentID && s.canAccessStore(user, a.StoreID) {
+			return a, true
+		}
+	}
+	return CustomerAppointment{}, false
+}
+
+func (s *MockStore) staffUpdateAppointmentStatus(user UserAccount, appointmentID, newStatus string) error {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, a := range s.customerAppointments {
+		if a.ID == appointmentID && s.canAccessStore(user, a.StoreID) {
+			// 状态机校验
+			switch newStatus {
+			case AppointmentStatusConfirmed:
+				if a.Status != AppointmentStatusPending {
+					return errAppointmentStatusFlow
+				}
+				s.customerAppointments[i].Status = newStatus
+				s.customerAppointments[i].ConfirmedAt = &now
+				s.customerAppointments[i].ConfirmedBy = user.DisplayName
+			case AppointmentStatusArrived:
+				if a.Status != AppointmentStatusConfirmed && a.Status != AppointmentStatusPending {
+					return errAppointmentStatusFlow
+				}
+				s.customerAppointments[i].Status = newStatus
+			case AppointmentStatusCompleted:
+				if a.Status != AppointmentStatusArrived {
+					return errAppointmentStatusFlow
+				}
+				s.customerAppointments[i].Status = newStatus
+				s.customerAppointments[i].CompletedAt = &now
+			case AppointmentStatusNoShow:
+				if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
+					return errAppointmentStatusFlow
+				}
+				s.customerAppointments[i].Status = newStatus
+			case AppointmentStatusTerminated:
+				if a.Status == AppointmentStatusCompleted || a.Status == AppointmentStatusCancelled {
+					return errAppointmentStatusFlow
+				}
+				s.customerAppointments[i].Status = newStatus
+			default:
+				return errAppointmentStatusFlow
+			}
+			s.customerAppointments[i].UpdatedAt = now
+			if s.persistence != nil {
+				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			}
+			return nil
+		}
+	}
+	return errAppointmentNotFound
+}
+
+// --- 辅助函数 ---
+
+func defaultCustomerHomeConfig() CustomerHomeResponse {
+	return CustomerHomeResponse{
+		BrandName:    "金匠馆",
+		BrandSlogan1: "旧金换打新款",
+		BrandSlogan2: "包损耗",
+		Banners:      []CustomerBanner{},
+	}
+}
+
+func defaultCustomerRecycleInfo() CustomerRecycleInfo {
+	return CustomerRecycleInfo{
+		Title:   "黄金回收服务",
+		Content: "金匠馆专业黄金回收服务，旧金换打新款，包损耗。到店即可享受专业检测和公正估价。",
+		Process: "1. 到店咨询\n2. 黄金检测\n3. 确认价格\n4. 完成回收",
+		Notes:   "最终回收价格以门店线下检测为准。",
+	}
+}
+
+func nextSequenceFromCustomerAppointments(appointments []CustomerAppointment) int {
+	max := 0
+	for _, a := range appointments {
+		var seq int
+		fmt.Sscanf(a.ID, "appt-%d-", &seq)
+		if seq > max {
+			max = seq
+		}
+	}
+	return max
+}
+
+func generateID() string {
+	return fmt.Sprintf("%x", time.Now().UnixNano())
+}

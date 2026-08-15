@@ -1,0 +1,130 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-05
+-->
+
+<view class="page account-page" style="min-height:100vh;padding:24rpx 24rpx 56rpx;background:#ffffff;">
+  <view class="account-shell" style="width:100%;margin:0 auto;">
+    <view wx:if="{{!form.loggedIn}}" class="login-shell">
+      <view class="login-center">
+        <view class="sf-main-content">
+          <view class="login-brand-zone">
+            <view class="sf-brand-mark">
+              <image class="sf-brand-logo" src="/assets/brand/app-icon.png" mode="aspectFit" />
+            </view>
+            <view class="sf-brand-name">金匠倌收银系统</view>
+            <view class="sf-brand-slogan">老板 / 店长登录</view>
+          </view>
+
+          <view class="sf-login-panel">
+            <view class="account-form">
+              <view class="account-field">
+                <text class="account-label">账号</text>
+                <input class="account-input" placeholder="请输入账号" value="{{credentials.username}}" data-key="username" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="handleCredentialInput" />
+              </view>
+              <view class="account-field">
+                <text class="account-label">密码</text>
+                <input class="account-input" password placeholder="请输入密码" value="{{credentials.password}}" data-key="password" adjust-position="{{false}}" hold-keyboard="{{true}}" confirm-hold="{{true}}" bindinput="handleCredentialInput" />
+              </view>
+            </view>
+
+            <button
+              class="primary-btn account-main-btn account-action-btn"
+              loading="{{passwordSubmitting}}"
+              disabled="{{passwordSubmitting || !agreementAccepted}}"
+              bindtap="handlePasswordLogin"
+            >
+              <text>{{passwordButtonText}}</text>
+            </button>
+
+            <view class="sf-agreement-row" bindtap="toggleAgreement">
+              <view class="sf-check {{agreementAccepted ? 'checked' : ''}}">✓</view>
+              <view class="sf-agreement-copy">
+                <text>阅读并同意</text>
+                <text class="agreement-link" catchtap="openTerms">《用户协议》</text>
+                <text>和</text>
+                <text class="agreement-link" catchtap="openPrivacy">《隐私协议》</text>
+              </view>
+            </view>
+
+            <view wx:if="{{loginError}}" class="login-error">
+              <image class="notice-icon" src="/assets/ui/warning.png" mode="aspectFit" />
+              <text>{{loginError}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="sf-login-footer">
+          <view class="sf-help">
+            <view class="sf-help-title">首次登录请联系管理员分配账号</view>
+            <view class="sf-help-copy">使用管理员分配的后台账号和密码登录</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="signed-card" style="margin-top:22rpx;padding:30rpx;border:1rpx solid rgba(154,116,22,0.22);border-radius:24rpx;background:#fffef8;box-shadow:0 12rpx 30rpx rgba(51,51,51,0.055);">
+      <view class="signed-head" style="display:flex;align-items:center;">
+        <view class="operator-avatar" style="display:flex;align-items:center;justify-content:center;width:86rpx;height:86rpx;margin-right:20rpx;border-radius:22rpx;background:#333333;">
+          <text style="display:block;color:#fffef8;font-size:28rpx;font-weight:900;">{{form.role}}</text>
+        </view>
+        <view class="signed-copy" style="flex:1;min-width:0;">
+          <view class="operator-name" style="display:block;color:#333333;font-size:36rpx;font-weight:900;line-height:1.25;">{{form.name}}</view>
+          <view class="operator-meta" style="display:block;margin-top:8rpx;color:#6d6b60;font-size:25rpx;line-height:1.4;">已通过后台账号确认</view>
+        </view>
+        <view class="status-pill" style="display:block;padding:8rpx 16rpx;border-radius:999rpx;color:#0b6e23;font-size:24rpx;font-weight:900;background:rgba(11,110,35,0.12);">已登录</view>
+      </view>
+
+      <view class="identity-list" style="margin-top:28rpx;">
+        <view class="identity-row" style="display:flex;align-items:center;min-height:92rpx;padding:18rpx;border:1rpx solid rgba(154,116,22,0.14);border-radius:18rpx;background:#fdfbe7;">
+          <image class="identity-icon" src="/assets/ui/city.png" mode="aspectFit" style="width:34rpx;height:34rpx;margin-right:16rpx;" />
+          <view>
+            <view class="identity-label" style="display:block;color:#6d6b60;font-size:23rpx;font-weight:800;line-height:1.3;">门店</view>
+            <view class="identity-value" style="display:block;margin-top:6rpx;color:#333333;font-size:27rpx;font-weight:900;line-height:1.35;">{{form.storeName}}</view>
+          </view>
+        </view>
+        <view class="identity-row" style="display:flex;align-items:center;min-height:92rpx;margin-top:14rpx;padding:18rpx;border:1rpx solid rgba(154,116,22,0.14);border-radius:18rpx;background:#fdfbe7;">
+          <image class="identity-icon" src="/assets/ui/user.png" mode="aspectFit" style="width:34rpx;height:34rpx;margin-right:16rpx;" />
+          <view>
+            <view class="identity-label" style="display:block;color:#6d6b60;font-size:23rpx;font-weight:800;line-height:1.3;">身份</view>
+            <view class="identity-value" style="display:block;margin-top:6rpx;color:#333333;font-size:27rpx;font-weight:900;line-height:1.35;">{{form.role}} · {{form.shiftName}}</view>
+          </view>
+        </view>
+        <view class="identity-row" style="display:flex;align-items:center;min-height:92rpx;margin-top:14rpx;padding:18rpx;border:1rpx solid rgba(154,116,22,0.14);border-radius:18rpx;background:#fdfbe7;">
+          <image class="identity-icon" src="/assets/ui/shield.png" mode="aspectFit" style="width:34rpx;height:34rpx;margin-right:16rpx;" />
+          <view>
+            <view class="identity-label" style="display:block;color:#6d6b60;font-size:23rpx;font-weight:800;line-height:1.3;">权限</view>
+            <view class="identity-value" style="display:block;margin-top:6rpx;color:#333333;font-size:27rpx;font-weight:900;line-height:1.35;">按后台账号范围生效</view>
+          </view>
+        </view>
+      </view>
+
+      <button
+        class="primary-btn account-main-btn"
+        bindtap="goHome"
+        style="width:100%;height:90rpx;margin-top:30rpx;border:0;border-radius:16rpx;color:#ffffff;font-size:30rpx;font-weight:900;line-height:90rpx;background:#866e23;box-shadow:0 18rpx 34rpx rgba(134,110,35,0.18);"
+      >进入工作台</button>
+      <button class="secondary-btn account-secondary-btn" bindtap="logout" style="width:100%;height:86rpx;margin-top:18rpx;border:1rpx solid rgba(134,110,35,0.34);border-radius:16rpx;color:#866e23;font-size:29rpx;font-weight:900;line-height:86rpx;background:#fffef8;box-shadow:none;">退出登录</button>
+    </view>
+
+    <view wx:if="{{form.loggedIn && loginError}}" class="login-error" style="display:flex;align-items:flex-start;margin-top:18rpx;padding:20rpx 22rpx;border:1rpx solid rgba(242,85,85,0.22);border-radius:16rpx;background:rgba(242,85,85,0.08);color:#9f2929;font-size:26rpx;line-height:1.55;">
+      <image class="notice-icon" src="/assets/ui/warning.png" mode="aspectFit" style="width:30rpx;height:30rpx;margin-top:4rpx;margin-right:14rpx;" />
+      <text>{{loginError}}</text>
+    </view>
+
+    <view wx:if="{{form.loggedIn}}" class="agreement-card" style="width:100%;margin:28rpx auto 0;padding:14rpx 10rpx;color:#6d6b60;font-size:24rpx;line-height:1.8;text-align:center;">
+      <text class="agreement-copy">登录即表示已阅读并同意</text>
+      <text class="agreement-link" bindtap="openTerms" style="color:#866e23;font-weight:900;">《用户协议》</text>
+      <text class="agreement-copy">和</text>
+      <text class="agreement-link" bindtap="openPrivacy" style="color:#866e23;font-weight:900;">《隐私协议》</text>
+    </view>
+  </view>
+</view>

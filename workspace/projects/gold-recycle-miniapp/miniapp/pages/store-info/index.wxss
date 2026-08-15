@@ -1,0 +1,67 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.wxss
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-04
+ */
+
+.store-info-hero .hero-title {
+  font-size: 52.8rpx;
+}
+
+.profile-main-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280rpx;
+  height: 78rpx;
+  margin-top: 28rpx;
+  border: 0.8rpx solid var(--line);
+  border-radius: 12rpx;
+  color: #ffffff;
+  font-size: 28.6rpx;
+  font-weight: 900;
+  line-height: 78rpx;
+  background: #866e23;
+  background-color: #866e23;
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid var(--line);
+  font-size: 28.6rpx;
+  font-weight: 800;
+}
+
+.profile-row:last-child {
+  border-bottom: 0;
+}
+
+.profile-row text:last-child {
+  max-width: 430rpx;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.profile-row-app-name {
+  font-size: 26rpx;
+}
+
+.profile-row-address {
+  align-items: flex-start;
+}

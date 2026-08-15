@@ -1,0 +1,190 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.wxss
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-06
+ */
+
+.product-form-page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx calc(128rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+}
+
+.form-header {
+  padding: 6rpx 0 14rpx;
+}
+
+.form-title,
+.form-subtitle,
+.section-title-text,
+.section-chip {
+  display: block;
+}
+
+.form-title {
+  margin-top: 10rpx;
+  color: var(--ink);
+  font-size: 42rpx;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.form-subtitle {
+  margin-top: 8rpx;
+  color: var(--muted);
+  font-size: 25.3rpx;
+  line-height: 1.45;
+}
+
+.form-section {
+  margin-top: 18rpx;
+  padding: 24rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 18rpx;
+  background: #ffffff;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.section-title-text {
+  color: var(--ink);
+  font-size: 31.9rpx;
+  font-weight: 900;
+}
+
+.section-chip {
+  flex: 0 0 auto;
+  padding: 8rpx 14rpx;
+  border-radius: 8rpx;
+  color: var(--brand-deep);
+  font-size: 24.2rpx;
+  font-weight: 900;
+  background: rgba(212, 175, 55, 0.14);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18rpx;
+}
+
+.image-uploader {
+  display: flex;
+  align-items: stretch;
+  gap: 18rpx;
+}
+
+.image-preview-box {
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 176rpx;
+  height: 176rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 14rpx;
+  background: #fffef8;
+}
+
+.product-image-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.image-upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--brand-deep);
+  text-align: center;
+}
+
+.image-upload-mark,
+.image-upload-title,
+.image-upload-hint {
+  display: block;
+}
+
+.image-upload-mark {
+  font-size: 52.8rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.image-upload-title {
+  margin-top: 10rpx;
+  font-size: 24.2rpx;
+  font-weight: 900;
+}
+
+.image-upload-hint {
+  margin-top: 6rpx;
+  color: var(--muted);
+  font-size: 22rpx;
+}
+
+.product-form-actions {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16rpx;
+  padding: 18rpx 24rpx calc(18rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid rgba(246, 231, 161, 0.9);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.form-secondary-btn,
+.form-primary-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 152rpx;
+  height: 72rpx;
+  padding: 0 26rpx;
+  border-radius: 12rpx;
+  font-size: 27.5rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.form-secondary-btn {
+  color: var(--brand-deep);
+  border: 1rpx solid var(--line);
+  background: #ffffff;
+  background-color: #ffffff;
+}
+
+.form-primary-btn {
+  min-width: 220rpx;
+  color: #ffffff;
+  border: 1rpx solid var(--line);
+  background: #866e23;
+  background-color: #866e23;
+  box-shadow: 0 10rpx 24rpx rgba(134, 110, 35, 0.14);
+}
+
+@media (max-width: 360px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,343 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.wxss
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-05-11
+ */
+
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+
+.stats-pill {
+  padding: 24rpx 22rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 12rpx;
+  background: #fffef8;
+}
+
+.stats-value,
+.stats-label,
+.member-name,
+.member-phone,
+.detail-title,
+.status-tag,
+.detail-item text {
+  display: block;
+}
+
+.stats-value {
+  font-size: 44rpx;
+  font-weight: 900;
+}
+
+.stats-label {
+  margin-top: 10rpx;
+  color: var(--muted);
+  font-size: 24.2rpx;
+}
+
+.filter-row,
+.member-list,
+.chip-wall,
+.detail-grid {
+  display: grid;
+  gap: 16rpx;
+}
+
+.source-title,
+.source-detail,
+.source-error-title,
+.source-error-text {
+  display: block;
+}
+
+.source-card {
+  border: 1rpx solid rgba(234, 180, 66, 0.18);
+  background: linear-gradient(180deg, rgba(255, 251, 241, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.source-card.source-api {
+  border-color: rgba(24, 183, 123, 0.2);
+}
+
+.source-card.source-cache,
+.source-card.source-error {
+  border-color: rgba(255, 159, 28, 0.24);
+}
+
+.source-head {
+  align-items: flex-start;
+  gap: 18rpx;
+}
+
+.source-copy {
+  flex: 1;
+}
+
+.source-title {
+  font-size: 30.8rpx;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.source-detail {
+  margin-top: 10rpx;
+  color: var(--muted);
+  font-size: 26.4rpx;
+  line-height: 1.6;
+}
+
+.source-refresh-btn {
+  min-width: 132rpx;
+  height: 64rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  border: 0.8rpx solid var(--line);
+  border-radius: 999rpx;
+  font-size: 26.4rpx;
+  font-weight: 800;
+  line-height: 64rpx;
+  color: #ffffff;
+  background: #866e23;
+  background-color: #866e23;
+}
+
+.source-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.source-chip {
+  padding: 10rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 23.1rpx;
+  color: #5f4b16;
+  background: rgba(255, 206, 53, 0.14);
+}
+
+.source-chip-warn {
+  color: #8a4b00;
+  background: rgba(255, 159, 28, 0.16);
+}
+
+.source-error {
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 22rpx;
+  background: rgba(255, 159, 28, 0.08);
+}
+
+.source-error-title {
+  font-size: 24.2rpx;
+  font-weight: 800;
+  color: #8a4b00;
+}
+
+.source-error-text {
+  margin-top: 8rpx;
+  color: #6f7782;
+  font-size: 25.3rpx;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.filter-row {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 18rpx;
+}
+
+.compact-picker {
+  min-height: 82rpx;
+}
+
+.member-card {
+  color: var(--ink) !important;
+  background: var(--paper) !important;
+  background-color: var(--paper) !important;
+  text-align: left;
+}
+
+.member-card-active {
+  border-color: rgba(255, 206, 53, 0.42);
+  box-shadow: 0 18rpx 42rpx rgba(255, 159, 28, 0.12);
+}
+
+.member-name {
+  font-size: 35.2rpx;
+  font-weight: 900;
+}
+
+.member-phone {
+  margin-top: 10rpx;
+  color: var(--muted);
+  font-size: 26.4rpx;
+}
+
+.member-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 18rpx;
+  color: var(--muted);
+  font-size: 26.4rpx;
+}
+
+.chip-wall {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18rpx;
+}
+
+.mini-chip {
+  padding: 10rpx 14rpx;
+  border-radius: 999rpx;
+  color: var(--brand-deep);
+  font-size: 23.1rpx;
+  font-weight: 700;
+  text-align: center;
+  background: rgba(255, 206, 53, 0.16);
+}
+
+.detail-title {
+  font-size: 37.4rpx;
+  font-weight: 900;
+}
+
+.detail-grid {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 22rpx;
+}
+
+.detail-item {
+  padding: 24rpx;
+  border-radius: 24rpx;
+  background: #fffef8;
+}
+
+.detail-item text:last-child {
+  margin-top: 10rpx;
+  color: var(--ink);
+  font-size: 30.8rpx;
+  font-weight: 800;
+}
+
+.status-tag {
+  padding: 10rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 24.2rpx;
+  font-weight: 800;
+}
+
+.status-tag.active {
+  color: var(--accent);
+  background: rgba(24, 183, 123, 0.14);
+}
+
+.status-tag.follow_up {
+  color: var(--brand-deep);
+  background: rgba(255, 206, 53, 0.2);
+}
+
+.status-tag.sleeping {
+  color: #596274;
+  background: rgba(119, 125, 136, 0.14);
+}
+
+.empty-card {
+  text-align: center;
+}
+
+.empty-title {
+  display: block;
+  font-size: 35.2rpx;
+  font-weight: 900;
+}
+
+.filter-actions {
+  margin-top: 22rpx;
+}
+
+.compact-title {
+  margin-top: 24rpx;
+}
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 14rpx;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 20rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 14rpx;
+  background: #fffdf8;
+}
+
+.record-title,
+.record-desc,
+.record-side text {
+  display: block;
+}
+
+.record-title {
+  font-size: 28.6rpx;
+  font-weight: 900;
+}
+
+.record-desc {
+  margin-top: 8rpx;
+  color: var(--muted);
+  font-size: 25.3rpx;
+  line-height: 1.4;
+}
+
+.record-side {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.record-side text:first-child {
+  color: var(--brand-deep);
+  font-size: 27.5rpx;
+  font-weight: 900;
+}
+
+.record-side text:last-child {
+  margin-top: 8rpx;
+  color: var(--muted);
+  font-size: 23.1rpx;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.form-card {
+  margin-top: 18rpx;
+}
+
+@media (max-width: 360px) {
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
+}

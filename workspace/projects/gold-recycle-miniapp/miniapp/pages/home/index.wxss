@@ -1,0 +1,319 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.wxss
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-03
+ */
+
+.home-page {
+  padding-top: 22rpx;
+}
+
+.home-header,
+.workbench-head,
+.card-head,
+.price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-header {
+  gap: 18rpx;
+  margin-bottom: 18rpx;
+}
+
+.home-brand-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.home-brand-logo {
+  flex: 0 0 auto;
+  width: 84rpx;
+  height: 84rpx;
+  margin-right: 16rpx;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.home-brand-copy {
+  min-width: 0;
+}
+
+.home-title,
+.home-store,
+.workbench-title,
+.workbench-sub,
+.metric-value,
+.metric-label,
+.quick-name,
+.price-title,
+.price-desc,
+.board-price,
+.board-trend,
+.resource-value,
+.resource-label,
+.resource-desc {
+  display: block;
+}
+
+.home-title {
+  font-size: 46.2rpx;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.home-store {
+  margin-top: 6rpx;
+  font-size: 25.3rpx;
+  color: var(--muted);
+}
+
+.workbench-card {
+  margin-top: 0;
+  border-color: #f6e7a1;
+  background: #fffef8;
+}
+
+.workbench-title {
+  font-size: 35.2rpx;
+  font-weight: 900;
+}
+
+.workbench-sub {
+  margin-top: 6rpx;
+  color: var(--muted);
+  font-size: 25.3rpx;
+}
+
+.workbench-chip,
+.card-count {
+  padding: 8rpx 14rpx;
+  border-radius: 8rpx;
+  color: var(--brand-deep);
+  font-size: 24.2rpx;
+  font-weight: 900;
+  background: rgba(212, 175, 55, 0.14);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 22rpx;
+}
+
+.metric-card {
+  min-width: 0;
+  padding: 20rpx 14rpx;
+  border-radius: 12rpx;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1rpx var(--line);
+}
+
+.metric-value {
+  font-size: 33rpx;
+  font-weight: 900;
+}
+
+.metric-label {
+  margin-top: 8rpx;
+  color: var(--muted);
+  font-size: 23.1rpx;
+}
+
+.main-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 21rpx;
+  width: 80%;
+  margin: 22rpx auto 0;
+}
+
+.main-actions .primary-btn,
+.main-actions .ghost-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 33rpx;
+  font-weight: 900;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 146rpx;
+  padding: 16rpx 10rpx;
+  border-radius: 12rpx;
+  background: #fffef8;
+  box-shadow: inset 0 0 0 1rpx #f6e7a1;
+}
+
+.quick-icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 62rpx;
+  height: 62rpx;
+  border-radius: 10rpx;
+  background: rgba(212, 175, 55, 0.14);
+}
+
+.quick-icon {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.quick-name {
+  margin-top: 12rpx;
+  color: var(--ink);
+  font-size: 25.3rpx;
+  font-weight: 900;
+  text-align: center;
+}
+
+.price-board {
+  padding-bottom: 8rpx;
+}
+
+.price-row {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.price-row:last-child {
+  border-bottom: 0;
+}
+
+.price-title {
+  font-size: 29.7rpx;
+  font-weight: 900;
+}
+
+.price-desc {
+  margin-top: 6rpx;
+  color: var(--muted);
+  font-size: 23.1rpx;
+}
+
+.price-side {
+  text-align: right;
+}
+
+.board-price {
+  color: var(--ink);
+  font-size: 33rpx;
+  font-weight: 900;
+}
+
+.board-trend {
+  margin-top: 6rpx;
+  color: var(--green);
+  font-size: 23.1rpx;
+  font-weight: 900;
+}
+
+.resource-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.resource-card {
+  padding: 24rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 16rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 22rpx rgba(28, 24, 16, 0.05);
+}
+
+.resource-value {
+  font-size: 41.8rpx;
+  font-weight: 900;
+}
+
+.resource-label {
+  margin-top: 8rpx;
+  font-size: 26.4rpx;
+  font-weight: 900;
+}
+
+.resource-desc {
+  margin-top: 6rpx;
+  color: var(--muted);
+  font-size: 24.2rpx;
+}
+
+.store-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.store-report-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 20rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 14rpx;
+  background: #fffdf8;
+}
+
+.store-report-name,
+.store-report-desc,
+.store-report-amount,
+.store-report-empty {
+  display: block;
+}
+
+.store-report-name {
+  font-size: 28.6rpx;
+  font-weight: 900;
+}
+
+.store-report-desc {
+  margin-top: 8rpx;
+  color: var(--muted);
+  font-size: 24.2rpx;
+}
+
+.store-report-amount {
+  flex-shrink: 0;
+  color: var(--brand-deep);
+  font-size: 30.8rpx;
+  font-weight: 900;
+}
+
+.store-report-empty {
+  margin-top: 18rpx;
+  padding: 24rpx;
+  border-radius: 14rpx;
+  color: var(--muted);
+  text-align: center;
+  background: #fffdf8;
+}

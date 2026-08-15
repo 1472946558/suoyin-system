@@ -1,0 +1,215 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-05-10
+-->
+
+<view class="page">
+  <view wx:if="{{loading}}" class="card empty-card">
+    <text class="empty-title">正在加载订单详情</text>
+    <text class="muted">请稍候，系统正在整理当前业务单据。</text>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="card empty-card">
+    <text class="empty-title">暂无可确认内容</text>
+    <text class="muted">{{errorText}}</text>
+    <button class="primary-btn" bindtap="editCashier">去收银页</button>
+  </view>
+
+  <view wx:else>
+    <view class="dark-hero detail-hero">
+      <text class="eyebrow">{{isDraft ? 'CONFIRM DRAFT' : (detailType === 'cashier' ? 'CASHIER ORDER' : 'RECYCLE ORDER')}}</text>
+      <text class="hero-title">{{isDraft ? '回收确认' : (detailType === 'cashier' ? '收银单详情' : statusText)}}</text>
+      <text class="hero-subtitle">{{heroSubtitle}}</text>
+      <view class="hero-tags">
+        <text class="hero-tag">{{record.storeName || '待绑定门店'}}</text>
+        <text class="hero-tag">{{record.operatorName || record.createdBy || '待填写操作员'}}</text>
+      </view>
+      <button wx:if="{{!isDraft}}" class="hero-copy-btn" bindtap="copyOrderNo">复制单号</button>
+    </view>
+
+    <view class="stats-grid">
+      <view class="stats-card">
+        <text class="stats-value">{{detailType === 'cashier' ? (record.itemCount || 0) : (quote.netWeightText + 'g')}}</text>
+        <text class="stats-label">{{detailType === 'cashier' ? '商品件数' : '净重'}}</text>
+      </view>
+      <view class="stats-card">
+        <text class="stats-value">¥{{quote.amountText}}</text>
+        <text class="stats-label">{{detailType === 'cashier' ? '成交金额' : '应结算'}}</text>
+      </view>
+      <view class="stats-card">
+        <text class="stats-value">{{detailType === 'cashier' ? statusText : photoValidation.count}}</text>
+        <text class="stats-label">{{detailType === 'cashier' ? '单据状态' : '现场照片'}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-line">
+        <text class="block-title">客户与收银</text>
+        <text class="status-pill {{isDraft ? 'pending' : 'done'}}">{{statusText}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">客户姓名</text>
+        <text>{{record.customerName || '未填写'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">手机号</text>
+        <text>{{record.customerPhone || '未填写'}}</text>
+      </view>
+      <view wx:if="{{detailType === 'cashier'}}" class="info-row">
+        <text class="info-label">业务类型</text>
+        <text>门店收银</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">操作员</text>
+        <text>{{record.operatorName || '未填写'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">门店</text>
+        <text>{{record.storeName || '未填写'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">单据时间</text>
+        <text>{{record.createdAt || record.updatedAt || '刚刚保存'}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{detailType === 'recycle'}}" class="card">
+      <text class="block-title">回收明细</text>
+      <view class="info-row">
+        <text class="info-label">品类 / 品名</text>
+        <text>{{record.itemCategory}} · {{record.itemName}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">成色</text>
+        <text>{{record.purity}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">毛重</text>
+        <text>{{quote.grossWeightText}}g</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">扣减</text>
+        <text>{{quote.deductionWeightText}}g</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">净重</text>
+        <text>{{quote.netWeightText}}g</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">回收单价</text>
+        <text>¥{{quote.recyclePriceText}}/g</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">备注</text>
+        <text>{{record.remark || '无'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">现场照片</text>
+        <text>{{photoValidation.count}} 张</text>
+      </view>
+      <view class="photo-note">
+        <text>{{photoValidation.message}}</text>
+      </view>
+      <view class="photo-grid">
+        <view class="photo-chip" wx:for="{{record.photos}}" wx:key="id">
+          <image wx:if="{{item.path}}" class="photo-thumb" src="{{item.path}}" mode="aspectFill" bindtap="previewPhoto" data-url="{{item.path}}" />
+          <text class="photo-name">{{item.name}}</text>
+          <text class="muted">{{item.path ? '点按可预览' : '已留存'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:elif="{{detailType === 'cashier'}}" class="card">
+      <text class="block-title">商品明细</text>
+      <view class="info-row">
+        <text class="info-label">订单编号</text>
+        <text>{{record.orderNo || record.id}}</text>
+      </view>
+      <view class="goods-list">
+        <view class="goods-item" wx:for="{{record.items}}" wx:key="name">
+          <view>
+            <text class="goods-name">{{item.name}}</text>
+            <text wx:if="{{item.sku}}" class="goods-code">编码 {{item.sku}}</text>
+            <text class="goods-meta">数量 {{item.quantity}} · 单价 ¥{{item.unitPrice}}</text>
+          </view>
+          <text class="goods-amount">¥{{item.amount}}</text>
+        </view>
+      </view>
+      <view class="info-row">
+        <text class="info-label">备注</text>
+        <text>{{record.remark || '无'}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="block-title">确认检查</text>
+      <view class="check-list">
+        <view class="check-item" wx:for="{{complianceItems}}" wx:key="title">
+          <text class="check-dot {{item.status}}"></text>
+          <view class="check-copy">
+            <text class="check-title">{{item.title}}</text>
+            <text class="check-desc">{{item.text}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="price-box">
+      <view>
+        <text class="price-label">{{detailType === 'cashier' ? 'ORDER AMOUNT' : 'SETTLE AMOUNT'}}</text>
+        <text class="price">¥{{quote.amountText}}</text>
+      </view>
+      <view class="price-side">
+        <text wx:if="{{detailType === 'cashier'}}">订单状态 {{statusText}}</text>
+        <text wx:else>货值 ¥{{quote.subtotalText}}</text>
+        <text wx:if="{{detailType === 'recycle'}}">服务费 ¥{{quote.serviceFeeText}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="block-title">处理轨迹</text>
+      <view class="timeline">
+        <view class="timeline-item" wx:for="{{timelineItems}}" wx:key="label">
+          <text class="timeline-label">{{item.label}}</text>
+          <text class="timeline-value">{{item.value}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{isDraft}}" class="action-grid">
+      <button class="ghost-btn" bindtap="editEntry">返回录单修改</button>
+      <button class="primary-btn" bindtap="confirmDraft">确认并正式留档</button>
+    </view>
+
+    <view wx:else class="action-grid">
+      <button class="ghost-btn" bindtap="goOrders">返回订单列表</button>
+      <button class="primary-btn" bindtap="startNew">再开一单</button>
+      <button class="primary-btn" loading="{{printing}}" disabled="{{printing}}" bindtap="printReceipt">打印小票</button>
+      <button class="ghost-btn" loading="{{printing}}" disabled="{{printing}}" bindtap="printLabel">打印标签</button>
+    </view>
+
+    <view wx:if="{{!isDraft}}" class="print-reset-row">
+      <button class="text-btn print-reset-btn" bindtap="resetPrinter">重选蓝牙打印机</button>
+    </view>
+
+    <view wx:if="{{!isDraft && printPreviewText}}" class="card print-preview-card">
+      <view class="section-line">
+        <text class="block-title">{{printPreviewTitle}}</text>
+        <text class="status-pill done">{{printProtocol || '蓝牙打印'}}</text>
+      </view>
+      <view class="print-preview-box">
+        <text>{{printPreviewText}}</text>
+      </view>
+      <text class="print-status">{{printStatusText}}</text>
+      <button class="primary-btn full-print-btn" loading="{{printing}}" disabled="{{printing}}" bindtap="sendPrintTask">发送打印任务</button>
+    </view>
+  </view>
+</view>

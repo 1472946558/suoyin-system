@@ -1,0 +1,11 @@
+<!--
+  文件名: index.wxml
+  功能描述: 我的（Tab 4 占位 - 子阶段 3 完善）
+-->
+<view class="page placeholder-page">
+  <view class="placeholder-card">
+    <text class="placeholder-icon">👤</text>
+    <text class="placeholder-title">我的</text>
+    <text class="placeholder-sub">子阶段 3 开发中</text>
+  </view>
+</view>

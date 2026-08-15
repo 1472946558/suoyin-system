@@ -1,0 +1,130 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-06-05
+-->
+
+<view class="page home-page">
+  <view class="home-header">
+    <view class="home-brand-row">
+      <image class="home-brand-logo" src="/assets/brand/app-icon.png" mode="aspectFit" />
+      <view class="home-brand-copy">
+        <text class="home-title">金匠倌收银</text>
+        <text class="home-store">{{homeStoreText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card workbench-card">
+    <view class="workbench-head">
+      <view>
+        <text class="workbench-title">今日工作台</text>
+        <text class="workbench-sub">{{profile.loggedIn ? profile.role : '请先登录门店账号'}}</text>
+      </view>
+      <text class="workbench-chip">{{profile.loggedIn ? (draftReady ? '有草稿' : '正常营业') : '未登录'}}</text>
+    </view>
+
+    <view wx:if="{{profile.loggedIn}}" class="metric-grid">
+      <view class="metric-card">
+        <text class="metric-value">¥{{stats.todayCashierAmount}}</text>
+        <text class="metric-label">今日收银</text>
+      </view>
+      <view class="metric-card">
+        <text class="metric-value">¥{{stats.todayRecycleAmount}}</text>
+        <text class="metric-label">今日回收</text>
+      </view>
+      <view class="metric-card">
+        <text class="metric-value">{{stats.todayCount}}</text>
+        <text class="metric-label">今日订单</text>
+      </view>
+      <view class="metric-card">
+        <text class="metric-value">{{stats.visibleStoreCount}}</text>
+        <text class="metric-label">{{stats.scopeText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{profile.loggedIn}}" class="main-actions">
+      <button class="primary-btn" bindtap="goAction" data-type="tab" data-url="/pages/order/index">开始收银</button>
+      <button class="ghost-btn" bindtap="goAction" data-type="tab" data-url="/pages/track/index">回收录单</button>
+    </view>
+    <view wx:else class="main-actions">
+      <button class="primary-btn" bindtap="goLogin">手机号快捷登录</button>
+    </view>
+  </view>
+
+  <view wx:if="{{profile.loggedIn}}" class="card quick-card">
+    <view class="card-head">
+      <text class="card-title">常用功能</text>
+      <text class="card-count">{{quickActions.length}} 项</text>
+    </view>
+    <view class="quick-grid">
+      <view class="quick-item" wx:for="{{quickActions}}" wx:key="title" bindtap="goAction" data-type="{{item.type}}" data-url="{{item.url}}">
+        <view class="quick-icon-wrap">
+          <image class="quick-icon" src="{{item.icon}}" mode="aspectFit" />
+        </view>
+        <text class="quick-name">{{item.title}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{profile.loggedIn && !quickActions.length}}" class="card empty-card">
+    <text class="empty-title">暂无可操作入口</text>
+    <text class="muted">请切换门店账号。</text>
+  </view>
+
+  <view wx:if="{{profile.loggedIn}}" class="card price-board">
+    <view class="card-head">
+      <text class="card-title">门店参考价</text>
+      <text class="card-count">参考元/g</text>
+    </view>
+    <view class="price-row" wx:for="{{prices}}" wx:key="purity">
+      <view>
+        <text class="price-title">{{item.purity}}</text>
+        <text class="price-desc">{{item.label}}</text>
+      </view>
+      <view class="price-side">
+        <text class="board-price">¥{{item.priceText}}</text>
+        <text class="board-trend">{{item.trend}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{profile.loggedIn}}" class="resource-grid">
+    <view class="resource-card">
+      <text class="resource-value">{{resourceStats.members}}</text>
+      <text class="resource-label">会员</text>
+      <text class="resource-desc">VIP {{resourceStats.vipMembers}}</text>
+    </view>
+    <view class="resource-card">
+      <text class="resource-value">{{resourceStats.products}}</text>
+      <text class="resource-label">商品模板</text>
+      <text class="resource-desc">上架 {{resourceStats.activeProducts}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{profile.loggedIn}}" class="card report-card">
+    <view class="card-head">
+      <text class="card-title">门店统计</text>
+      <text class="card-count">{{stats.scopeText}}</text>
+    </view>
+    <view wx:if="{{stats.storeBreakdown.length}}" class="store-report-list">
+      <view class="store-report-row" wx:for="{{stats.storeBreakdown}}" wx:key="storeName">
+        <view>
+          <text class="store-report-name">{{item.storeName}}</text>
+          <text class="store-report-desc">{{item.orderCount}} 笔订单</text>
+        </view>
+        <text class="store-report-amount">¥{{item.amountText}}</text>
+      </view>
+    </view>
+    <view wx:else class="store-report-empty">
+      <text>暂无订单统计</text>
+    </view>
+  </view>
+</view>

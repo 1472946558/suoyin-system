@@ -1,0 +1,152 @@
+<!--
+ Copyright (c) 2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: index.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2026-07-03
+-->
+
+<view class="page">
+  <view class="dark-hero">
+    <text class="eyebrow">旧料管理</text>
+    <text class="hero-title">旧料、余料、抵押寄存</text>
+    <text class="hero-subtitle">回收单自动汇总旧料，也可登记余料和抵押寄存。</text>
+    <view class="stats-strip">
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.todayWeightText}}g</text>
+        <text class="stats-label">今日旧料</text>
+        <text class="stats-money">¥{{stats.todayAmountText}}</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.monthWeightText}}g</text>
+        <text class="stats-label">月度旧料</text>
+        <text class="stats-money">¥{{stats.monthAmountText}}</text>
+      </view>
+    </view>
+    <view class="stats-strip sub-strip">
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.remainingWeightText}}g</text>
+        <text class="stats-label">余料在库</text>
+      </view>
+      <view class="stats-pill">
+        <text class="stats-value">{{stats.pledgeCount}}</text>
+        <text class="stats-label">抵押寄存</text>
+        <text class="stats-money">¥{{stats.pledgeAmountText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-head">
+      <text class="card-title">登记台账</text>
+      <text class="muted">{{typeLabels[typeIndex]}}</text>
+    </view>
+    <view class="field">
+      <text class="label">类型</text>
+      <picker mode="selector" range="{{typeLabels}}" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="picker-box">{{typeLabels[typeIndex]}}</view>
+      </picker>
+    </view>
+    <view class="form-grid">
+      <view class="field">
+        <text class="label">客户</text>
+        <input class="input" placeholder="可留空" value="{{form.customerName}}" data-key="customerName" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">门店</text>
+        <input class="input" value="{{form.storeName}}" data-key="storeName" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">品类</text>
+        <input class="input" value="{{form.category}}" data-key="category" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">成色</text>
+        <input class="input" value="{{form.purity}}" data-key="purity" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">重量(g)</text>
+        <input class="input" type="digit" value="{{form.weightGram}}" data-key="weightGram" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">金额</text>
+        <input class="input" type="digit" value="{{form.amount}}" data-key="amount" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">剩余重量(g)</text>
+        <input class="input" type="digit" value="{{form.remainingWeightGram}}" data-key="remainingWeightGram" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="label">状态</text>
+        <input class="input" value="{{form.status}}" data-key="status" bindinput="onInput" />
+      </view>
+    </view>
+    <view class="field">
+      <text class="label">备注</text>
+      <input class="input" placeholder="抵押到期日、处理说明等" value="{{form.remark}}" data-key="remark" bindinput="onInput" />
+    </view>
+    <button class="primary-btn" bindtap="saveEntry">登记</button>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>成色重量金额</text>
+      <text class="section-kicker">按成色汇总旧料和寄存</text>
+    </view>
+  </view>
+  <view class="purity-list">
+    <view class="card purity-card" wx:for="{{purityStats}}" wx:key="purity">
+      <view>
+        <text class="record-title">{{item.purity}}</text>
+        <text class="record-sub">{{item.count}} 条 · {{item.weightText}}g</text>
+      </view>
+      <text class="amount-text">¥{{item.amountText}}</text>
+    </view>
+  </view>
+
+  <view class="section-title">
+    <view>
+      <text>旧料台账</text>
+      <text class="section-kicker">{{loading ? '加载中...' : filteredRows.length + ' 条记录'}}</text>
+    </view>
+  </view>
+  <view class="card">
+    <view class="field">
+      <text class="label">搜索</text>
+      <input class="input" placeholder="单号 / 客户 / 品类 / 成色" value="{{keyword}}" bindinput="onKeywordInput" />
+    </view>
+  </view>
+
+  <view wx:if="{{filteredRows.length}}" class="record-list">
+    <view class="card record-card" wx:for="{{filteredRows}}" wx:key="id">
+      <view class="record-head">
+        <view>
+          <text class="record-title">{{item.orderNo}}</text>
+          <text class="record-sub">{{item.typeText}} · {{item.createdAt}}</text>
+        </view>
+        <text class="status-tag">{{item.status}}</text>
+      </view>
+      <view class="detail-grid">
+        <view class="detail-item"><text class="muted">客户</text><text>{{item.customerName}}</text></view>
+        <view class="detail-item"><text class="muted">门店</text><text>{{item.storeName}}</text></view>
+        <view class="detail-item"><text class="muted">成色</text><text>{{item.purity}}</text></view>
+        <view class="detail-item"><text class="muted">重量</text><text>{{item.weightText}}</text></view>
+        <view class="detail-item"><text class="muted">金额</text><text>¥{{item.amountText}}</text></view>
+        <view class="detail-item"><text class="muted">余料</text><text>{{item.remainingText}}</text></view>
+      </view>
+      <view class="record-foot">
+        <text>{{item.category}} · {{item.source}}</text>
+        <button wx:if="{{item.canDelete}}" class="text-btn" data-id="{{item.id}}" bindtap="deleteEntry">删除</button>
+      </view>
+    </view>
+  </view>
+  <view wx:else class="card empty-card">
+    <text class="empty-title">暂无旧料台账</text>
+    <text class="muted">可以先从回收录单生成，或手动登记抵押寄存。</text>
+  </view>
+</view>

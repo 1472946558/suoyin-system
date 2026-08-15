@@ -1,0 +1,355 @@
+/*
+ * Copyright (c) 2026 北京纵横时空科技有限责任公司
+ *
+ * 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ * 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ * 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+ *
+ * 文件名: index.wxss
+ * 功能描述: 页面模块
+ * 作者: 廖心慈
+ * 创建日期: 2026-06-03
+ */
+
+.page-header,
+.section-head,
+.cashier-item-footer,
+.summary-card,
+.summary-side {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-header {
+  margin-bottom: 16rpx;
+}
+
+.page-title,
+.page-sub,
+.block-title,
+.section-note,
+.summary-label,
+.summary-amount,
+.summary-side text,
+.item-amount {
+  display: block;
+}
+
+.page-title {
+  font-size: 44rpx;
+  font-weight: 900;
+}
+
+.page-sub {
+  margin-top: 6rpx;
+  color: var(--muted);
+  font-size: 25.3rpx;
+}
+
+.header-badge,
+.section-note {
+  padding: 8rpx 14rpx;
+  border-radius: 8rpx;
+  color: var(--brand-deep);
+  font-size: 24.2rpx;
+  font-weight: 900;
+  background: rgba(212, 175, 55, 0.14);
+}
+
+.step-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 18rpx;
+  padding: 18rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 16rpx;
+  background: #ffffff;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  color: var(--muted);
+  font-size: 24.2rpx;
+  font-weight: 900;
+}
+
+.step-item text:first-child {
+  display: grid;
+  place-items: center;
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #c7c7c7;
+}
+
+.step-item.active {
+  color: var(--brand-deep);
+}
+
+.step-item.active text:first-child {
+  color: var(--ink);
+  background: var(--brand);
+}
+
+.step-line {
+  height: 2rpx;
+  background: var(--line);
+}
+
+.block-title {
+  font-size: 33rpx;
+  font-weight: 900;
+}
+
+.two-col,
+.cashier-inline-grid,
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14rpx;
+}
+
+.compact-field {
+  min-width: 0;
+}
+
+.sku-input-row {
+  display: flex;
+  gap: 12rpx;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.sku-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cashier-items-card {
+  overflow: visible;
+}
+
+.sku-query-btn {
+  display: flex;
+  flex: 0 0 132rpx;
+  align-items: center;
+  justify-content: center;
+  width: 132rpx;
+  min-width: 0;
+  height: 82rpx;
+  padding: 0;
+  border: 0.8rpx solid var(--line);
+  border-radius: 14rpx;
+  color: #ffffff;
+  font-size: 25.3rpx;
+  font-weight: 900;
+  line-height: 1;
+  background: #866e23;
+  background-color: #866e23;
+}
+
+.sku-dropdown {
+  margin-top: 12rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.32);
+  border-radius: 16rpx;
+  background: #fffef8;
+  box-shadow: 0 12rpx 26rpx rgba(51, 51, 51, 0.08);
+  overflow: hidden;
+}
+
+.sku-dropdown-list {
+  display: grid;
+  gap: 0;
+}
+
+.sku-dropdown-item {
+  display: grid;
+  gap: 8rpx;
+  padding: 18rpx 20rpx;
+  border-top: 1rpx solid rgba(246, 231, 161, 0.72);
+}
+
+.sku-dropdown-item:first-child {
+  border-top: 0;
+}
+
+.sku-dropdown-copy,
+.sku-dropdown-meta {
+  display: block;
+  min-width: 0;
+}
+
+.sku-dropdown-sku,
+.sku-dropdown-name {
+  display: inline;
+}
+
+.sku-dropdown-sku {
+  color: var(--brand-deep);
+  font-size: 26.4rpx;
+  font-weight: 900;
+}
+
+.sku-dropdown-name {
+  margin-left: 10rpx;
+  color: var(--ink);
+  font-size: 26.4rpx;
+  font-weight: 700;
+}
+
+.sku-dropdown-meta {
+  color: var(--muted);
+  font-size: 23.1rpx;
+  line-height: 1.5;
+}
+
+.sku-dropdown-empty {
+  padding: 20rpx;
+  color: var(--muted);
+  font-size: 24.2rpx;
+  text-align: center;
+}
+
+.store-dropdown {
+  margin-top: 12rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.32);
+  border-radius: 16rpx;
+  background: #fffef8;
+  box-shadow: 0 12rpx 26rpx rgba(51, 51, 51, 0.08);
+  overflow: hidden;
+}
+
+.store-dropdown-list {
+  display: grid;
+  gap: 0;
+}
+
+.store-dropdown-item {
+  display: grid;
+  gap: 8rpx;
+  padding: 18rpx 20rpx;
+  border-top: 1rpx solid rgba(246, 231, 161, 0.72);
+}
+
+.store-dropdown-item:first-child {
+  border-top: 0;
+}
+
+.store-dropdown-name,
+.store-dropdown-meta {
+  display: block;
+}
+
+.store-dropdown-name {
+  color: var(--ink);
+  font-size: 26.4rpx;
+  font-weight: 800;
+}
+
+.store-dropdown-meta {
+  color: var(--muted);
+  font-size: 23.1rpx;
+  line-height: 1.5;
+}
+
+.store-dropdown-empty {
+  padding: 20rpx;
+  color: var(--muted);
+  font-size: 24.2rpx;
+  text-align: center;
+}
+
+.product-hint {
+  display: block;
+  margin-top: 10rpx;
+  padding: 12rpx 14rpx;
+  border-radius: 10rpx;
+  color: var(--accent);
+  font-size: 24.2rpx;
+  line-height: 1.45;
+  background: rgba(11, 110, 35, 0.08);
+}
+
+.product-hint.ok {
+  color: var(--accent);
+  background: rgba(11, 110, 35, 0.08);
+}
+
+.product-hint.warn {
+  color: #b45309;
+  background: rgba(180, 83, 9, 0.08);
+}
+
+.cashier-item {
+  padding: 20rpx 0;
+  border-top: 1rpx solid var(--line);
+}
+
+.cashier-item:first-of-type {
+  border-top: 0;
+  padding-top: 4rpx;
+}
+
+.cashier-item-footer {
+  margin-top: 12rpx;
+}
+
+.item-amount {
+  color: var(--ink);
+  font-size: 26.4rpx;
+  font-weight: 900;
+}
+
+.remove-item-btn {
+  min-width: 92rpx;
+  height: 56rpx;
+  margin: 0;
+  padding: 0 18rpx;
+  border: 0.8rpx solid var(--line);
+  border-radius: 10rpx;
+  color: #ffffff;
+  font-size: 26.4rpx;
+  font-weight: 900;
+  line-height: 56rpx;
+  background: #866e23;
+  background-color: #866e23;
+}
+
+.summary-card {
+  margin: 18rpx 0;
+  padding: 24rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.3);
+  border-radius: 16rpx;
+  background: #fffef8;
+}
+
+.summary-label {
+  color: var(--muted);
+  font-size: 25.3rpx;
+}
+
+.summary-amount {
+  margin-top: 8rpx;
+  color: var(--ink);
+  font-size: 52.8rpx;
+  font-weight: 900;
+}
+
+.summary-side {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+  color: var(--muted);
+  font-size: 25.3rpx;
+}
+
+.full-btn {
+  margin-top: 14rpx;
+}

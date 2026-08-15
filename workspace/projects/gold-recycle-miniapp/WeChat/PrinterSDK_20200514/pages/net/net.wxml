@@ -1,0 +1,42 @@
+<!--
+ Copyright (c) 2020-2026 北京纵横时空科技有限责任公司
+
+ 本软件（包含源代码、可执行文件及所有相关文档）受中华人民共和国著作权法
+ 及其他知识产权相关法律保护。未经北京纵横时空科技有限责任公司事先书面授权，
+ 任何单位或个人不得以任何形式复制、修改、分发、出租、反编译本软件或其任何部分。
+
+ 文件名: net.wxml
+ 功能描述: 页面模块
+ 作者: 廖心慈
+ 创建日期: 2020-04-30
+-->
+
+<!--blecontrol.wxml-->
+<view class="body">
+
+
+  <view style='margin:4%;display: flex;flex-direction: row;'>
+    <text class="text">名称：</text>
+    <view class="pwd" style='margin:4%;display: flex;flex-direction: row;'>
+      <input class="pwdinput" bindinput="ssid" value="{{ssid}}" placeholder="请输入SSID" />
+      <image bindtap="clear" src='../../imags/ic_close.png' class='imageStyle'></image>
+    </view>
+  </view>
+
+  <view style='margin:4%;display: flex;flex-direction: row;'>
+    <text class="text">密码：</text>
+    <view class="pwd" style='margin:4%;display: flex;flex-direction: row;'>
+      <input class="pwdinput" password='{{passwordType}}' bindinput="password" value="{{password}}" />
+      <image src='{{defaultType? "../../imags/ic_unvisiable.png": "../../imags/ic_visiable.png"}}' class='imageStyle' bindtap='eyeStatus'></image>
+    </view>
+  </view>
+
+  <button class='button'  hover-class="hover" bindtap="settiing">设置</button>
+
+  <view style='margin-top:4%;display: flex;flex-direction: row;'>
+
+    <button hidden="true" type='primary' bindtap='receiptTest' loading='{{isReceiptSend}}' disabled='{{isReceiptSend}}'>打印自检页</button>
+
+  </view>
+
+</view>

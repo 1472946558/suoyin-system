@@ -1,0 +1,74 @@
+services:
+  backend:
+    environment:
+      APP_MODE: persistent
+      WECHAT_MINIAPP_APP_ID: ${WECHAT_MINIAPP_APP_ID:-}
+      WECHAT_MINIAPP_APP_SECRET: ${WECHAT_MINIAPP_APP_SECRET:-}
+      WECHAT_API_BASE_URL: ${WECHAT_API_BASE_URL:-https://api.weixin.qq.com}
+      MINIAPP_ALLOW_MOCK_LOGIN: ${MINIAPP_ALLOW_MOCK_LOGIN:-false}
+      STORAGE_ENABLED: ${STORAGE_ENABLED:-}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+      STORAGE_REGION: ${STORAGE_REGION:-}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
+      STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-}
+      STORAGE_PATH_PREFIX: ${STORAGE_PATH_PREFIX:-}
+      STORAGE_UPLOAD_STRATEGY: ${STORAGE_UPLOAD_STRATEGY:-}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
+      STORAGE_ACCESS_KEY_SECRET: ${STORAGE_ACCESS_KEY_SECRET:-}
+      STORAGE_UPLOAD_URL_TTL_SECONDS: ${STORAGE_UPLOAD_URL_TTL_SECONDS:-1800}
+      STORAGE_CALLBACK_ENABLED: ${STORAGE_CALLBACK_ENABLED:-}
+      STORAGE_STATUS_DESCRIPTION: ${STORAGE_STATUS_DESCRIPTION:-}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-miniapp_prod}
+      MYSQL_USER: ${MYSQL_USER:-miniapp_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+      MYSQL_CHARSET: ${MYSQL_CHARSET:-utf8mb4}
+      REDIS_ADDR: redis:6379
+      REDIS_USER: ${REDIS_USER:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me}
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-miniapp:}
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-miniapp_prod}
+      MYSQL_USER: ${MYSQL_USER:-miniapp_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+    command:
+      - --character-set-server=${MYSQL_CHARSET:-utf8mb4}
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["/bin/sh", "-c", "redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  mysql_data:
+  redis_data:

@@ -1,0 +1,11 @@
+<!--
+  文件名: index.wxml
+  功能描述: 款式列表（Tab 2 占位 - 子阶段 2 完善）
+-->
+<view class="page placeholder-page">
+  <view class="placeholder-card">
+    <text class="placeholder-icon">💍</text>
+    <text class="placeholder-title">款式列表</text>
+    <text class="placeholder-sub">子阶段 2 开发中</text>
+  </view>
+</view>

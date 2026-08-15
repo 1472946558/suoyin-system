@@ -1,0 +1,32 @@
+# Dependencies
+admin/node_modules/
+backend/vendor/
+
+# Build artifacts
+release/
+output/
+*.gz
+*.sha256
+
+# Runtime / logs
+*.log
+*.pid
+08_go_live/
+
+# Agent workspace
+.workbuddy/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example

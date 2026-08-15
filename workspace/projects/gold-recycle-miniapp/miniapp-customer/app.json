@@ -1,0 +1,71 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/products/index",
+    "pages/stores/index",
+    "pages/mine/index"
+  ],
+  "subpackages": [
+    {
+      "root": "pkg-customer",
+      "name": "pkg-customer",
+      "pages": [
+        "product-detail/index",
+        "store-detail/index",
+        "appointment-create/index",
+        "appointments/index",
+        "appointment-detail/index",
+        "appointment-notes/index",
+        "recycle-info/index"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarTitleText": "金匠倌",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fdfbe7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#8A8F99",
+    "selectedColor": "#866E23",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "assets/tabbar/home.png",
+        "selectedIconPath": "assets/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/products/index",
+        "text": "款式",
+        "iconPath": "assets/tabbar/products.png",
+        "selectedIconPath": "assets/tabbar/products-active.png"
+      },
+      {
+        "pagePath": "pages/stores/index",
+        "text": "门店",
+        "iconPath": "assets/tabbar/stores.png",
+        "selectedIconPath": "assets/tabbar/stores-active.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "assets/tabbar/mine.png",
+        "selectedIconPath": "assets/tabbar/mine-active.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于查找附近的门店"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
+  "sitemapLocation": "sitemap.json"
+}
