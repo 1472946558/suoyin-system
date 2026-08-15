@@ -1,35 +1,16 @@
-// utils/customer-auth.js - 顾客登录管理
+// utils/customer-auth.js - 顾客登录业务
+// 拆分说明：把纯 wx.getStorageSync 抽到 customer-storage.js，原因是
+//   request.js 和 customer-auth.js 之前互相 require，形成循环依赖，
+//   微信开发者工具在分包加载时对该循环解析不佳，会触发
+//   "can not find module : , require args is ../../utils/request.js" 报错。
 const { api } = require('./request.js');
-
-const TOKEN_KEY = 'customer_token';
-const PROFILE_KEY = 'customer_profile';
-
-function getCustomerToken() {
-  try {
-    return wx.getStorageSync(TOKEN_KEY) || '';
-  } catch (e) {
-    return '';
-  }
-}
-
-function setCustomerToken(token) {
-  try { wx.setStorageSync(TOKEN_KEY, token); } catch (e) {}
-}
-
-function clearCustomerSession() {
-  try {
-    wx.removeStorageSync(TOKEN_KEY);
-    wx.removeStorageSync(PROFILE_KEY);
-  } catch (e) {}
-}
-
-function getStoredProfile() {
-  try { return wx.getStorageSync(PROFILE_KEY) || null; } catch (e) { return null; }
-}
-
-function setStoredProfile(profile) {
-  try { wx.setStorageSync(PROFILE_KEY, profile); } catch (e) {}
-}
+const {
+  getCustomerToken,
+  setCustomerToken,
+  clearCustomerSession,
+  getStoredProfile,
+  setStoredProfile
+} = require('./customer-storage.js');
 
 /**
  * 静默登录（用 wx.login 拿 code，调后端 wechat-login）
@@ -112,12 +93,15 @@ function customerLogout() {
     });
 }
 
+// 重新导出，保持向后兼容（其它页面可能还在 require customer-auth.js 拿这些方法）
 module.exports = {
+  // 存储相关（透传给 customer-storage.js）
   getCustomerToken,
   setCustomerToken,
   clearCustomerSession,
   getStoredProfile,
   setStoredProfile,
+  // 业务方法（保持原接口）
   ensureCustomerSession,
   customerLogin,
   customerPhoneAuth,

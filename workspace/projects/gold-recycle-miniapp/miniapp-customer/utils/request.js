@@ -1,5 +1,5 @@
 // utils/request.js - 网络请求封装
-const { getCustomerToken } = require('./customer-auth.js');
+const { getCustomerToken } = require('./customer-storage.js');
 
 function getApiBase() {
   const app = getApp();
