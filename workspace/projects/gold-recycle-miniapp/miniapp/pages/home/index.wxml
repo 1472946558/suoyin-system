@@ -59,6 +59,17 @@
     </view>
   </view>
 
+  <view wx:if="{{profile.loggedIn && pendingAppointments > 0}}" class="card appt-notice" bindtap="goAction" data-type="nav" data-url="/pages/appointments/index">
+    <view class="appt-notice-left">
+      <text class="appt-notice-icon">!</text>
+      <view>
+        <text class="appt-notice-title">{{pendingAppointments}} 个待确认预约</text>
+        <text class="appt-notice-desc">点击查看并处理</text>
+      </view>
+    </view>
+    <text class="appt-notice-arrow">></text>
+  </view>
+
   <view wx:if="{{profile.loggedIn}}" class="card quick-card">
     <view class="card-head">
       <text class="card-title">常用功能</text>

@@ -18,11 +18,13 @@ const { refreshProfileStoreBinding } = require("../../utils/storeSession");
 const { listMembersOnline, listProductsOnline, getMemberStats, getProductStats } = require("../../utils/catalogStore");
 const { getVisibleReferencePrices, refreshReferencePrices } = require("../../utils/goldPriceStore");
 const { formatRequestError } = require("../../utils/apiClient");
+const appointmentStore = require("../../utils/appointmentStore.js");
 
 const allQuickActions = [
   { title: "开始收银", desc: "录入客户与商品明细", type: "tab", url: "/pages/order/index", icon: "/assets/ui/home-cashier.png", permission: "cashier" },
   { title: "回收录单", desc: "录入成色重量与报价", type: "tab", url: "/pages/track/index", icon: "/assets/ui/home-recycle.png", permission: "recycle" },
   { title: "查看订单", desc: "浏览历史回收单", type: "tab", url: "/pages/orders/index", icon: "/assets/ui/home-orders.png", permission: "orders" },
+  { title: "预约管理", desc: "查看与处理门店预约", type: "nav", url: "/pages/appointments/index", icon: "/assets/ui/home-orders.png", permission: "appointments" },
   { title: "会员管理", desc: "常客档案与带入建单", type: "nav", url: "/pages/members/index", icon: "/assets/ui/home-members.png", permission: "members" },
   { title: "商品目录", desc: "门店商品与报价参考", type: "nav", url: "/pages/products/index", icon: "/assets/ui/home-products.png", permission: "products" },
   { title: "库存系统", desc: "商品入库与库存查询", type: "nav", url: "/pages/inventory/index", icon: "/assets/ui/list.png", permission: "inventory" },
@@ -87,6 +89,7 @@ Page({
       activeProducts: 0
     },
     quickActions: [],
+    pendingAppointments: 0,
     checklist: [
       { title: "登录门店账号", desc: "确认操作员、门店与班次信息" },
       { title: "创建收银草稿", desc: "先登记客户与商品明细" },
@@ -114,10 +117,12 @@ Page({
       draftReady: loggedIn && Boolean(getDraft().customerName || getDraft().itemName),
       quickActions: loggedIn ? allQuickActions.filter(function(item) {
         return canAccessFeature(item.permission);
-      }) : []
+      }) : [],
+      pendingAppointments: loggedIn ? this.data.pendingAppointments : 0
     });
     if (loggedIn) {
       this.refreshReferencePrices();
+      this.loadPendingAppointments();
       refreshProfileStoreBinding().then((nextProfile) => {
         if (!nextProfile || !nextProfile.loggedIn) {
           this.setData({
@@ -172,6 +177,14 @@ Page({
         prices: prices.slice(0, 4)
       });
     });
+  },
+
+  loadPendingAppointments() {
+    appointmentStore.listStaffAppointments("PENDING")
+      .then((resp) => {
+        this.setData({ pendingAppointments: resp.total || 0 });
+      })
+      .catch(() => {});
   },
 
   setTabBarIndex() {

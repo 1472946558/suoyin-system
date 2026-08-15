@@ -1,0 +1,167 @@
+/* 预约列表页样式 */
+.appt-list-page {
+  padding-top: 0;
+}
+
+.tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+  padding: 16rpx 24rpx;
+  background: var(--bg);
+  border-bottom: 1rpx solid var(--line);
+}
+
+.tab-item {
+  display: inline-flex;
+  align-items: center;
+  height: 64rpx;
+  padding: 0 28rpx;
+  margin-right: 14rpx;
+  border-radius: 999rpx;
+  color: var(--muted);
+  font-size: 27rpx;
+  font-weight: 700;
+  background: var(--paper);
+  border: 1rpx solid var(--line);
+}
+
+.tab-item.active {
+  color: #ffffff;
+  background: var(--button-bg);
+  border-color: var(--button-bg);
+}
+
+.appt-list {
+  padding: 18rpx 24rpx;
+}
+
+.appt-card {
+  margin-bottom: 18rpx;
+  padding: 24rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 18rpx;
+  background: var(--paper);
+  box-shadow: 0 8rpx 22rpx rgba(51, 51, 51, 0.035);
+}
+
+.appt-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  padding-bottom: 14rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.appt-no {
+  font-size: 25rpx;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 1rpx;
+}
+
+.appt-status {
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.appt-status.status-pending {
+  color: #9a7416;
+  background: rgba(255, 206, 53, 0.2);
+}
+
+.appt-status.status-confirmed {
+  color: #0b6e23;
+  background: rgba(24, 183, 123, 0.12);
+}
+
+.appt-status.status-arrived {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.appt-status.status-completed {
+  color: #6d6b60;
+  background: rgba(109, 107, 96, 0.12);
+}
+
+.appt-status.status-cancelled,
+.appt-status.status-noshow,
+.appt-status.status-terminated {
+  color: #f25555;
+  background: rgba(242, 85, 85, 0.1);
+}
+
+.appt-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.appt-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.appt-label {
+  flex: 0 0 64rpx;
+  color: var(--muted);
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.appt-value {
+  flex: 1;
+  color: var(--ink);
+  font-size: 28rpx;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.appt-phone {
+  color: var(--button-bg);
+  text-decoration: underline;
+}
+
+.appt-remark {
+  color: var(--muted);
+  font-size: 26rpx;
+}
+
+.appt-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid var(--line);
+}
+
+.appt-store {
+  font-size: 25rpx;
+  color: var(--muted);
+}
+
+.appt-arrow {
+  font-size: 28rpx;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80rpx 0;
+}
+
+.list-count {
+  display: flex;
+  justify-content: center;
+  padding: 24rpx 0 48rpx;
+}

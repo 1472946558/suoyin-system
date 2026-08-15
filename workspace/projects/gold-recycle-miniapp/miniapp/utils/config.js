@@ -75,7 +75,10 @@ const baseAppConfig = {
     memberDetail: "/api/v1/members/:id",
     listProducts: "/api/v1/products",
     createProduct: "/api/v1/products",
-    productDetail: "/api/v1/products/:id"
+    productDetail: "/api/v1/products/:id",
+    staffAppointments: "/api/v1/staff/appointments",
+    staffAppointmentDetail: "/api/v1/staff/appointments/:id",
+    staffAppointmentStatus: "/api/v1/staff/appointments/:id/status"
   }
 };
 

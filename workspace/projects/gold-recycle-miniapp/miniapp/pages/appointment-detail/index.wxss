@@ -1,0 +1,181 @@
+/* 预约详情页样式 */
+.appt-detail-page {
+  padding-top: 18rpx;
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80rpx 0;
+}
+
+.status-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.status-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-hero-label {
+  font-size: 28rpx;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.status-hero-no {
+  font-size: 25rpx;
+  color: var(--muted);
+  letter-spacing: 1rpx;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  padding-bottom: 14rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.card-title {
+  font-size: 31rpx;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  padding: 14rpx 0;
+}
+
+.info-row + .info-row {
+  border-top: 1rpx solid rgba(246, 231, 161, 0.5);
+}
+
+.info-label {
+  flex: 0 0 140rpx;
+  color: var(--muted);
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.info-value {
+  flex: 1;
+  color: var(--ink);
+  font-size: 29rpx;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.info-remark {
+  color: var(--muted);
+  font-size: 27rpx;
+}
+
+.info-phone-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.call-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  color: #ffffff;
+  font-size: 25rpx;
+  font-weight: 800;
+  background: var(--button-bg);
+}
+
+.appt-status {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.appt-status.status-pending {
+  color: #9a7416;
+  background: rgba(255, 206, 53, 0.2);
+}
+
+.appt-status.status-confirmed {
+  color: #0b6e23;
+  background: rgba(24, 183, 123, 0.12);
+}
+
+.appt-status.status-arrived {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.appt-status.status-completed {
+  color: #6d6b60;
+  background: rgba(109, 107, 96, 0.12);
+}
+
+.appt-status.status-cancelled,
+.appt-status.status-noshow,
+.appt-status.status-terminated {
+  color: #f25555;
+  background: rgba(242, 85, 85, 0.1);
+}
+
+.action-bar {
+  display: flex;
+  gap: 18rpx;
+  margin-top: 24rpx;
+  padding: 0 24rpx;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 14rpx;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.action-btn.action-primary {
+  color: #ffffff;
+  background: var(--button-bg);
+  box-shadow: 0 16rpx 34rpx rgba(134, 110, 35, 0.18);
+}
+
+.action-btn.action-danger {
+  color: #ffffff;
+  background: #f25555;
+  box-shadow: 0 16rpx 34rpx rgba(242, 85, 85, 0.15);
+}
+
+.action-btn.action-warn {
+  color: #ffffff;
+  background: #e8870c;
+  box-shadow: 0 16rpx 34rpx rgba(232, 135, 12, 0.15);
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  text-align: center;
+  align-items: center;
+}

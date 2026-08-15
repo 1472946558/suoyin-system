@@ -19,18 +19,18 @@ const rolePresets = [
   {
     key: "boss",
     label: "老板",
-    permissions: ["dashboard.view", "cashier.use", "recycle.use", "orders.view", "members.view", "products.view", "settings.view", "settings.manage"]
+    permissions: ["dashboard.view", "cashier.use", "recycle.use", "orders.view", "members.view", "products.view", "settings.view", "settings.manage", "appointments.view"]
   },
   {
     key: "shop_manager",
     label: "店长",
-    permissions: ["dashboard.view", "cashier.use", "recycle.use", "orders.view", "members.view", "products.view", "settings.view"]
+    permissions: ["dashboard.view", "cashier.use", "recycle.use", "orders.view", "members.view", "products.view", "settings.view", "appointments.view"]
   }
 ];
 
 const devtoolAccounts = {
-  boss: { username: "boss", password: "Boss123!" },
-  shop_manager: { username: "manager.sz", password: "Manager123!" }
+  boss: { username: "boss", password: "" },
+  shop_manager: { username: "manager.sz", password: "" }
 };
 
 const quickLoginProfiles = {
@@ -344,7 +344,8 @@ function canAccessFeature(featureKey) {
     inventory: ["products.view", "catalog.product.read"],
     materials: ["recycle.use", "recycle.order.read"],
     settings: ["settings.view", "settings.read"],
-    "settings.manage": ["settings.manage", "settings.read"]
+    "settings.manage": ["settings.manage", "settings.read"],
+    appointments: ["appointments.view"]
   };
   if (rules[featureKey] && !profile.loggedIn) {
     return false;
