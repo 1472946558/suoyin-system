@@ -902,6 +902,46 @@ strong {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* 回收服务介绍：动态列表区块 */
+.sub-block {
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fafafa;
+}
+.sub-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sub-item:last-child {
+  margin-bottom: 0;
+}
+.sub-item input,
+.sub-item select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #111827;
+  min-width: 0;
+}
+.step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #866e23;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 .settings-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -1086,4 +1126,65 @@ strong {
     overflow-x: auto;
     white-space: nowrap;
   }
+}
+
+/* --- 预约管理页面样式 --- */
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.info-row .info-label {
+  flex-shrink: 0;
+  width: 80px;
+  color: var(--muted, #8a8a8a);
+}
+
+.info-row > span:last-child {
+  flex: 1;
+  word-break: break-all;
+}
+
+.readonly-value {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  font-size: 14px;
+  color: var(--text, #333);
+}
+
+.empty-row {
+  text-align: center;
+  color: var(--muted, #8a8a8a);
+  padding: 24px 0;
+}
+
+.danger-text {
+  color: #d93025;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  width: 90%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
 }

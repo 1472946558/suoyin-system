@@ -14,13 +14,18 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watchEffect } from "vue";
 import {
+  appointmentAction,
+  cancelAppointment,
   cancelRecycleOrder,
+  createCustomerHomeBanner,
   createInventoryLedgerItem,
   createMaterialLedgerItem,
   createMemberProfile,
   createProductRecord,
   createStoreRecord,
   createUserAccount,
+  deleteCustomerHomeBanner,
+  deleteCustomerStyle,
   deleteMaterialLedgerItem,
   deleteProductRecords,
   disableMemberProfile,
@@ -28,9 +33,16 @@ import {
   disableStoreRecord,
   disableUserAccount,
   downloadProductImportTemplate,
+  fetchAdminConsole,
+  fetchAppointmentDetail,
+  fetchAppointmentRules,
+  fetchAppointments,
   fetchCashierOrderDetail,
   fetchCashierOrders,
-  fetchAdminConsole,
+  fetchCustomerHomeConfig,
+  fetchCustomerRecycleInfo,
+  fetchCustomerStyleCategories,
+  fetchCustomerStyles,
   fetchInventoryLedger,
   fetchMaterialLedger,
   fetchMemberProfiles,
@@ -39,24 +51,44 @@ import {
   fetchRecycleOrderDetail,
   fetchRecycleOrders,
   fetchRoleTemplates,
+  fetchStoreCustomerConfig,
   fetchStoreRecords,
   fetchUserAccounts,
   importProducts,
   loginAdmin,
   outboundMaterialLedgerItem,
+  saveAppointmentRules,
+  saveCustomerHomeBanner,
+  saveCustomerHomeConfig,
+  saveCustomerRecycleInfo,
+  saveCustomerStyle,
   saveMemberProfile,
   saveProductRecord,
   saveRoleTemplate,
+  saveStoreCustomerConfig,
   saveStoreRecord,
   saveSystemProfile,
   saveUserAccount,
+  updateAppointmentStaffNote,
+  uploadCustomerImage,
   voidCashierOrder,
   type AbilityCode,
   type AbilityGroup,
   type AdminOrderRow,
+  type AppointmentListQuery,
+  type AppointmentRecord,
+  type AppointmentRules,
   type AttachmentAsset,
   type CashierOrderView,
   type ConsoleBootstrap,
+  type CustomerHomeBanner,
+  type CustomerHomeBannerInput,
+  type CustomerHomeConfig,
+  type CustomerRecycleInfoRecord,
+  type RecycleProcessStepRecord,
+  type RecycleServiceItemRecord,
+  type CustomerStyleListQuery,
+  type CustomerStyleRecord,
   type DataSource,
   type ListQuery,
   type InventoryLedgerItem as ApiInventoryLedgerItem,
@@ -69,6 +101,7 @@ import {
   type RoleTemplate,
   type StoreRecord,
   type SystemProfile,
+  type UploadScene,
   type UserAccount,
 } from "./api";
 
@@ -85,7 +118,10 @@ type PageId =
   | "products"
   | "inventory"
   | "materials"
-  | "settings";
+  | "settings"
+  | "appointments"
+  | "customer-home"
+  | "customer-styles";
 type MetricTone = "gold" | "emerald" | "slate" | "danger";
 
 interface OrderRow {
@@ -191,6 +227,18 @@ const PAGE_META: Record<PageId, { title: string; description: string }> = {
     title: "系统设置",
     description: "维护品牌名称、客服电话、小票标题和回收拍照规则。",
   },
+  appointments: {
+    title: "预约管理",
+    description: "查看顾客预约记录、确认到店、取消预约和配置预约规则。",
+  },
+  "customer-home": {
+    title: "顾客端配置",
+    description: "配置顾客端小程序首页 Banner、品牌文案和服务介绍。",
+  },
+  "customer-styles": {
+    title: "款式工费管理",
+    description: "维护顾客端展示的款式、图片、工费说明和上下架状态。",
+  },
 };
 
 const NAV_ITEMS: Array<{ id: PageId; title: string; hint: string; ability?: AbilityCode }> = [
@@ -204,6 +252,9 @@ const NAV_ITEMS: Array<{ id: PageId; title: string; hint: string; ability?: Abil
   { id: "products", title: "商品", hint: "维护", ability: "product.manage" },
   { id: "inventory", title: "库存", hint: "入库", ability: "product.manage" },
   { id: "materials", title: "旧料", hint: "台账", ability: "recycle.view" },
+  { id: "appointments", title: "预约", hint: "管理", ability: "appointment.manage" },
+  { id: "customer-home", title: "顾客端", hint: "配置", ability: "customer_content.view" },
+  { id: "customer-styles", title: "款式", hint: "工费", ability: "product.view" },
   { id: "settings", title: "设置", hint: "系统", ability: "system.config.manage" },
 ];
 
@@ -255,6 +306,44 @@ const orderItems = ref<AdminOrderRow[]>([]);
 const selectedCashierDetail = ref<CashierOrderView | null>(null);
 const selectedRecycleDetail = ref<RecycleOrderView | null>(null);
 
+// --- 预约管理状态 ---
+const appointmentItems = ref<AppointmentRecord[]>([]);
+const appointmentFilters = reactive<AppointmentListQuery>({
+  status: "",
+  storeId: "",
+  phone: "",
+  serviceType: "",
+  dateFrom: "",
+  dateTo: "",
+  page: 1,
+  pageSize: 50,
+});
+const selectedAppointmentId = ref("");
+const selectedAppointmentDetail = ref<AppointmentRecord | null>(null);
+const staffNoteDraft = ref("");
+const cancelReasonDraft = ref("");
+const cancelDialogOpen = ref(false);
+const appointmentRules = ref<AppointmentRules | null>(null);
+const appointmentRulesDraft = ref<AppointmentRules | null>(null);
+const rulesEditing = ref(false);
+
+// --- 顾客端内容管理 ---
+const customerHomeConfig = ref<CustomerHomeConfig | null>(null);
+const homeConfigDraft = ref<Omit<CustomerHomeConfig, "banners"> | null>(null);
+const homeBanners = ref<CustomerHomeBanner[]>([]);
+const bannerDialogOpen = ref(false);
+const bannerEditingId = ref("");
+const bannerDraft = ref<CustomerHomeBannerInput | null>(null);
+const recycleInfoDraft = ref<CustomerRecycleInfoRecord | null>(null);
+const styleItems = ref<CustomerStyleRecord[]>([]);
+const styleTotal = ref(0);
+const styleCategories = ref<string[]>([]);
+const styleFilters = reactive<CustomerStyleListQuery>({ category: "", status: "", keyword: "", page: 1, pageSize: 20 });
+const styleDialogOpen = ref(false);
+const styleEditingId = ref("");
+const styleDraft = ref<Partial<CustomerStyleRecord> | null>(null);
+const uploadPending = ref(false);
+
 const storeFilters = reactive<ListQuery>({ page: 1, pageSize: 50, status: "", keyword: "" });
 const userFilters = reactive<ListQuery>({ page: 1, pageSize: 50, storeId: "", status: "", keyword: "" });
 const cashierFilters = reactive<ListQuery>({ page: 1, pageSize: 50, storeId: "", status: "", dateFrom: "", dateTo: "", keyword: "" });
@@ -271,6 +360,12 @@ const recyclePreview = reactive({
 });
 
 const storeDraft = ref<StoreRecord | null>(null);
+const storeCustomerDraft = ref<{
+  imageUrl: string;
+  appointmentEnabled: boolean;
+  serviceTagsText: string;
+  sortOrder: number;
+} | null>(null);
 const userDraft = ref<UserAccount | null>(null);
 const roleDraft = ref<RoleTemplate | null>(null);
 const memberDraft = ref<MemberProfile | null>(null);
@@ -387,6 +482,7 @@ const selectedCashier = computed(() => cashierOrders.value.find((item) => item.i
 const selectedRecycle = computed(() => recycleOrders.value.find((item) => item.id === selectedRecycleId.value) ?? recycleOrders.value[0] ?? null);
 const selectedMember = computed(() => members.value.find((item) => item.id === selectedMemberId.value) ?? members.value[0] ?? null);
 const selectedProduct = computed(() => products.value.find((item) => item.id === selectedProductId.value) ?? products.value[0] ?? null);
+const selectedAppointment = computed(() => appointmentItems.value.find((item) => item.id === selectedAppointmentId.value) ?? appointmentItems.value[0] ?? null);
 const selectedProductStores = computed(() => {
   const ids = new Set(productDraft.value?.storeIds || []);
   return stores.value.filter((store) => ids.has(store.id));
@@ -690,6 +786,9 @@ function syncDrafts(data?: ConsoleBootstrap | null) {
   selectedProductId.value = products.value.find((item) => item.id === selectedProductId.value)?.id || products.value[0]?.id || "";
 
   storeDraft.value = cloneStore(stores.value.find((item) => item.id === selectedStoreId.value) ?? null);
+  if (selectedStoreId.value) {
+    void loadStoreCustomerConfig(selectedStoreId.value);
+  }
   userDraft.value = cloneUser(users.value.find((item) => item.id === selectedUserId.value) ?? null);
   roleDraft.value = cloneRole(roles.value.find((item) => item.id === selectedRoleId.value) ?? null);
   memberDraft.value = cloneMember(members.value.find((item) => item.id === selectedMemberId.value) ?? null);
@@ -1092,6 +1191,42 @@ function canAccess(ability: AbilityCode) {
 function selectStore(item: StoreRecord) {
   selectedStoreId.value = item.id;
   storeDraft.value = cloneStore(item);
+  void loadStoreCustomerConfig(item.id);
+}
+
+async function loadStoreCustomerConfig(storeId: string) {
+  if (!sessionToken.value || !storeId) return;
+  try {
+    const result = await fetchStoreCustomerConfig(sessionToken.value, storeId);
+    storeCustomerDraft.value = {
+      imageUrl: result.data.imageUrl || "",
+      appointmentEnabled: result.data.appointmentEnabled ?? true,
+      serviceTagsText: (result.data.serviceTags || []).join("、"),
+      sortOrder: result.data.sortOrder || 0,
+    };
+  } catch {
+    storeCustomerDraft.value = {
+      imageUrl: "",
+      appointmentEnabled: true,
+      serviceTagsText: "",
+      sortOrder: 0,
+    };
+  }
+}
+
+async function saveStoreCustomerAction() {
+  if (!sessionToken.value || !selectedStoreId.value || !storeCustomerDraft.value) return;
+  await runAction(async () => {
+    await saveStoreCustomerConfig(sessionToken.value, selectedStoreId.value, {
+      imageUrl: storeCustomerDraft.value!.imageUrl,
+      appointmentEnabled: storeCustomerDraft.value!.appointmentEnabled,
+      serviceTags: storeCustomerDraft.value!.serviceTagsText
+        .split(/[、,，\s]+/)
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      sortOrder: Number(storeCustomerDraft.value!.sortOrder) || 0,
+    });
+  }, "门店顾客端展示配置已保存。", "stores");
 }
 
 function selectUser(item: UserAccount) {
@@ -1415,6 +1550,59 @@ async function loadPageData(page = activePage.value) {
       selectedMaterialIds.value = selectedMaterialIds.value.filter((id) => materialEntries.value.some((item) => item.id === id));
       break;
     }
+    case "appointments": {
+      const result = await fetchAppointments(sessionToken.value, appointmentFilters);
+      sourceMode.value = result.source;
+      appointmentItems.value = result.data.items;
+      selectedAppointmentId.value = appointmentItems.value.find((item) => item.id === selectedAppointmentId.value)?.id || appointmentItems.value[0]?.id || "";
+      await loadSelectedAppointmentDetail();
+      await loadAppointmentRules();
+      break;
+    }
+    case "customer-home": {
+      const result = await fetchCustomerHomeConfig(sessionToken.value);
+      sourceMode.value = result.source;
+      customerHomeConfig.value = result.data;
+      homeBanners.value = result.data.banners || [];
+      const { banners: _banners, ...copyDraft } = result.data;
+      homeConfigDraft.value = {
+        brandName: copyDraft.brandName || "",
+        brandSlogan1: copyDraft.brandSlogan1 || "",
+        brandSlogan2: copyDraft.brandSlogan2 || "",
+        serviceCopy: copyDraft.serviceCopy || "",
+        entryStyleText: copyDraft.entryStyleText || "",
+        entryFeeText: copyDraft.entryFeeText || "",
+        servicePhone: copyDraft.servicePhone || "",
+        appointmentNotes: copyDraft.appointmentNotes || "",
+        serviceIntro: copyDraft.serviceIntro || "",
+        locationPermissionNote: copyDraft.locationPermissionNote || "",
+      };
+      const recycleResult = await fetchCustomerRecycleInfo(sessionToken.value);
+      recycleInfoDraft.value = {
+        title: recycleResult.data.title || "",
+        intro: recycleResult.data.intro || "",
+        imageUrl: recycleResult.data.imageUrl || "",
+        process: recycleResult.data.process?.length ? recycleResult.data.process.map((p) => ({ step: p.step, title: p.title, desc: p.desc || "" })) : [],
+        services: recycleResult.data.services?.length ? recycleResult.data.services.map((s) => ({ icon: s.icon || "", title: s.title, desc: s.desc || "" })) : [],
+        notices: recycleResult.data.notices?.length ? [...recycleResult.data.notices] : [],
+      };
+      break;
+    }
+    case "customer-styles": {
+      const result = await fetchCustomerStyles(sessionToken.value, styleFilters);
+      sourceMode.value = result.source;
+      styleItems.value = result.data.items || [];
+      styleTotal.value = result.data.total || 0;
+      if (styleCategories.value.length === 0) {
+        try {
+          const cats = await fetchCustomerStyleCategories(sessionToken.value);
+          styleCategories.value = cats.data || [];
+        } catch {
+          styleCategories.value = [];
+        }
+      }
+      break;
+    }
     default:
       break;
   }
@@ -1435,6 +1623,24 @@ function resetFilters(page: PageId) {
     materialFilters.type = "";
     materialFilters.dateFrom = "";
     materialFilters.dateTo = "";
+    return;
+  }
+  if (page === "customer-styles") {
+    styleFilters.category = "";
+    styleFilters.status = "";
+    styleFilters.keyword = "";
+    styleFilters.page = 1;
+    return;
+  }
+  if (page === "appointments") {
+    appointmentFilters.status = "";
+    appointmentFilters.storeId = "";
+    appointmentFilters.phone = "";
+    appointmentFilters.serviceType = "";
+    appointmentFilters.dateFrom = "";
+    appointmentFilters.dateTo = "";
+    appointmentFilters.page = 1;
+    appointmentFilters.pageSize = 50;
     return;
   }
   const target = page === "stores" ? storeFilters : page === "users" ? userFilters : page === "cashier" ? cashierFilters : page === "recycle" ? recycleFilters : page === "orders" ? orderFilters : page === "members" ? memberFilters : productFilters;
@@ -1542,6 +1748,491 @@ async function disableStore() {
   await runAction(async () => {
     await disableStoreRecord(sessionToken.value, storeDraft.value!.id);
   }, "门店已删除。", "stores");
+}
+
+// --- 预约管理 ---
+
+function selectAppointment(item: AppointmentRecord) {
+  selectedAppointmentId.value = item.id;
+  void loadSelectedAppointmentDetail(item.id);
+}
+
+async function loadSelectedAppointmentDetail(id = selectedAppointmentId.value) {
+  if (!sessionToken.value || !id) {
+    selectedAppointmentDetail.value = null;
+    return;
+  }
+  try {
+    const result = await fetchAppointmentDetail(sessionToken.value, id);
+    selectedAppointmentDetail.value = result.data;
+    staffNoteDraft.value = result.data.staffNote || "";
+  } catch {
+    selectedAppointmentDetail.value = null;
+  }
+}
+
+const APPT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "待确认",
+  CONFIRMED: "已确认",
+  ARRIVED: "已到店",
+  COMPLETED: "已完成",
+  CANCELLED: "已取消",
+  NO_SHOW: "未到店",
+  TERMINATED: "已终止",
+};
+
+const APPT_STATUS_TONES: Record<string, string> = {
+  PENDING: "gold",
+  CONFIRMED: "emerald",
+  ARRIVED: "emerald",
+  COMPLETED: "slate",
+  CANCELLED: "danger",
+  NO_SHOW: "danger",
+  TERMINATED: "danger",
+};
+
+function apptStatusLabel(status: string): string {
+  return APPT_STATUS_LABELS[status] || status;
+}
+
+function apptStatusTone(status: string): string {
+  return APPT_STATUS_TONES[status] || "slate";
+}
+
+const SERVICE_TYPE_LABELS: Record<string, string> = {
+  OLD_FOR_NEW: "以旧换新",
+  REPAIR: "维修保养",
+  CONSULT: "咨询鉴定",
+  RECYCLE: "黄金回收",
+};
+
+function serviceTypeLabel(type: string): string {
+  return SERVICE_TYPE_LABELS[type] || type;
+}
+
+function bannerLinkLabel(linkType: string): string {
+  const labels: Record<string, string> = {
+    none: "不跳转",
+    styles: "款式列表",
+    stores: "门店列表",
+    booking: "预约页",
+    custom: "自定义页面",
+  };
+  return labels[linkType] || linkType || "不跳转";
+}
+
+async function confirmAppointment(id: string) {
+  if (!sessionToken.value) return;
+  await runAction(async () => {
+    await appointmentAction(sessionToken.value, id, "confirm");
+  }, "预约已确认。", "appointments");
+}
+
+async function arriveAppointment(id: string) {
+  if (!sessionToken.value) return;
+  await runAction(async () => {
+    await appointmentAction(sessionToken.value, id, "arrive");
+  }, "已标记到店。", "appointments");
+}
+
+async function completeAppointment(id: string) {
+  if (!sessionToken.value) return;
+  await runAction(async () => {
+    await appointmentAction(sessionToken.value, id, "complete");
+  }, "预约已完成。", "appointments");
+}
+
+async function noShowAppointment(id: string) {
+  if (!sessionToken.value) return;
+  await runAction(async () => {
+    await appointmentAction(sessionToken.value, id, "no-show");
+  }, "已标记未到店。", "appointments");
+}
+
+function openCancelDialog() {
+  cancelReasonDraft.value = "";
+  cancelDialogOpen.value = true;
+}
+
+async function doCancelAppointment() {
+  if (!sessionToken.value || !selectedAppointmentDetail.value) return;
+  const reason = cancelReasonDraft.value.trim();
+  if (!reason) {
+    showNotice("warning", "请填写取消原因。");
+    return;
+  }
+  cancelDialogOpen.value = false;
+  await runAction(async () => {
+    await cancelAppointment(sessionToken.value, selectedAppointmentDetail.value!.id, reason);
+  }, "预约已取消。", "appointments");
+}
+
+async function saveStaffNote() {
+  if (!sessionToken.value || !selectedAppointmentDetail.value) return;
+  actionPending.value = true;
+  clearNotice();
+  try {
+    await updateAppointmentStaffNote(sessionToken.value, selectedAppointmentDetail.value.id, staffNoteDraft.value);
+    showNotice("success", "内部备注已保存。");
+  } catch (error) {
+    showNotice("warning", error instanceof Error ? error.message : "保存失败，请稍后重试。");
+  } finally {
+    actionPending.value = false;
+  }
+}
+
+async function loadAppointmentRules() {
+  if (!sessionToken.value) return;
+  try {
+    const result = await fetchAppointmentRules(sessionToken.value);
+    appointmentRules.value = result.data;
+    appointmentRulesDraft.value = { ...result.data };
+  } catch {
+    // 静默失败，不阻断页面加载
+  }
+}
+
+function startEditRules() {
+  if (appointmentRules.value) {
+    appointmentRulesDraft.value = { ...appointmentRules.value };
+    rulesEditing.value = true;
+  }
+}
+
+function cancelEditRules() {
+  rulesEditing.value = false;
+  if (appointmentRules.value) {
+    appointmentRulesDraft.value = { ...appointmentRules.value };
+  }
+}
+
+function toggleServiceType(type: string) {
+  if (!appointmentRulesDraft.value) return;
+  const list = appointmentRulesDraft.value.bookableServiceTypes;
+  const idx = list.indexOf(type);
+  if (idx >= 0) {
+    list.splice(idx, 1);
+  } else {
+    list.push(type);
+  }
+}
+
+async function saveAppointmentRulesAction() {
+  if (!sessionToken.value || !appointmentRulesDraft.value) return;
+  actionPending.value = true;
+  clearNotice();
+  try {
+    const { updatedAt: _, ...rules } = appointmentRulesDraft.value;
+    void _;
+    const result = await saveAppointmentRules(sessionToken.value, rules);
+    appointmentRules.value = result.data;
+    appointmentRulesDraft.value = { ...result.data };
+    rulesEditing.value = false;
+    showNotice("success", "预约规则已保存。");
+  } catch (error) {
+    showNotice("warning", error instanceof Error ? error.message : "保存失败，请稍后重试。");
+  } finally {
+    actionPending.value = false;
+  }
+}
+
+// --- 顾客端内容管理：首页配置 / Banner / 款式工费 / 图片上传 ---
+
+function pickCustomerImage(scene: UploadScene, maxMB: number, onDone: (url: string) => void) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/jpeg,image/png,image/webp";
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > maxMB * 1024 * 1024) {
+      showNotice("warning", `图片不能超过 ${maxMB}MB。`);
+      return;
+    }
+    if (!sessionToken.value) return;
+    uploadPending.value = true;
+    clearNotice();
+    try {
+      const result = await uploadCustomerImage(sessionToken.value, file, scene);
+      onDone(result.data.url);
+      showNotice("success", "图片已上传。");
+    } catch (error) {
+      showNotice("warning", error instanceof Error ? error.message : "图片上传失败。");
+    } finally {
+      uploadPending.value = false;
+    }
+  };
+  input.click();
+}
+
+async function saveHomeConfigAction() {
+  if (!sessionToken.value || !homeConfigDraft.value) return;
+  actionPending.value = true;
+  clearNotice();
+  try {
+    const result = await saveCustomerHomeConfig(sessionToken.value, homeConfigDraft.value);
+    customerHomeConfig.value = result.data;
+    homeBanners.value = result.data.banners || [];
+    showNotice("success", "顾客端首页配置已保存。");
+  } catch (error) {
+    showNotice("warning", error instanceof Error ? error.message : "保存失败，请稍后重试。");
+  } finally {
+    actionPending.value = false;
+  }
+}
+
+// --- 回收服务介绍编辑 ---
+
+async function saveRecycleInfoAction() {
+  if (!sessionToken.value || !recycleInfoDraft.value) return;
+  if (!recycleInfoDraft.value.title.trim()) {
+    showNotice("warning", "回收服务标题不能为空。");
+    return;
+  }
+  actionPending.value = true;
+  clearNotice();
+  try {
+    const result = await saveCustomerRecycleInfo(sessionToken.value, {
+      title: recycleInfoDraft.value.title,
+      intro: recycleInfoDraft.value.intro || "",
+      imageUrl: recycleInfoDraft.value.imageUrl || "",
+      process: recycleInfoDraft.value.process.map((p, i) => ({ step: i + 1, title: p.title, desc: p.desc || "" })),
+      services: recycleInfoDraft.value.services.map((s) => ({ icon: s.icon || "", title: s.title, desc: s.desc || "" })),
+      notices: recycleInfoDraft.value.notices.filter((n) => n.trim() !== ""),
+    });
+    recycleInfoDraft.value = result.data;
+    showNotice("success", "回收服务介绍已保存。");
+  } catch (error) {
+    showNotice("warning", error instanceof Error ? error.message : "保存失败，请稍后重试。");
+  } finally {
+    actionPending.value = false;
+  }
+}
+
+function addRecycleProcessStep() {
+  if (!recycleInfoDraft.value) return;
+  recycleInfoDraft.value.process.push({ step: recycleInfoDraft.value.process.length + 1, title: "", desc: "" });
+}
+function removeRecycleProcessStep(index: number) {
+  if (!recycleInfoDraft.value) return;
+  recycleInfoDraft.value.process.splice(index, 1);
+  recycleInfoDraft.value.process.forEach((p, i) => (p.step = i + 1));
+}
+function moveRecycleProcessStep(index: number, dir: -1 | 1) {
+  if (!recycleInfoDraft.value) return;
+  const target = index + dir;
+  if (target < 0 || target >= recycleInfoDraft.value.process.length) return;
+  const arr = recycleInfoDraft.value.process;
+  [arr[index], arr[target]] = [arr[target], arr[index]];
+  arr.forEach((p, i) => (p.step = i + 1));
+}
+function addRecycleServiceItem() {
+  if (!recycleInfoDraft.value) return;
+  recycleInfoDraft.value.services.push({ icon: "", title: "", desc: "" });
+}
+function removeRecycleServiceItem(index: number) {
+  if (!recycleInfoDraft.value) return;
+  recycleInfoDraft.value.services.splice(index, 1);
+}
+function moveRecycleServiceItem(index: number, dir: -1 | 1) {
+  if (!recycleInfoDraft.value) return;
+  const target = index + dir;
+  if (target < 0 || target >= recycleInfoDraft.value.services.length) return;
+  const arr = recycleInfoDraft.value.services;
+  [arr[index], arr[target]] = [arr[target], arr[index]];
+}
+function addRecycleNotice() {
+  if (!recycleInfoDraft.value) return;
+  recycleInfoDraft.value.notices.push("");
+}
+function removeRecycleNotice(index: number) {
+  if (!recycleInfoDraft.value) return;
+  recycleInfoDraft.value.notices.splice(index, 1);
+}
+function moveRecycleNotice(index: number, dir: -1 | 1) {
+  if (!recycleInfoDraft.value) return;
+  const target = index + dir;
+  if (target < 0 || target >= recycleInfoDraft.value.notices.length) return;
+  const arr = recycleInfoDraft.value.notices;
+  [arr[index], arr[target]] = [arr[target], arr[index]];
+}
+
+function openCreateBanner() {
+  bannerEditingId.value = "";
+  bannerDraft.value = {
+    title: "",
+    subtitle: "",
+    imageUrl: "",
+    linkType: "none",
+    linkTarget: "",
+    sortOrder: homeBanners.value.length + 1,
+    enabled: true,
+  };
+  bannerDialogOpen.value = true;
+}
+
+function openEditBanner(banner: CustomerHomeBanner) {
+  bannerEditingId.value = banner.id;
+  bannerDraft.value = {
+    title: banner.title,
+    subtitle: banner.subtitle || "",
+    imageUrl: banner.imageUrl,
+    linkType: banner.linkType || "none",
+    linkTarget: banner.linkTarget || "",
+    sortOrder: banner.sortOrder,
+    enabled: banner.enabled,
+  };
+  bannerDialogOpen.value = true;
+}
+
+async function saveBannerAction() {
+  if (!sessionToken.value || !bannerDraft.value) return;
+  if (!bannerDraft.value.imageUrl.trim()) {
+    showNotice("warning", "请先上传 Banner 图片。");
+    return;
+  }
+  await runAction(async () => {
+    if (bannerEditingId.value) {
+      await saveCustomerHomeBanner(sessionToken.value, bannerEditingId.value, bannerDraft.value!);
+    } else {
+      await createCustomerHomeBanner(sessionToken.value, bannerDraft.value!);
+    }
+    bannerDialogOpen.value = false;
+  }, "Banner 已保存。", "customer-home");
+}
+
+async function removeBanner(banner: CustomerHomeBanner) {
+  if (!sessionToken.value) return;
+  if (!window.confirm(`确定删除 Banner「${banner.title || banner.imageUrl}」吗？`)) return;
+  await runAction(async () => {
+    await deleteCustomerHomeBanner(sessionToken.value, banner.id);
+  }, "Banner 已删除。", "customer-home");
+}
+
+async function toggleBannerEnabled(banner: CustomerHomeBanner) {
+  if (!sessionToken.value) return;
+  await runAction(async () => {
+    await saveCustomerHomeBanner(sessionToken.value, banner.id, {
+      title: banner.title,
+      subtitle: banner.subtitle || "",
+      imageUrl: banner.imageUrl,
+      linkType: banner.linkType || "none",
+      linkTarget: banner.linkTarget || "",
+      sortOrder: banner.sortOrder,
+      enabled: !banner.enabled,
+    });
+  }, banner.enabled ? "Banner 已停用。" : "Banner 已启用。", "customer-home");
+}
+
+function styleStatusLabel(status: string) {
+  return status === "active" ? "上架" : "下架";
+}
+
+function openCreateStyle() {
+  styleEditingId.value = "";
+  styleDraft.value = {
+    name: "",
+    sku: "",
+    category: styleCategories.value[0] || "",
+    imageUrl: "",
+    images: [],
+    detailImages: [],
+    purity: "",
+    retailPrice: 0,
+    gramWeight: 0,
+    laborFeeRef: "",
+    description: "",
+    laborFeeNote: "",
+    applicableServiceTypes: ["OLD_FOR_NEW", "REPAIR", "CONSULT", "RECYCLE"],
+    recommendedStoreRule: "nearest",
+    sortOrder: 0,
+    isRecommended: false,
+    isHot: false,
+    status: "active",
+    tags: [],
+    storeIds: [],
+  };
+  styleDialogOpen.value = true;
+}
+
+function openEditStyle(record: CustomerStyleRecord) {
+  styleEditingId.value = record.id;
+  styleDraft.value = {
+    ...record,
+    images: [...(record.images || [])],
+    detailImages: [...(record.detailImages || [])],
+    applicableServiceTypes: [...(record.applicableServiceTypes || [])],
+    tags: [...(record.tags || [])],
+    storeIds: [...(record.storeIds || [])],
+  };
+  styleDialogOpen.value = true;
+}
+
+async function saveStyleAction() {
+  if (!sessionToken.value || !styleDraft.value) return;
+  if (!String(styleDraft.value.name || "").trim() || !String(styleDraft.value.imageUrl || "").trim()) {
+    showNotice("warning", "款式名称和主图必填。");
+    return;
+  }
+  const id = styleEditingId.value;
+  await runAction(async () => {
+    await saveCustomerStyle(sessionToken.value, id, styleDraft.value!);
+    styleDialogOpen.value = false;
+  }, id ? "款式已更新。" : "款式已新增。", "customer-styles");
+}
+
+async function removeStyle(record: CustomerStyleRecord) {
+  if (!sessionToken.value) return;
+  if (!window.confirm(`确定删除款式「${record.name}」吗？删除后顾客端将不再展示。`)) return;
+  await runAction(async () => {
+    await deleteCustomerStyle(sessionToken.value, record.id);
+  }, "款式已删除。", "customer-styles");
+}
+
+function toggleStyleServiceType(type: string) {
+  if (!styleDraft.value) return;
+  const list = styleDraft.value.applicableServiceTypes || (styleDraft.value.applicableServiceTypes = []);
+  const idx = list.indexOf(type);
+  if (idx >= 0) {
+    list.splice(idx, 1);
+  } else {
+    list.push(type);
+  }
+}
+
+function moveStyleImage(index: number, offset: number) {
+  if (!styleDraft.value) return;
+  const list = styleDraft.value.images || [];
+  const target = index + offset;
+  if (target < 0 || target >= list.length) return;
+  [list[index], list[target]] = [list[target], list[index]];
+  styleDraft.value.images = [...list];
+}
+
+function moveStyleDetailImage(index: number, offset: number) {
+  if (!styleDraft.value) return;
+  const list = styleDraft.value.detailImages || [];
+  const target = index + offset;
+  if (target < 0 || target >= list.length) return;
+  [list[index], list[target]] = [list[target], list[index]];
+  styleDraft.value.detailImages = [...list];
+}
+
+function removeStyleDetailImage(index: number) {
+  if (!styleDraft.value) return;
+  const list = styleDraft.value.detailImages || [];
+  list.splice(index, 1);
+  styleDraft.value.detailImages = [...list];
+}
+
+function removeStyleImage(index: number) {
+  if (!styleDraft.value) return;
+  const list = styleDraft.value.images || [];
+  list.splice(index, 1);
+  styleDraft.value.images = [...list];
+  if (styleDraft.value.images[0]) {
+    styleDraft.value.imageUrl = styleDraft.value.images[0];
+  }
 }
 
 async function createUser() {
@@ -1937,6 +2628,10 @@ watchEffect(() => {
                 <label class="field"><span>负责人</span><input v-model="storeDraft.managerName" /></label>
                 <label class="field"><span>城市</span><input v-model="storeDraft.city" /></label>
                 <label class="field"><span>地址</span><textarea v-model="storeDraft.address" rows="2"></textarea></label>
+                <label class="field"><span>联系电话</span><input v-model="storeDraft.contactPhone" placeholder="顾客端显示的门店电话" /></label>
+                <label class="field"><span>营业时间</span><input v-model="storeDraft.businessHours" placeholder="如 09:30-21:30" /></label>
+                <label class="field"><span>经度</span><input v-model.number="storeDraft.longitude" type="number" step="0.000001" placeholder="如 116.397428" /></label>
+                <label class="field"><span>纬度</span><input v-model.number="storeDraft.latitude" type="number" step="0.000001" placeholder="如 39.90923" /></label>
                 <label class="field">
                   <span>状态</span>
                   <select v-model="storeDraft.status">
@@ -1948,6 +2643,36 @@ watchEffect(() => {
               <div class="detail-actions">
                 <button class="primary-btn" type="button" :disabled="actionPending" @click="saveStore">保存门店</button>
                 <button class="secondary-btn" type="button" :disabled="actionPending" @click="disableStore">删除门店</button>
+              </div>
+
+              <!-- 顾客端展示配置（门店图片 / 预约开关 / 服务标签） -->
+              <div v-if="storeCustomerDraft" class="form-card" style="margin-top: 20px; border-top: 1px dashed var(--border-color, #e2e8f0); padding-top: 16px;">
+                <p class="eyebrow">顾客端展示配置</p>
+                <label class="field">
+                  <span>门店图片（顾客端列表/详情展示）</span>
+                  <div v-if="storeCustomerDraft.imageUrl" style="margin-bottom: 8px;">
+                    <img :src="storeCustomerDraft.imageUrl" alt="门店图片" style="max-width: 180px; max-height: 100px; object-fit: cover; border-radius: 8px; display: block;" />
+                  </div>
+                  <button class="secondary-btn" type="button" :disabled="uploadPending" @click="pickCustomerImage('store', 5, (url) => { if (storeCustomerDraft) storeCustomerDraft.imageUrl = url; })">
+                    {{ uploadPending ? "上传中…" : (storeCustomerDraft.imageUrl ? "更换图片" : "上传图片") }}
+                  </button>
+                </label>
+                <label class="field">
+                  <span>预约开关（关闭后顾客端该门店不可预约）</span>
+                  <select v-model="storeCustomerDraft.appointmentEnabled">
+                    <option :value="true">开启预约</option>
+                    <option :value="false">关闭预约</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>服务标签（顿号/逗号分隔，如：以旧换新、维修保养）</span>
+                  <input v-model="storeCustomerDraft.serviceTagsText" placeholder="以旧换新、维修保养" />
+                </label>
+                <label class="field">
+                  <span>顾客端排序（数字越小越靠前）</span>
+                  <input v-model.number="storeCustomerDraft.sortOrder" type="number" />
+                </label>
+                <button class="secondary-btn" type="button" :disabled="actionPending" @click="saveStoreCustomerAction">保存顾客端配置</button>
               </div>
             </aside>
           </div>
@@ -3002,6 +3727,617 @@ watchEffect(() => {
             </table>
           </div>
         </section>
+
+        <!-- 预约管理 -->
+        <section v-if="activePage === 'appointments'" class="page-grid">
+          <div class="panel simple-page-head">
+            <div>
+              <p class="eyebrow">预约管理</p>
+              <h3>顾客预约</h3>
+              <p class="header-copy">查看顾客预约记录、确认到店、取消预约和配置预约规则。</p>
+            </div>
+          </div>
+
+          <div class="panel toolbar">
+            <label class="field compact-field">
+              <span>状态</span>
+              <select v-model="appointmentFilters.status">
+                <option value="">全部</option>
+                <option value="PENDING">待确认</option>
+                <option value="CONFIRMED">已确认</option>
+                <option value="ARRIVED">已到店</option>
+                <option value="COMPLETED">已完成</option>
+                <option value="CANCELLED">已取消</option>
+                <option value="NO_SHOW">未到店</option>
+                <option value="TERMINATED">已终止</option>
+              </select>
+            </label>
+            <label class="field compact-field">
+              <span>门店</span>
+              <select v-model="appointmentFilters.storeId">
+                <option value="">全部门店</option>
+                <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
+              </select>
+            </label>
+            <label class="field compact-field">
+              <span>服务类型</span>
+              <select v-model="appointmentFilters.serviceType">
+                <option value="">全部</option>
+                <option value="OLD_FOR_NEW">以旧换新</option>
+                <option value="REPAIR">维修保养</option>
+                <option value="CONSULT">咨询鉴定</option>
+                <option value="RECYCLE">黄金回收</option>
+              </select>
+            </label>
+            <label class="field compact-field grow-field">
+              <span>手机号</span>
+              <input v-model="appointmentFilters.phone" placeholder="顾客手机号" />
+            </label>
+            <button class="secondary-btn" type="button" @click="loadPageData('appointments')">查询</button>
+            <button class="text-btn" type="button" @click="resetFilters('appointments')">重置</button>
+          </div>
+
+          <div class="content-grid sidebar-layout">
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>预约号</th>
+                    <th>顾客</th>
+                    <th>门店</th>
+                    <th>服务</th>
+                    <th>时间</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="item in appointmentItems"
+                    :key="item.id"
+                    :class="{ selected: selectedAppointment?.id === item.id }"
+                    @click="selectAppointment(item)"
+                  >
+                    <td><strong>{{ item.appointmentNo }}</strong></td>
+                    <td>{{ item.customerName }}<span>{{ item.customerPhone }}</span></td>
+                    <td>{{ item.storeName }}</td>
+                    <td>{{ item.serviceTypeText || serviceTypeLabel(item.serviceType) }}</td>
+                    <td>{{ item.appointmentDate }} {{ item.appointmentTime }}</td>
+                    <td><span class="badge" :class="apptStatusTone(item.status)">{{ apptStatusLabel(item.status) }}</span></td>
+                  </tr>
+                  <tr v-if="appointmentItems.length === 0">
+                    <td colspan="6" class="empty-row">暂无预约记录</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <aside v-if="selectedAppointmentDetail" class="detail-card panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">预约详情</p>
+                  <h3>{{ selectedAppointmentDetail.appointmentNo }}</h3>
+                  <span class="badge" :class="apptStatusTone(selectedAppointmentDetail.status)">{{ apptStatusLabel(selectedAppointmentDetail.status) }}</span>
+                </div>
+              </div>
+
+              <div class="info-list">
+                <div class="info-row"><span class="info-label">顾客</span><span>{{ selectedAppointmentDetail.customerName }}</span></div>
+                <div class="info-row"><span class="info-label">手机号</span><span>{{ selectedAppointmentDetail.customerPhone }}</span></div>
+                <div class="info-row"><span class="info-label">门店</span><span>{{ selectedAppointmentDetail.storeName }}</span></div>
+                <div class="info-row"><span class="info-label">服务类型</span><span>{{ selectedAppointmentDetail.serviceTypeText || serviceTypeLabel(selectedAppointmentDetail.serviceType) }}</span></div>
+                <div class="info-row"><span class="info-label">预约时间</span><span>{{ selectedAppointmentDetail.appointmentDate }} {{ selectedAppointmentDetail.appointmentTime }}</span></div>
+                <div class="info-row" v-if="selectedAppointmentDetail.remark"><span class="info-label">顾客备注</span><span>{{ selectedAppointmentDetail.remark }}</span></div>
+                <div class="info-row" v-if="selectedAppointmentDetail.confirmedBy"><span class="info-label">确认人</span><span>{{ selectedAppointmentDetail.confirmedBy }}</span></div>
+                <div class="info-row" v-if="selectedAppointmentDetail.cancelReason"><span class="info-label">取消原因</span><span>{{ selectedAppointmentDetail.cancelReason }}</span></div>
+              </div>
+
+              <div class="form-card" style="margin-top: 16px;">
+                <label class="field">
+                  <span>内部备注（顾客不可见）</span>
+                  <textarea v-model="staffNoteDraft" rows="3" placeholder="记录内部沟通备注"></textarea>
+                </label>
+                <button class="secondary-btn" type="button" :disabled="actionPending" @click="saveStaffNote">保存备注</button>
+              </div>
+
+              <div class="detail-actions" style="margin-top: 16px;">
+                <button v-if="selectedAppointmentDetail.status === 'PENDING'" class="primary-btn" type="button" :disabled="actionPending" @click="confirmAppointment(selectedAppointmentDetail.id)">确认预约</button>
+                <button v-if="selectedAppointmentDetail.status === 'CONFIRMED'" class="primary-btn" type="button" :disabled="actionPending" @click="arriveAppointment(selectedAppointmentDetail.id)">标记到店</button>
+                <button v-if="selectedAppointmentDetail.status === 'ARRIVED'" class="primary-btn" type="button" :disabled="actionPending" @click="completeAppointment(selectedAppointmentDetail.id)">完成服务</button>
+                <button v-if="selectedAppointmentDetail.status === 'ARRIVED'" class="secondary-btn" type="button" :disabled="actionPending" @click="noShowAppointment(selectedAppointmentDetail.id)">标记未到</button>
+                <button v-if="['PENDING', 'CONFIRMED'].includes(selectedAppointmentDetail.status)" class="text-btn danger-text" type="button" :disabled="actionPending" @click="openCancelDialog">取消预约</button>
+              </div>
+            </aside>
+          </div>
+
+          <!-- 预约规则配置 -->
+          <div class="panel" style="margin-top: 24px;">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">预约规则</p>
+                <h3>规则配置</h3>
+                <p class="header-copy">配置可预约天数、时段粒度、营业时间和取消提前量。</p>
+              </div>
+              <div v-if="!rulesEditing && appointmentRules">
+                <button class="secondary-btn" type="button" @click="startEditRules">编辑规则</button>
+              </div>
+              <div v-if="rulesEditing" style="display: flex; gap: 8px;">
+                <button class="primary-btn" type="button" :disabled="actionPending" @click="saveAppointmentRulesAction">保存</button>
+                <button class="text-btn" type="button" @click="cancelEditRules">取消</button>
+              </div>
+            </div>
+
+            <div v-if="appointmentRulesDraft" class="form-card" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
+              <label class="field">
+                <span>可预约天数</span>
+                <input v-if="rulesEditing" v-model.number="appointmentRulesDraft.bookableDays" type="number" min="1" max="30" />
+                <span v-else class="readonly-value">{{ appointmentRulesDraft.bookableDays }} 天</span>
+              </label>
+              <label class="field">
+                <span>时段粒度（分钟）</span>
+                <select v-if="rulesEditing" v-model.number="appointmentRulesDraft.slotMinutes">
+                  <option :value="15">15</option>
+                  <option :value="30">30</option>
+                  <option :value="60">60</option>
+                </select>
+                <span v-else class="readonly-value">{{ appointmentRulesDraft.slotMinutes }} 分钟</span>
+              </label>
+              <label class="field">
+                <span>营业开始</span>
+                <input v-if="rulesEditing" v-model="appointmentRulesDraft.openTime" type="time" />
+                <span v-else class="readonly-value">{{ appointmentRulesDraft.openTime }}</span>
+              </label>
+              <label class="field">
+                <span>营业结束</span>
+                <input v-if="rulesEditing" v-model="appointmentRulesDraft.closeTime" type="time" />
+                <span v-else class="readonly-value">{{ appointmentRulesDraft.closeTime }}</span>
+              </label>
+              <label class="field">
+                <span>当天提前量（分钟）</span>
+                <input v-if="rulesEditing" v-model.number="appointmentRulesDraft.sameDayLeadMinutes" type="number" min="0" />
+                <span v-else class="readonly-value">{{ appointmentRulesDraft.sameDayLeadMinutes }} 分钟</span>
+              </label>
+              <label class="field">
+                <span>取消提前量（分钟）</span>
+                <input v-if="rulesEditing" v-model.number="appointmentRulesDraft.cancelLeadMinutes" type="number" min="0" />
+                <span v-else class="readonly-value">{{ appointmentRulesDraft.cancelLeadMinutes }} 分钟</span>
+              </label>
+              <label class="field">
+                <span>单时段容量</span>
+                <input v-if="rulesEditing" v-model.number="appointmentRulesDraft.slotCapacity" type="number" min="1" max="20" />
+                <span v-else class="readonly-value">{{ appointmentRulesDraft.slotCapacity }} 单</span>
+              </label>
+            </div>
+            <div v-if="appointmentRulesDraft && rulesEditing" class="form-card" style="margin-top: 12px;">
+              <label class="field">
+                <span>可预约服务类型</span>
+              </label>
+              <div style="display: flex; gap: 16px; flex-wrap: wrap; padding: 8px 0;">
+                <label v-for="st in [{v:'OLD_FOR_NEW',l:'以旧换新'},{v:'REPAIR',l:'维修保养'},{v:'CONSULT',l:'咨询鉴定'},{v:'RECYCLE',l:'黄金回收'}]" :key="st.v" style="display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" :value="st.v" :checked="appointmentRulesDraft.bookableServiceTypes.includes(st.v)" @change="toggleServiceType(st.v)" />
+                  <span>{{ st.l }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 取消预约弹窗 -->
+        <div v-if="cancelDialogOpen" class="modal-overlay" @click.self="cancelDialogOpen = false">
+          <div class="modal-card panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">取消预约</p>
+                <h3>请填写取消原因</h3>
+              </div>
+            </div>
+            <div class="form-card">
+              <label class="field">
+                <span>取消原因</span>
+                <textarea v-model="cancelReasonDraft" rows="3" placeholder="后台取消不受提前量限制，但需填写原因"></textarea>
+              </label>
+            </div>
+            <div class="detail-actions">
+              <button class="primary-btn" type="button" :disabled="actionPending || !cancelReasonDraft.trim()" @click="doCancelAppointment">确认取消</button>
+              <button class="text-btn" type="button" @click="cancelDialogOpen = false">关闭</button>
+            </div>
+          </div>
+        </div>
+
+        <section v-if="activePage === 'customer-home'" class="page-grid">
+          <div class="panel simple-page-head">
+            <div>
+              <p class="eyebrow">顾客端配置</p>
+              <h3>首页内容管理</h3>
+              <p class="header-copy">配置顾客端小程序首页的品牌文案、服务介绍和轮播 Banner。</p>
+            </div>
+            <button class="primary-btn" type="button" :disabled="actionPending" @click="saveHomeConfigAction">保存文案配置</button>
+          </div>
+
+          <!-- 品牌文案 -->
+          <div class="panel" v-if="homeConfigDraft">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">品牌与服务文案</p>
+                <h3>首页文案</h3>
+                <p class="header-copy">这些文案会展示在顾客端首页，修改后立即生效。</p>
+              </div>
+            </div>
+            <div class="form-card" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+              <label class="field"><span>品牌名称（必填）</span><input v-model="homeConfigDraft.brandName" placeholder="金匠馆" /></label>
+              <label class="field"><span>品牌标语一</span><input v-model="homeConfigDraft.brandSlogan1" placeholder="专业黄金服务" /></label>
+              <label class="field"><span>品牌标语二</span><input v-model="homeConfigDraft.brandSlogan2" placeholder="值得信赖" /></label>
+              <label class="field"><span>服务文案</span><input v-model="homeConfigDraft.serviceCopy" placeholder="以旧换新 · 维修保养 · 咨询鉴定" /></label>
+              <label class="field"><span>款式入口文案</span><input v-model="homeConfigDraft.entryStyleText" placeholder="查看款式" /></label>
+              <label class="field"><span>工费入口文案</span><input v-model="homeConfigDraft.entryFeeText" placeholder="工费说明" /></label>
+              <label class="field"><span>客服电话</span><input v-model="homeConfigDraft.servicePhone" placeholder="400-000-0000" /></label>
+              <label class="field"><span>预约须知</span><input v-model="homeConfigDraft.appointmentNotes" placeholder="预约后请提前 10 分钟到店" /></label>
+              <label class="field"><span>定位权限说明</span><input v-model="homeConfigDraft.locationPermissionNote" placeholder="用于推荐附近门店" /></label>
+              <label class="field" style="grid-column: 1 / -1;">
+                <span>服务介绍（多行文本，V1 不支持富文本）</span>
+                <textarea v-model="homeConfigDraft.serviceIntro" rows="4" placeholder="门店提供的服务介绍"></textarea>
+              </label>
+            </div>
+          </div>
+
+          <!-- Banner 管理 -->
+          <div class="panel" style="margin-top: 24px;">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">首页 Banner</p>
+                <h3>轮播图管理（最多 8 张启用）</h3>
+                <p class="header-copy">建议尺寸 750×300，单张不超过 2MB。</p>
+              </div>
+              <button class="primary-btn" type="button" :disabled="actionPending" @click="openCreateBanner">新增 Banner</button>
+            </div>
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>预览</th>
+                    <th>标题</th>
+                    <th>跳转</th>
+                    <th>排序</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="banner in homeBanners" :key="banner.id">
+                    <td><img :src="banner.imageUrl" alt="banner" style="width: 120px; height: 48px; object-fit: cover; border-radius: 6px;" /></td>
+                    <td>
+                      <strong>{{ banner.title || "（无标题）" }}</strong>
+                      <span v-if="banner.subtitle">{{ banner.subtitle }}</span>
+                    </td>
+                    <td>{{ bannerLinkLabel(banner.linkType) }}{{ banner.linkTarget ? ` · ${banner.linkTarget}` : "" }}</td>
+                    <td>{{ banner.sortOrder }}</td>
+                    <td><span class="badge" :class="banner.enabled ? 'emerald' : 'slate'">{{ banner.enabled ? "启用" : "停用" }}</span></td>
+                    <td>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="text-btn" type="button" @click="openEditBanner(banner)">编辑</button>
+                        <button class="text-btn" type="button" @click="toggleBannerEnabled(banner)">{{ banner.enabled ? "停用" : "启用" }}</button>
+                        <button class="text-btn danger-text" type="button" @click="removeBanner(banner)">删除</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="homeBanners.length === 0">
+                    <td colspan="6" class="empty-row">暂无 Banner，点击右上角新增</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 回收服务介绍 -->
+          <div class="panel" style="margin-top: 24px;">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">顾客端配置</p>
+                <h3>回收服务介绍</h3>
+                <p class="header-copy">配置顾客端「回收介绍」页的标题、简介、配图、流程步骤、服务项和须知。</p>
+              </div>
+              <button class="primary-btn" type="button" :disabled="actionPending" @click="saveRecycleInfoAction">保存回收介绍</button>
+            </div>
+            <div v-if="recycleInfoDraft" class="form-card" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+              <label class="field"><span>回收服务标题（必填）</span><input v-model="recycleInfoDraft.title" placeholder="黄金回收服务" /></label>
+              <label class="field" style="grid-column: 1 / -1;"><span>简介</span><textarea v-model="recycleInfoDraft.intro" rows="3" placeholder="页首简介文字"></textarea></label>
+              <label class="field" style="grid-column: 1 / -1;">
+                <span>顶部配图</span>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <img v-if="recycleInfoDraft.imageUrl" :src="recycleInfoDraft.imageUrl" alt="回收介绍配图" style="max-width: 240px; max-height: 90px; object-fit: cover; border-radius: 8px; display: block;" />
+                  <button class="secondary-btn" type="button" :disabled="uploadPending" @click="pickCustomerImage('service_intro', 5, (url) => { if (recycleInfoDraft) recycleInfoDraft.imageUrl = url; })">
+                    {{ uploadPending ? "上传中…" : (recycleInfoDraft.imageUrl ? "更换配图" : "上传配图") }}
+                  </button>
+                  <button v-if="recycleInfoDraft.imageUrl" class="text-btn danger-text" type="button" @click="recycleInfoDraft.imageUrl = ''">移除</button>
+                </div>
+              </label>
+
+              <!-- 流程步骤 -->
+              <div class="sub-block" style="grid-column: 1 / -1;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                  <strong>回收流程步骤（按顺序展示）</strong>
+                  <button class="secondary-btn" type="button" @click="addRecycleProcessStep">添加步骤</button>
+                </div>
+                <div v-for="(step, idx) in recycleInfoDraft.process" :key="idx" class="sub-item">
+                  <span class="step-no">{{ idx + 1 }}</span>
+                  <input v-model="step.title" placeholder="步骤标题（如：到店咨询）" style="flex: 1.2;" />
+                  <input v-model="step.desc" placeholder="步骤说明" style="flex: 2;" />
+                  <button class="text-btn" type="button" :disabled="idx === 0" @click="moveRecycleProcessStep(idx, -1)">↑</button>
+                  <button class="text-btn" type="button" :disabled="idx === recycleInfoDraft.process.length - 1" @click="moveRecycleProcessStep(idx, 1)">↓</button>
+                  <button class="text-btn danger-text" type="button" @click="removeRecycleProcessStep(idx)">删</button>
+                </div>
+                <div v-if="recycleInfoDraft.process.length === 0" class="empty-row">暂无流程步骤，点击「添加步骤」</div>
+              </div>
+
+              <!-- 服务项 -->
+              <div class="sub-block" style="grid-column: 1 / -1;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                  <strong>服务项目（图标 + 标题 + 说明）</strong>
+                  <button class="secondary-btn" type="button" @click="addRecycleServiceItem">添加服务项</button>
+                </div>
+                <div v-for="(svc, idx) in recycleInfoDraft.services" :key="idx" class="sub-item">
+                  <select v-model="svc.icon" style="width: 130px;">
+                    <option value="">无图标</option>
+                    <option value="recycle">♻ 回收</option>
+                    <option value="repair">🔧 维修</option>
+                    <option value="consult">💎 咨询</option>
+                    <option value="custom">✨ 定制</option>
+                  </select>
+                  <input v-model="svc.title" placeholder="服务名称（如：旧金换新）" style="flex: 1.2;" />
+                  <input v-model="svc.desc" placeholder="服务说明" style="flex: 2;" />
+                  <button class="text-btn" type="button" :disabled="idx === 0" @click="moveRecycleServiceItem(idx, -1)">↑</button>
+                  <button class="text-btn" type="button" :disabled="idx === recycleInfoDraft.services.length - 1" @click="moveRecycleServiceItem(idx, 1)">↓</button>
+                  <button class="text-btn danger-text" type="button" @click="removeRecycleServiceItem(idx)">删</button>
+                </div>
+                <div v-if="recycleInfoDraft.services.length === 0" class="empty-row">暂无服务项目，点击「添加服务项」</div>
+              </div>
+
+              <!-- 须知 -->
+              <div class="sub-block" style="grid-column: 1 / -1;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                  <strong>回收须知（逐条展示）</strong>
+                  <button class="secondary-btn" type="button" @click="addRecycleNotice">添加须知</button>
+                </div>
+                <div v-for="(notice, idx) in recycleInfoDraft.notices" :key="idx" class="sub-item">
+                  <span class="step-no">{{ idx + 1 }}</span>
+                  <input v-model="recycleInfoDraft.notices[idx]" placeholder="须知内容" style="flex: 3;" />
+                  <button class="text-btn" type="button" :disabled="idx === 0" @click="moveRecycleNotice(idx, -1)">↑</button>
+                  <button class="text-btn" type="button" :disabled="idx === recycleInfoDraft.notices.length - 1" @click="moveRecycleNotice(idx, 1)">↓</button>
+                  <button class="text-btn danger-text" type="button" @click="removeRecycleNotice(idx)">删</button>
+                </div>
+                <div v-if="recycleInfoDraft.notices.length === 0" class="empty-row">暂无须知，点击「添加须知」</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="activePage === 'customer-styles'" class="page-grid">
+          <div class="panel simple-page-head">
+            <div>
+              <p class="eyebrow">款式工费管理</p>
+              <h3>顾客端款式</h3>
+              <p class="header-copy">维护顾客端展示的款式、图片、工费说明和上下架状态。</p>
+            </div>
+            <button class="primary-btn" type="button" :disabled="actionPending" @click="openCreateStyle">新增款式</button>
+          </div>
+
+          <div class="panel toolbar">
+            <label class="field compact-field">
+              <span>分类</span>
+              <select v-model="styleFilters.category">
+                <option value="">全部分类</option>
+                <option v-for="cat in styleCategories" :key="cat" :value="cat">{{ cat }}</option>
+              </select>
+            </label>
+            <label class="field compact-field">
+              <span>状态</span>
+              <select v-model="styleFilters.status">
+                <option value="">全部</option>
+                <option value="active">上架</option>
+                <option value="inactive">下架</option>
+              </select>
+            </label>
+            <label class="field compact-field grow-field">
+              <span>关键词</span>
+              <input v-model="styleFilters.keyword" placeholder="款式名称 / 纯度" @keyup.enter="styleFilters.page = 1; loadPageData('customer-styles')" />
+            </label>
+            <button class="secondary-btn" type="button" @click="styleFilters.page = 1; loadPageData('customer-styles')">查询</button>
+            <button class="text-btn" type="button" @click="resetFilters('customer-styles')">重置</button>
+          </div>
+
+          <div class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>主图</th>
+                  <th>款式</th>
+                  <th>分类 / 纯度</th>
+                  <th>工费参考</th>
+                  <th>排序</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="record in styleItems" :key="record.id">
+                  <td><img :src="record.imageUrl" alt="款式主图" style="width: 56px; height: 56px; object-fit: cover; border-radius: 8px;" /></td>
+                  <td>
+                    <strong>{{ record.name }}</strong>
+                    <span v-if="record.isHot">🔥 热门</span>
+                  </td>
+                  <td>{{ record.category || "—" }} / {{ record.purity || "—" }}</td>
+                  <td>{{ record.laborFeeRef || "—" }}</td>
+                  <td>{{ record.sortOrder }}</td>
+                  <td><span class="badge" :class="record.status === 'active' ? 'emerald' : 'slate'">{{ styleStatusLabel(record.status) }}</span></td>
+                  <td>
+                    <div style="display: flex; gap: 8px;">
+                      <button class="text-btn" type="button" @click="openEditStyle(record)">编辑</button>
+                      <button class="text-btn danger-text" type="button" @click="removeStyle(record)">删除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="styleItems.length === 0">
+                  <td colspan="7" class="empty-row">暂无款式记录</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="styleTotal > (styleFilters.pageSize || 20)" class="panel toolbar" style="justify-content: flex-end;">
+            <button class="secondary-btn" type="button" :disabled="(styleFilters.page || 1) <= 1" @click="styleFilters.page = (styleFilters.page || 1) - 1; loadPageData('customer-styles')">上一页</button>
+            <span style="align-self: center; font-size: 13px;">第 {{ styleFilters.page }} 页 / 共 {{ Math.ceil(styleTotal / (styleFilters.pageSize || 20)) }} 页（{{ styleTotal }} 条）</span>
+            <button class="secondary-btn" type="button" :disabled="(styleFilters.page || 1) >= Math.ceil(styleTotal / (styleFilters.pageSize || 20))" @click="styleFilters.page = (styleFilters.page || 1) + 1; loadPageData('customer-styles')">下一页</button>
+          </div>
+        </section>
+
+        <!-- Banner 编辑弹窗 -->
+        <div v-if="bannerDialogOpen && bannerDraft" class="modal-overlay" @click.self="bannerDialogOpen = false">
+          <div class="modal-card panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">首页 Banner</p>
+                <h3>{{ bannerEditingId ? "编辑 Banner" : "新增 Banner" }}</h3>
+              </div>
+            </div>
+            <div class="form-card">
+              <label class="field">
+                <span>Banner 图片（750×300，≤2MB，必填）</span>
+                <div v-if="bannerDraft.imageUrl" style="margin-bottom: 8px;">
+                  <img :src="bannerDraft.imageUrl" alt="banner" style="max-width: 260px; border-radius: 8px; display: block;" />
+                </div>
+                <button class="secondary-btn" type="button" :disabled="uploadPending" @click="pickCustomerImage('banner', 2, (url) => { if (bannerDraft) bannerDraft.imageUrl = url; })">
+                  {{ uploadPending ? "上传中…" : (bannerDraft.imageUrl ? "更换图片" : "上传图片") }}
+                </button>
+              </label>
+              <label class="field"><span>标题</span><input v-model="bannerDraft.title" placeholder="活动标题" /></label>
+              <label class="field"><span>副标题</span><input v-model="bannerDraft.subtitle" placeholder="可选" /></label>
+              <label class="field">
+                <span>跳转类型</span>
+                <select v-model="bannerDraft.linkType">
+                  <option value="none">不跳转</option>
+                  <option value="styles">款式列表</option>
+                  <option value="stores">门店列表</option>
+                  <option value="booking">预约页</option>
+                  <option value="custom">自定义页面</option>
+                </select>
+              </label>
+              <label class="field" v-if="bannerDraft.linkType === 'custom'"><span>跳转目标（页面路径）</span><input v-model="bannerDraft.linkTarget" placeholder="/pkg-customer/pages/xxx" /></label>
+              <label class="field"><span>排序（数字越小越靠前）</span><input v-model.number="bannerDraft.sortOrder" type="number" /></label>
+              <label class="field">
+                <span>启用状态</span>
+                <select v-model="bannerDraft.enabled">
+                  <option :value="true">启用</option>
+                  <option :value="false">停用</option>
+                </select>
+              </label>
+            </div>
+            <div class="detail-actions">
+              <button class="primary-btn" type="button" :disabled="actionPending || !bannerDraft.imageUrl.trim()" @click="saveBannerAction">保存</button>
+              <button class="text-btn" type="button" @click="bannerDialogOpen = false">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 款式编辑弹窗 -->
+        <div v-if="styleDialogOpen && styleDraft" class="modal-overlay" @click.self="styleDialogOpen = false">
+          <div class="modal-card panel" style="max-width: 720px; max-height: 86vh; overflow-y: auto;">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">款式工费</p>
+                <h3>{{ styleEditingId ? "编辑款式" : "新增款式" }}</h3>
+              </div>
+            </div>
+            <div class="form-card" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
+              <label class="field"><span>款式名称（必填）</span><input v-model="styleDraft.name" placeholder="如：足金传承手镯" /></label>
+              <label class="field"><span>分类</span><input v-model="styleDraft.category" placeholder="如：手镯" list="style-category-options" /></label>
+              <datalist id="style-category-options">
+                <option v-for="cat in styleCategories" :key="cat" :value="cat" />
+              </datalist>
+              <label class="field"><span>纯度</span><input v-model="styleDraft.purity" placeholder="如：足金999" /></label>
+              <label class="field"><span>工费参考</span><input v-model="styleDraft.laborFeeRef" placeholder="如：35元/克 起" /></label>
+              <label class="field"><span>零售价（元）</span><input v-model.number="styleDraft.retailPrice" type="number" min="0" /></label>
+              <label class="field"><span>克重（克）</span><input v-model.number="styleDraft.gramWeight" type="number" min="0" step="0.01" /></label>
+              <label class="field"><span>推荐门店规则</span>
+                <select v-model="styleDraft.recommendedStoreRule">
+                  <option value="nearest">离顾客最近</option>
+                  <option value="product_stores">仅指定门店</option>
+                  <option value="all">全部门店</option>
+                </select>
+              </label>
+              <label class="field"><span>排序（数字越小越靠前）</span><input v-model.number="styleDraft.sortOrder" type="number" /></label>
+              <label class="field"><span>上架状态</span>
+                <select v-model="styleDraft.status">
+                  <option value="active">上架</option>
+                  <option value="inactive">下架</option>
+                </select>
+              </label>
+              <label class="field" style="grid-column: 1 / -1;"><span>款式说明</span><textarea v-model="styleDraft.description" rows="3" placeholder="展示在款式详情页"></textarea></label>
+              <label class="field" style="grid-column: 1 / -1;"><span>工费说明</span><textarea v-model="styleDraft.laborFeeNote" rows="2" placeholder="如：工费按工艺复杂度浮动，以门店报价为准"></textarea></label>
+            </div>
+
+            <div class="form-card" style="margin-top: 12px;">
+              <label class="field">
+                <span>款式图片（第一张为主图，必填）</span>
+              </label>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+                <div v-for="(img, index) in styleDraft.images" :key="img + index" style="position: relative;">
+                  <img :src="img" alt="款式图" style="width: 96px; height: 96px; object-fit: cover; border-radius: 8px; display: block;" />
+                  <div style="display: flex; gap: 4px; justify-content: center; margin-top: 4px;">
+                    <button class="text-btn" type="button" :disabled="index === 0" @click="moveStyleImage(index, -1)">←</button>
+                    <button class="text-btn" type="button" :disabled="index === (styleDraft.images?.length || 0) - 1" @click="moveStyleImage(index, 1)">→</button>
+                    <button class="text-btn danger-text" type="button" @click="removeStyleImage(index)">删</button>
+                  </div>
+                  <span v-if="index === 0" style="position: absolute; top: 4px; left: 4px; font-size: 11px; background: rgba(0,0,0,0.6); color: #fff; padding: 1px 6px; border-radius: 4px;">主图</span>
+                </div>
+              </div>
+              <button class="secondary-btn" type="button" :disabled="uploadPending" @click="pickCustomerImage('style_main', 5, (url) => { if (styleDraft) { styleDraft.images = [...(styleDraft.images || []), url]; if (!styleDraft.imageUrl) styleDraft.imageUrl = url; } })">
+                {{ uploadPending ? "上传中…" : "添加图片" }}
+              </button>
+            </div>
+
+            <div class="form-card" style="margin-top: 12px;">
+              <label class="field">
+                <span>款式详情图（展示在款式详情页，可多张）</span>
+              </label>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+                <div v-for="(img, index) in styleDraft.detailImages" :key="img + index" style="position: relative;">
+                  <img :src="img" alt="款式详情图" style="width: 96px; height: 96px; object-fit: cover; border-radius: 8px; display: block;" />
+                  <div style="display: flex; gap: 4px; justify-content: center; margin-top: 4px;">
+                    <button class="text-btn" type="button" :disabled="index === 0" @click="moveStyleDetailImage(index, -1)">←</button>
+                    <button class="text-btn" type="button" :disabled="index === (styleDraft.detailImages?.length || 0) - 1" @click="moveStyleDetailImage(index, 1)">→</button>
+                    <button class="text-btn danger-text" type="button" @click="removeStyleDetailImage(index)">删</button>
+                  </div>
+                  <span style="position: absolute; top: 4px; left: 4px; font-size: 11px; background: rgba(0,0,0,0.6); color: #fff; padding: 1px 6px; border-radius: 4px;">详情{{ index + 1 }}</span>
+                </div>
+              </div>
+              <button class="secondary-btn" type="button" :disabled="uploadPending" @click="pickCustomerImage('style_detail', 5, (url) => { if (styleDraft) { styleDraft.detailImages = [...(styleDraft.detailImages || []), url]; } })">
+                {{ uploadPending ? "上传中…" : "添加详情图" }}
+              </button>
+            </div>
+
+            <div class="form-card" style="margin-top: 12px;">
+              <label class="field"><span>适用服务类型</span></label>
+              <div style="display: flex; gap: 16px; flex-wrap: wrap; padding: 8px 0;">
+                <label v-for="st in [{v:'OLD_FOR_NEW',l:'以旧换新'},{v:'REPAIR',l:'维修保养'},{v:'CONSULT',l:'咨询鉴定'},{v:'RECYCLE',l:'黄金回收'}]" :key="st.v" style="display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" :value="st.v" :checked="(styleDraft.applicableServiceTypes || []).includes(st.v)" @change="toggleStyleServiceType(st.v)" />
+                  <span>{{ st.l }}</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" :checked="styleDraft.isHot" @change="styleDraft.isHot = ($event.target as HTMLInputElement).checked" />
+                  <span>热门款式</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" :checked="styleDraft.isRecommended" @change="styleDraft.isRecommended = ($event.target as HTMLInputElement).checked" />
+                  <span>推荐款式</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <button class="primary-btn" type="button" :disabled="actionPending" @click="saveStyleAction">保存</button>
+              <button class="text-btn" type="button" @click="styleDialogOpen = false">取消</button>
+            </div>
+          </div>
+        </div>
 
         <section v-if="activePage === 'settings'" class="page-grid">
           <div class="panel simple-page-head">

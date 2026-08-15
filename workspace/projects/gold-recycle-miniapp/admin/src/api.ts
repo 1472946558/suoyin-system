@@ -44,7 +44,10 @@ export type PageId =
   | "settings"
   | "system-config"
   | "template-init"
-  | "audit";
+  | "audit"
+  | "appointments"
+  | "customer-home"
+  | "customer-styles";
 
 export type AbilityCode =
   | "auth.login"
@@ -62,7 +65,10 @@ export type AbilityCode =
   | "system.config.view"
   | "system.config.manage"
   | "template.init"
-  | "audit.view";
+  | "audit.view"
+  | "appointment.manage"
+  | "customer_content.view"
+  | "customer_content.manage";
 
 export interface SessionUser {
   id: string;
@@ -124,6 +130,8 @@ export interface StoreRecord {
   address: string;
   contactPhone: string;
   businessHours: string;
+  longitude: number;
+  latitude: number;
   status: StoreStatus;
   cashierDevices: number;
   pendingTasks: number;
@@ -131,6 +139,48 @@ export interface StoreRecord {
   todayOrders: number;
   lastSettlementAt: string;
   tags: string[];
+}
+
+export interface AppointmentRecord {
+  id: string;
+  appointmentNo: string;
+  customerName: string;
+  customerPhone: string;
+  storeId: string;
+  storeName: string;
+  serviceType: string;
+  serviceTypeText: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  status: string;
+  statusText: string;
+  remark?: string;
+  staffNote?: string;
+  createdAt: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
+}
+
+export interface AppointmentRules {
+  bookableServiceTypes: string[];
+  bookableDays: number;
+  slotMinutes: number;
+  openTime: string;
+  closeTime: string;
+  sameDayLeadMinutes: number;
+  cancelLeadMinutes: number;
+  slotCapacity: number;
+  updatedAt?: string;
+}
+
+export interface AppointmentListResult {
+  items: AppointmentRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface UserAccount {
@@ -572,12 +622,13 @@ function canUseLocalData(error: unknown): boolean {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const isFormData = options.body instanceof FormData;
   let res: Response;
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(options.headers || {}),
       },
     });
@@ -1078,3 +1129,340 @@ export async function disableMemberProfile(token: string, memberId: string): Pro
   });
   return { data, source: "api" };
 }
+
+// --- 预约管理 API ---
+
+export interface AppointmentListQuery {
+  status?: string;
+  storeId?: string;
+  phone?: string;
+  serviceType?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function fetchAppointments(token: string, query: AppointmentListQuery = {}): Promise<ResourceResult<AppointmentListResult>> {
+  const params = new URLSearchParams();
+  if (query.status) params.set("status", query.status);
+  if (query.storeId) params.set("storeId", query.storeId);
+  if (query.phone) params.set("phone", query.phone);
+  if (query.serviceType) params.set("serviceType", query.serviceType);
+  if (query.dateFrom) params.set("dateFrom", query.dateFrom);
+  if (query.dateTo) params.set("dateTo", query.dateTo);
+  if (query.page) params.set("page", String(query.page));
+  if (query.pageSize) params.set("pageSize", String(query.pageSize));
+  const qs = params.toString();
+  const data = await request<AppointmentListResult>(`/admin/customer-appointments${qs ? `?${qs}` : ""}`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function fetchAppointmentDetail(token: string, id: string): Promise<ResourceResult<AppointmentRecord>> {
+  const data = await request<AppointmentRecord>(`/admin/customer-appointments/${id}`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function appointmentAction(token: string, id: string, action: "confirm" | "arrive" | "complete" | "no-show"): Promise<ResourceResult<AppointmentRecord>> {
+  const data = await request<AppointmentRecord>(`/admin/customer-appointments/${id}/${action}`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function cancelAppointment(token: string, id: string, reason: string): Promise<ResourceResult<AppointmentRecord>> {
+  const data = await request<AppointmentRecord>(`/admin/customer-appointments/${id}/cancel`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ reason }),
+  });
+  return { data, source: "api" };
+}
+
+export async function updateAppointmentStaffNote(token: string, id: string, staffNote: string): Promise<ResourceResult<null>> {
+  const data = await request<null>(`/admin/customer-appointments/${id}/staff-note`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify({ staffNote }),
+  });
+  return { data, source: "api" };
+}
+
+export async function fetchAppointmentRules(token: string): Promise<ResourceResult<AppointmentRules>> {
+  const data = await request<AppointmentRules>(`/admin/appointment-rules`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function saveAppointmentRules(token: string, rules: Omit<AppointmentRules, "updatedAt">): Promise<ResourceResult<AppointmentRules>> {
+  const data = await request<AppointmentRules>(`/admin/appointment-rules`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(rules),
+  });
+  return { data, source: "api" };
+}
+
+// --- 顾客端内容管理（首页配置 / Banner / 款式工费 / 门店扩展 / 图片上传） ---
+
+export interface CustomerHomeBanner {
+  id: string;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  linkType: string;
+  linkTarget?: string;
+  sortOrder: number;
+  enabled: boolean;
+}
+
+export interface CustomerHomeConfig {
+  brandName: string;
+  brandSlogan1: string;
+  brandSlogan2: string;
+  serviceCopy?: string;
+  entryStyleText?: string;
+  entryFeeText?: string;
+  servicePhone?: string;
+  appointmentNotes?: string;
+  serviceIntro?: string;
+  locationPermissionNote?: string;
+  banners: CustomerHomeBanner[];
+}
+
+export async function fetchCustomerHomeConfig(token: string): Promise<ResourceResult<CustomerHomeConfig>> {
+  const data = await request<CustomerHomeConfig>(`/admin/customer-home/config`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function saveCustomerHomeConfig(
+  token: string,
+  config: Omit<CustomerHomeConfig, "banners">,
+): Promise<ResourceResult<CustomerHomeConfig>> {
+  const data = await request<CustomerHomeConfig>(`/admin/customer-home/config`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(config),
+  });
+  return { data, source: "api" };
+}
+
+export interface RecycleProcessStepRecord {
+  step: number;
+  title: string;
+  desc?: string;
+}
+
+export interface RecycleServiceItemRecord {
+  icon?: string;
+  title: string;
+  desc?: string;
+}
+
+export interface CustomerRecycleInfoRecord {
+  title: string;
+  intro?: string;
+  imageUrl?: string;
+  process: RecycleProcessStepRecord[];
+  services: RecycleServiceItemRecord[];
+  notices: string[];
+}
+
+export async function fetchCustomerRecycleInfo(token: string): Promise<ResourceResult<CustomerRecycleInfoRecord>> {
+  const data = await request<CustomerRecycleInfoRecord>(`/admin/customer/recycle-info`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function saveCustomerRecycleInfo(
+  token: string,
+  info: CustomerRecycleInfoRecord,
+): Promise<ResourceResult<CustomerRecycleInfoRecord>> {
+  const data = await request<CustomerRecycleInfoRecord>(`/admin/customer/recycle-info`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(info),
+  });
+  return { data, source: "api" };
+}
+
+export type CustomerHomeBannerInput = Omit<CustomerHomeBanner, "id">;
+
+export async function createCustomerHomeBanner(token: string, banner: CustomerHomeBannerInput): Promise<ResourceResult<CustomerHomeBanner>> {
+  const data = await request<CustomerHomeBanner>(`/admin/customer-home/banners`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(banner),
+  });
+  return { data, source: "api" };
+}
+
+export async function saveCustomerHomeBanner(token: string, id: string, banner: CustomerHomeBannerInput): Promise<ResourceResult<CustomerHomeBanner>> {
+  const data = await request<CustomerHomeBanner>(`/admin/customer-home/banners/${id}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(banner),
+  });
+  return { data, source: "api" };
+}
+
+export async function deleteCustomerHomeBanner(token: string, id: string): Promise<ResourceResult<null>> {
+  const data = await request<null>(`/admin/customer-home/banners/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export interface CustomerStyleRecord {
+  id: string;
+  name: string;
+  sku?: string;
+  category: string;
+  categoryTab?: string;
+  imageUrl: string;
+  images: string[];
+  detailImages: string[];
+  purity?: string;
+  retailPrice: number;
+  gramWeight: number;
+  laborFeeRef?: string;
+  description?: string;
+  laborFeeNote?: string;
+  applicableServiceTypes: string[];
+  recommendedStoreRule?: string;
+  sortOrder: number;
+  isRecommended: boolean;
+  isHot: boolean;
+  status: string;
+  tags: string[];
+  storeIds: string[];
+  updatedAt?: string;
+}
+
+export interface CustomerStyleListResult {
+  items: CustomerStyleRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CustomerStyleListQuery {
+  category?: string;
+  status?: string;
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function fetchCustomerStyles(token: string, query: CustomerStyleListQuery = {}): Promise<ResourceResult<CustomerStyleListResult>> {
+  const data = await request<CustomerStyleListResult>(`/admin/customer-products${toQueryString(query)}`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function fetchCustomerStyleCategories(token: string): Promise<ResourceResult<string[]>> {
+  const data = await request<string[]>(`/admin/customer-products/categories`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function saveCustomerStyle(
+  token: string,
+  id: string,
+  record: Partial<CustomerStyleRecord>,
+): Promise<ResourceResult<CustomerStyleRecord>> {
+  const data = await request<CustomerStyleRecord>(`/admin/customer-products${id ? `/${id}` : ""}`, {
+    method: id ? "PUT" : "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(record),
+  });
+  return { data, source: "api" };
+}
+
+export async function deleteCustomerStyle(token: string, id: string): Promise<ResourceResult<null>> {
+  const data = await request<null>(`/admin/customer-products/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export interface StoreCustomerConfig {
+  imageUrl?: string;
+  appointmentEnabled?: boolean;
+  serviceTags: string[];
+  sortOrder: number;
+  longitude?: number;
+  latitude?: number;
+  contactPhone?: string;
+  businessHours?: string;
+  address?: string;
+  status?: string;
+}
+
+export async function fetchStoreCustomerConfig(token: string, storeId: string): Promise<ResourceResult<StoreCustomerConfig>> {
+  const data = await request<StoreCustomerConfig>(`/admin/stores/${storeId}/customer-config`, {
+    headers: authHeaders(token),
+  });
+  return { data, source: "api" };
+}
+
+export async function saveStoreCustomerConfig(
+  token: string,
+  storeId: string,
+  config: Partial<StoreCustomerConfig>,
+): Promise<ResourceResult<StoreCustomerConfig>> {
+  const data = await request<StoreCustomerConfig>(`/admin/stores/${storeId}/customer-config`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(config),
+  });
+  return { data, source: "api" };
+}
+
+export type UploadScene = "banner" | "style_main" | "style_detail" | "store" | "service_intro";
+
+export interface UploadAsset {
+  id: string;
+  scene: string;
+  url: string;
+  path: string;
+  storage: string;
+  mimeType: string;
+  size: number;
+  refId?: string;
+  originalName?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export async function uploadCustomerImage(
+  token: string,
+  file: File,
+  scene: UploadScene,
+  refId = "",
+): Promise<ResourceResult<UploadAsset>> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("scene", scene);
+  if (refId) form.append("refId", refId);
+  const data = await request<UploadAsset>(`/admin/uploads/images`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: form,
+  });
+  return { data, source: "api" };
+}
+
