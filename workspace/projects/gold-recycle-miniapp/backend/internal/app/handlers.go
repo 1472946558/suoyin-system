@@ -444,6 +444,17 @@ func (a *App) handleAdminStoreCollection(w http.ResponseWriter, r *http.Request)
 }
 
 func (a *App) handleAdminStore(w http.ResponseWriter, r *http.Request) {
+	// 子资源：门店顾客端扩展配置（支持 GET/PUT，需在方法白名单之前分发）
+	if strings.HasSuffix(r.URL.Path, "/customer-config") {
+		storeID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/admin/stores/"), "/customer-config")
+		if storeID == "" {
+			a.writeError(w, r, http.StatusBadRequest, 40002, "invalid store id")
+			return
+		}
+		a.handleAdminStoreCustomerConfig(w, r, storeID)
+		return
+	}
+
 	if r.Method != http.MethodPut && r.Method != http.MethodDelete {
 		a.writeError(w, r, http.StatusMethodNotAllowed, 40005, "method not allowed")
 		return

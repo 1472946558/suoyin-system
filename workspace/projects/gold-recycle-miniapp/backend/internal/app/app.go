@@ -91,6 +91,8 @@ func New() (*App, error) {
 		GoldPriceXAUUSD:        envFloat("GOLD_PRICE_XAU_USD", 0),
 		GoldPriceUSDCNY:        envFloat("GOLD_PRICE_USD_CNY", 0),
 		GoldPriceUpdatedAt:     env("GOLD_PRICE_UPDATED_AT", ""),
+		AssetsDir:              env("ASSETS_DIR", ""),
+		AssetsPublicBaseURL:    env("ASSETS_PUBLIC_BASE_URL", ""),
 	}
 
 	persistence, err := newPersistence(cfg)
@@ -149,6 +151,24 @@ func (a *App) Router() http.Handler {
 	mux.Handle("/api/admin/materials/", a.withAuth(a.requireAdminAbility("recycle.view", a.handleAdminMaterialActions)))
 	mux.Handle("/api/admin/orders", a.withAuth(a.requireAdminAbility("order.view", a.handleAdminOrderCollection)))
 	mux.Handle("/api/admin/system-profile", a.withAuth(a.requireAdminAbility("system.config.manage", a.handleAdminSystemProfile)))
+
+	// 后台「顾客端内容管理」接口（决策：统一沿用 /api/admin/ 前缀）
+	mux.Handle("/api/admin/uploads/images", a.withAuth(a.requireAdminAbility("customer_content.view", a.handleAdminUploadImages)))
+	mux.Handle("/api/admin/uploads/images/", a.withAuth(a.requireAdminAbility("customer_content.view", a.handleAdminUploadImageActions)))
+	mux.Handle("/api/admin/customer-home/banners", a.withAuth(a.requireAdminAbility("customer_content.view", a.handleAdminBannerCollection)))
+	mux.Handle("/api/admin/customer-home/banners/", a.withAuth(a.requireAdminAbility("customer_content.view", a.handleAdminBannerItem)))
+	mux.Handle("/api/admin/customer-home/config", a.withAuth(a.requireAdminAbility("customer_content.view", a.handleAdminHomeConfig)))
+	mux.Handle("/api/admin/customer/recycle-info", a.withAuth(a.requireAdminAbility("customer_content.view", a.handleAdminCustomerRecycleInfo)))
+	mux.Handle("/api/admin/customer-products", a.withAuth(a.requireAdminAbility("product.view", a.handleAdminCustomerProductCollection)))
+	mux.Handle("/api/admin/customer-products/", a.withAuth(a.requireAdminAbility("product.view", a.handleAdminCustomerProductItem)))
+	mux.Handle("/api/admin/appointment-rules", a.withAuth(a.requireAdminAbility("customer_content.view", a.handleAdminAppointmentRules)))
+	mux.Handle("/api/admin/customer-appointments", a.withAuth(a.requireAdminAbility("appointment.manage", a.handleAdminCustomerAppointments)))
+	mux.Handle("/api/admin/customer-appointments/", a.withAuth(a.requireAdminAbility("appointment.manage", a.handleAdminCustomerAppointmentActions)))
+
+	// 素材静态服务（本地磁盘兜底方案；配置 ASSETS_DIR 后启用）
+	if assetsDir := strings.TrimSpace(a.Config.AssetsDir); assetsDir != "" {
+		mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsDir))))
+	}
 	mux.Handle("/api/v1/auth/logout", a.withAuth(a.handleLogout))
 	mux.Handle("/api/v1/me", a.withAuth(a.handleMe))
 	mux.HandleFunc("/api/v1/auth/wechat-login", a.handleMiniAppLogin)

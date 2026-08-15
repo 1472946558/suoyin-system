@@ -112,7 +112,9 @@ var persistenceStatements = []string{
 		appointment_date DATE NOT NULL,
 		appointment_time VARCHAR(8) NOT NULL,
 		status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+		service_type VARCHAR(32) NOT NULL DEFAULT 'CONSULT',
 		remark TEXT NOT NULL,
+		staff_note TEXT NOT NULL,
 		created_at DATETIME(6) NOT NULL,
 		updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
 		cancelled_at DATETIME(6) NULL,
@@ -242,6 +244,13 @@ func (p *Persistence) ensureSchema(ctx context.Context) error {
 	}
 	if err := p.ensureColumn(ctx, "cashier_orders", "voided_at", "DATETIME(6) NULL"); err != nil {
 		return fmt.Errorf("ensure cashier voided_at column: %w", err)
+	}
+	// 顾客预约扩展列（存量生产库自动补列）
+	if err := p.ensureColumn(ctx, "customer_appointments", "service_type", "VARCHAR(32) NOT NULL DEFAULT 'CONSULT'"); err != nil {
+		return fmt.Errorf("ensure appointments service_type column: %w", err)
+	}
+	if err := p.ensureColumn(ctx, "customer_appointments", "staff_note", "TEXT NOT NULL"); err != nil {
+		return fmt.Errorf("ensure appointments staff_note column: %w", err)
 	}
 	return nil
 }
@@ -467,7 +476,7 @@ func (p *Persistence) loadCustomerAppointments(ctx context.Context) ([]CustomerA
 	rows, err := p.db.QueryContext(ctx, `
 		SELECT id, org_id, customer_id, customer_name, customer_phone,
 		       store_id, store_name, store_address, store_phone,
-		       appointment_date, appointment_time, status, remark,
+		       appointment_date, appointment_time, status, service_type, remark, staff_note,
 		       created_at, updated_at, cancelled_at, cancel_reason,
 		       confirmed_at, confirmed_by, completed_at
 		FROM customer_appointments
@@ -484,7 +493,7 @@ func (p *Persistence) loadCustomerAppointments(ctx context.Context) ([]CustomerA
 		if err := rows.Scan(
 			&appt.ID, &appt.OrgID, &appt.CustomerID, &appt.CustomerName, &appt.CustomerPhone,
 			&appt.StoreID, &appt.StoreName, &appt.StoreAddress, &appt.StorePhone,
-			&appt.AppointmentDate, &appt.AppointmentTime, &appt.Status, &appt.Remark,
+			&appt.AppointmentDate, &appt.AppointmentTime, &appt.Status, &appt.ServiceType, &appt.Remark, &appt.StaffNote,
 			&appt.CreatedAt, &appt.UpdatedAt, &cancelledAt, &appt.CancelReason,
 			&confirmedAt, &appt.ConfirmedBy, &completedAt,
 		); err != nil {
@@ -509,10 +518,10 @@ func (p *Persistence) saveCustomerAppointment(ctx context.Context, appt Customer
 		INSERT INTO customer_appointments (
 			id, org_id, customer_id, customer_name, customer_phone,
 			store_id, store_name, store_address, store_phone,
-			appointment_date, appointment_time, status, remark,
+			appointment_date, appointment_time, status, service_type, remark, staff_note,
 			created_at, updated_at, cancelled_at, cancel_reason,
 			confirmed_at, confirmed_by, completed_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON DUPLICATE KEY UPDATE
 			customer_name = VALUES(customer_name),
 			customer_phone = VALUES(customer_phone),
@@ -520,7 +529,9 @@ func (p *Persistence) saveCustomerAppointment(ctx context.Context, appt Customer
 			store_address = VALUES(store_address),
 			store_phone = VALUES(store_phone),
 			status = VALUES(status),
+			service_type = VALUES(service_type),
 			remark = VALUES(remark),
+			staff_note = VALUES(staff_note),
 			updated_at = VALUES(updated_at),
 			cancelled_at = VALUES(cancelled_at),
 			cancel_reason = VALUES(cancel_reason),
@@ -529,7 +540,7 @@ func (p *Persistence) saveCustomerAppointment(ctx context.Context, appt Customer
 			completed_at = VALUES(completed_at)`,
 		appt.ID, appt.OrgID, appt.CustomerID, appt.CustomerName, appt.CustomerPhone,
 		appt.StoreID, appt.StoreName, appt.StoreAddress, appt.StorePhone,
-		appt.AppointmentDate, appt.AppointmentTime, appt.Status, appt.Remark,
+		appt.AppointmentDate, appt.AppointmentTime, appt.Status, appt.ServiceType, appt.Remark, appt.StaffNote,
 		appt.CreatedAt, appt.UpdatedAt, appt.CancelledAt, appt.CancelReason,
 		appt.ConfirmedAt, appt.ConfirmedBy, appt.CompletedAt,
 	)

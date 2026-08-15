@@ -66,6 +66,16 @@ func newAdminAbilityGroups() []AdminAbilityGroup {
 			},
 		},
 		{
+			Key:         "customer_content",
+			Label:       "顾客端配置",
+			Description: "顾客端小程序的内容、素材和预约管理。",
+			Items: []AdminAbilityOption{
+				{Code: "customer_content.view", Label: "查看顾客端配置", Description: "查看首页 Banner、文案、素材和预约规则。"},
+				{Code: "customer_content.manage", Label: "管理顾客端配置", Description: "维护首页 Banner、文案、素材和预约规则。"},
+				{Code: "appointment.manage", Label: "管理预约记录", Description: "确认、到店、完成、取消和标记未到店。"},
+			},
+		},
+		{
 			Key:         "system",
 			Label:       "基础设置",
 			Description: "维护品牌信息、拍照规则和打印设置。",
@@ -711,6 +721,9 @@ func sanitizeAdminAbilities(abilities []AdminAbilityCode) []AdminAbilityCode {
 		"recycle.view":         {},
 		"system.config.view":   {},
 		"system.config.manage": {},
+		"customer_content.view":   {},
+		"customer_content.manage": {},
+		"appointment.manage":      {},
 	}
 	items := make([]AdminAbilityCode, 0, len(abilities))
 	seen := make(map[AdminAbilityCode]struct{}, len(abilities))
@@ -2097,7 +2110,7 @@ func buildAdminFixtures() (
 	allAbilities := allAdminAbilities(groups)
 	roles := []AdminRoleTemplate{
 		{ID: 1, Key: "boss", Name: "老板", Description: "可查看并维护全部门店的收银、回收、会员、商品和基础设置。", DataScope: "all_stores", MemberCount: 1, Locked: true, Abilities: allAbilities},
-		{ID: 2, Key: "shop_manager", Name: "店长", Description: "只查看和维护自己门店的业务数据。", DataScope: "assigned_store", MemberCount: 3, Locked: true, Abilities: []AdminAbilityCode{"dashboard.view", "store.view", "product.view", "product.manage", "order.view", "recycle.view"}},
+		{ID: 2, Key: "shop_manager", Name: "店长", Description: "只查看和维护自己门店的业务数据。", DataScope: "assigned_store", MemberCount: 3, Locked: true, Abilities: []AdminAbilityCode{"dashboard.view", "store.view", "store.manage", "product.view", "product.manage", "order.view", "recycle.view", "customer_content.view", "appointment.manage"}},
 	}
 	stores := []AdminStoreRecord{
 		{ID: "store-sz-luohu", Code: "SZ-LH-01", Name: "罗湖旗舰店", ManagerName: "李店长", City: "深圳", Address: "罗湖区深南东路 1888 号 1F", ContactPhone: "0755-8899 1201", BusinessHours: "10:00 - 22:00", Status: "active", CashierDevices: 3, PendingTasks: 2, TodayAmount: 18260, TodayOrders: 16, LastSettlementAt: "2026-05-10 10:05", Tags: []string{"黄金回收", "收银台", "拍照留档"}},
@@ -2205,6 +2218,12 @@ func sanitizePersistedAdminRoles(roles []AdminRoleTemplate) ([]AdminRoleTemplate
 		role.ID = 1
 		role.Key = "boss"
 		role.Locked = true
+		// 老板始终持有全部 ability（含后续新增的顾客端配置/预约管理）
+		expected := allAdminAbilities(newAdminAbilityGroups())
+		if len(role.Abilities) != len(expected) {
+			role.Abilities = expected
+			changed = true
+		}
 		items = append(items, role)
 	} else {
 		items = append(items, AdminRoleTemplate{ID: 1, Key: "boss", Name: "老板", Description: "可查看全部门店的收银、回收、会员、商品和基础设置。", DataScope: "all_stores", Locked: true, Abilities: allAdminAbilities(newAdminAbilityGroups())})
@@ -2214,9 +2233,16 @@ func sanitizePersistedAdminRoles(roles []AdminRoleTemplate) ([]AdminRoleTemplate
 		role.ID = 2
 		role.Key = "shop_manager"
 		role.Locked = true
+		// 店长保底 ability（含顾客端内容只读 + 预约管理 + 本店门店维护）
+		required := []AdminAbilityCode{"dashboard.view", "store.view", "store.manage", "product.view", "product.manage", "order.view", "recycle.view", "customer_content.view", "appointment.manage"}
+		mergedAbilities := sanitizeAdminAbilities(append(append([]AdminAbilityCode(nil), role.Abilities...), required...))
+		if len(mergedAbilities) != len(role.Abilities) {
+			role.Abilities = mergedAbilities
+			changed = true
+		}
 		items = append(items, role)
 	} else {
-		items = append(items, AdminRoleTemplate{ID: 2, Key: "shop_manager", Name: "店长", Description: "可查看本门店的业务数据，并维护商品和基础资料。", DataScope: "assigned_store", Locked: true, Abilities: []AdminAbilityCode{"dashboard.view", "store.view", "product.view", "product.manage", "order.view", "recycle.view"}})
+		items = append(items, AdminRoleTemplate{ID: 2, Key: "shop_manager", Name: "店长", Description: "可查看本门店的业务数据，并维护商品和基础资料。", DataScope: "assigned_store", Locked: true, Abilities: []AdminAbilityCode{"dashboard.view", "store.view", "store.manage", "product.view", "product.manage", "order.view", "recycle.view", "customer_content.view", "appointment.manage"}})
 		changed = true
 	}
 	return items, changed

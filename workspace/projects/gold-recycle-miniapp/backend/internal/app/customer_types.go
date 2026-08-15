@@ -13,6 +13,11 @@
 
 package app
 
+import (
+	"encoding/json"
+	"strings"
+)
+
 import "time"
 
 // CustomerProfile 顾客档案
@@ -75,6 +80,7 @@ type CustomerAppointment struct {
 	AppointmentTime string     `json:"appointmentTime"` // HH:MM
 	Status          string     `json:"status"`
 	Remark          string     `json:"remark,omitempty"`
+	StaffNote       string     `json:"staffNote,omitempty"` // 内部备注（后台专用，顾客端 DTO 不返回）
 	CreatedAt       time.Time  `json:"createdAt"`
 	UpdatedAt       time.Time  `json:"updatedAt"`
 	CancelledAt     *time.Time `json:"cancelledAt,omitempty"`
@@ -97,6 +103,15 @@ type CustomerProductDTO struct {
 	GramWeight       float64  `json:"gramWeight"`
 	RecommendedScene string   `json:"recommendedScene,omitempty"`
 	Tags             []string `json:"tags,omitempty"`
+	// 后台「款式/工费管理」配置的扩展字段（顾客端展示）
+	LaborFeeRef            string   `json:"laborFeeRef,omitempty"`
+	Description            string   `json:"description,omitempty"`
+	LaborFeeNote           string   `json:"laborFeeNote,omitempty"`
+	Images                 []string `json:"images,omitempty"`
+	DetailImages           []string `json:"detailImages,omitempty"` // 款式详情图（style_detail 场景上传）
+	ApplicableServiceTypes []string `json:"applicableServiceTypes,omitempty"`
+	IsRecommended          bool     `json:"isRecommended,omitempty"`
+	IsHot                  bool     `json:"isHot,omitempty"`
 }
 
 // CustomerStoreDTO 顾客可见的门店白名单 DTO（列表）
@@ -107,6 +122,9 @@ type CustomerStoreDTO struct {
 	Address       string  `json:"address"`
 	ContactPhone  string  `json:"contactPhone,omitempty"`
 	BusinessHours string  `json:"businessHours,omitempty"`
+	ImageURL      string  `json:"imageUrl,omitempty"`
+	ServiceTags   []string `json:"serviceTags,omitempty"`
+	AppointmentEnabled bool `json:"appointmentEnabled"` // 门店预约开关（默认开）
 	Distance      float64 `json:"distance,omitempty"` // km，前端计算
 }
 
@@ -118,6 +136,9 @@ type CustomerStoreDetailDTO struct {
 	Address       string  `json:"address"`
 	ContactPhone  string  `json:"contactPhone,omitempty"`
 	BusinessHours string  `json:"businessHours,omitempty"`
+	ImageURL      string  `json:"imageUrl,omitempty"`
+	ServiceTags   []string `json:"serviceTags,omitempty"`
+	AppointmentEnabled bool `json:"appointmentEnabled"` // 门店预约开关（默认开）
 	Longitude     float64 `json:"longitude"`
 	Latitude      float64 `json:"latitude"`
 }
@@ -152,6 +173,15 @@ type CustomerProfileDTO struct {
 	AvatarURL string `json:"avatarUrl,omitempty"`
 }
 
+// AppointmentRulesSummary 预约规则摘要（暴露给顾客端，替代硬编码）
+type AppointmentRulesSummary struct {
+	BookableDays       int      `json:"bookableDays"`       // 可预约天数
+	SlotMinutes        int      `json:"slotMinutes"`        // 时段粒度（分钟）
+	CancelLeadMinutes  int      `json:"cancelLeadMinutes"`  // 取消需提前分钟数
+	SameDayLeadMinutes int      `json:"sameDayLeadMinutes"` // 当日提前量（分钟）
+	BookableServiceTypes []string `json:"bookableServiceTypes"` // 可预约服务类型 code 列表
+}
+
 // CustomerHomeResponse 顾客首页聚合数据
 type CustomerHomeResponse struct {
 	Banners      []CustomerBanner `json:"banners"`
@@ -159,21 +189,114 @@ type CustomerHomeResponse struct {
 	BrandSlogan1 string           `json:"brandSlogan1"`
 	BrandSlogan2 string           `json:"brandSlogan2"`
 	ServicePhone string           `json:"servicePhone,omitempty"`
+	// 顾客端内容管理扩展（后台可配置；红线：不含"旧金回收"独立入口字段）
+	ServiceCopy            string          `json:"serviceCopy,omitempty"`            // 服务文案，如"黄金维修 · 到店回收 · 款式定制"
+	EntryStyleText         string          `json:"entryStyleText,omitempty"`         // 首页核心入口-款式图
+	EntryFeeText           string          `json:"entryFeeText,omitempty"`           // 首页核心入口-工费
+	NearbyStoreRule        *NearbyStoreRule `json:"nearbyStoreRule,omitempty"`        // 附近门店展示规则
+	AppointmentNotes       string          `json:"appointmentNotes,omitempty"`       // 预约须知
+	ServiceIntro           string          `json:"serviceIntro,omitempty"`           // 我的页服务说明
+	LocationPermissionNote string          `json:"locationPermissionNote,omitempty"` // 位置权限说明
+	AppointmentRules       AppointmentRulesSummary `json:"appointmentRules"`           // 预约规则摘要
 }
 
 // CustomerBanner 首页轮播图
 type CustomerBanner struct {
-	ImageURL string `json:"imageUrl"`
-	LinkType string `json:"linkType,omitempty"` // products / recycle / appointment / stores
-	LinkURL  string `json:"linkUrl,omitempty"`
+	ID         string `json:"id,omitempty"`
+	Title      string `json:"title,omitempty"`
+	Subtitle   string `json:"subtitle,omitempty"`
+	ImageURL   string `json:"imageUrl"`
+	LinkType   string `json:"linkType,omitempty"`   // none/style_list/style_detail/store_list/store_detail/booking/external_page（兼容旧值 products/recycle/appointment/stores）
+	LinkTarget string `json:"linkTarget,omitempty"` // 款式 id / 门店 id / 页面路径
+	LinkURL    string `json:"linkUrl,omitempty"`    // 兼容旧字段
+	SortOrder  int    `json:"sortOrder,omitempty"`
+	Enabled    *bool  `json:"enabled,omitempty"` // nil = 启用（兼容存量数据）
 }
 
-// CustomerRecycleInfo 黄金回收服务介绍
+// CustomerRecycleInfo 黄金回收服务介绍（结构化，供顾客端渲染）
 type CustomerRecycleInfo struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Process string `json:"process,omitempty"`
-	Notes   string `json:"notes,omitempty"`
+	Title    string                  `json:"title"`
+	Intro    string                  `json:"intro,omitempty"`
+	ImageURL string                  `json:"imageUrl,omitempty"` // 顶部配图（service_intro 场景上传）
+	Process  []RecycleProcessStep    `json:"process,omitempty"`
+	Services []RecycleServiceItem    `json:"services,omitempty"`
+	Notices  []string                `json:"notices,omitempty"`
+}
+
+// RecycleProcessStep 回收流程步骤
+type RecycleProcessStep struct {
+	Step  int    `json:"step"`
+	Title string `json:"title"`
+	Desc  string `json:"desc,omitempty"`
+}
+
+// RecycleServiceItem 回收服务项
+type RecycleServiceItem struct {
+	Icon  string `json:"icon,omitempty"`
+	Title string `json:"title"`
+	Desc  string `json:"desc,omitempty"`
+}
+
+// UnmarshalJSON 兼容旧版扁平字符串格式（content/process/notes 均为字符串）。
+// 存量 app_configs 中持久化的是旧结构，直接反序列化会因类型不匹配导致启动失败；
+// 此处基于原始字段类型检测：content/notes 为字符串、或 process 为字符串时按旧结构解析，
+// 否则按新结构解析。
+func (c *CustomerRecycleInfo) UnmarshalJSON(data []byte) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	isLegacy := false
+	for _, key := range []string{"content", "notes", "process"} {
+		v, ok := raw[key]
+		if !ok {
+			continue
+		}
+		var s string
+		if err := json.Unmarshal(v, &s); err == nil {
+			isLegacy = true
+			break
+		}
+	}
+
+	if isLegacy {
+		var legacy struct {
+			Title   string `json:"title"`
+			Content string `json:"content"`
+			Process string `json:"process"`
+			Notes   string `json:"notes"`
+		}
+		if err := json.Unmarshal(data, &legacy); err != nil {
+			return err
+		}
+		*c = CustomerRecycleInfo{
+			Title:   legacy.Title,
+			Intro:   legacy.Content,
+			Notices: splitLegacyLines(legacy.Notes),
+		}
+		return nil
+	}
+
+	type recycleInfoAlias CustomerRecycleInfo // 避免递归调用
+	var modern recycleInfoAlias
+	if err := json.Unmarshal(data, &modern); err != nil {
+		return err
+	}
+	*c = CustomerRecycleInfo(modern)
+	return nil
+}
+
+// splitLegacyLines 将旧版多行文本按换行符拆为非空字符串切片
+func splitLegacyLines(s string) []string {
+	var out []string
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			out = append(out, line)
+		}
+	}
+	return out
 }
 
 // --- 请求体 ---
@@ -288,16 +411,20 @@ func validServiceType(t string) bool {
 	return false
 }
 
-// canCancelAppointment 判断预约是否可取消（距预约时间 >= 2 小时）
-func canCancelAppointment(appt CustomerAppointment, now time.Time) bool {
+// canCancelAppointment 判断预约是否可取消（距预约时间 >= cancelLeadMinutes，默认 120 分钟）
+func canCancelAppointment(appt CustomerAppointment, now time.Time, cancelLeadMinutes int) bool {
 	if appt.Status != AppointmentStatusPending && appt.Status != AppointmentStatusConfirmed {
 		return false
+	}
+	if cancelLeadMinutes <= 0 {
+		cancelLeadMinutes = 120
 	}
 	apptTime, err := time.ParseInLocation("2006-01-02 15:04", appt.AppointmentDate+" "+appt.AppointmentTime, time.Local)
 	if err != nil {
 		return false
 	}
-	return now.Add(2 * time.Hour).Before(apptTime) || now.Add(2*time.Hour).Equal(apptTime)
+	lead := time.Duration(cancelLeadMinutes) * time.Minute
+	return now.Add(lead).Before(apptTime) || now.Add(lead).Equal(apptTime)
 }
 
 // maskPhone 手机号脱敏

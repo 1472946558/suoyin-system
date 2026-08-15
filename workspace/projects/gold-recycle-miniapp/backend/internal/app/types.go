@@ -55,6 +55,8 @@ type Config struct {
 	GoldPriceXAUUSD        float64
 	GoldPriceUSDCNY        float64
 	GoldPriceUpdatedAt     string
+	AssetsDir              string // 后台素材上传本地目录（ASSETS_DIR）
+	AssetsPublicBaseURL    string // 素材公网地址前缀（ASSETS_PUBLIC_BASE_URL），如 https://jinjiangguan.com
 }
 
 func (c Config) ListenAddr() string {
@@ -85,6 +87,11 @@ type StoreInfo struct {
 	Latitude      float64 `json:"latitude,omitempty"`
 	ContactPhone  string  `json:"contactPhone,omitempty"`
 	BusinessHours string  `json:"businessHours,omitempty"`
+	// 顾客端扩展（后台「顾客端内容管理」）
+	ImageURL           string   `json:"imageUrl,omitempty"`           // 门店图片
+	AppointmentEnabled *bool    `json:"appointmentEnabled,omitempty"` // 是否支持预约（nil = 可预约）
+	ServiceTags        []string `json:"serviceTags,omitempty"`        // 门店服务标签
+	SortOrder          int      `json:"sortOrder,omitempty"`          // 门店排序
 }
 
 type PermissionItem struct {
@@ -407,6 +414,17 @@ type CatalogProduct struct {
 	Tags             []string `json:"tags"`
 	RecommendedScene string   `json:"recommendedScene"`
 	QuoteLeadTime    string   `json:"quoteLeadTime"`
+	// 顾客端款式扩展（后台「款式/工费管理」）
+	LaborFeeRef            string   `json:"laborFeeRef,omitempty"`            // 工费参考，如 "35元/克 起"
+	Description            string   `json:"description,omitempty"`            // 款式说明
+	LaborFeeNote           string   `json:"laborFeeNote,omitempty"`           // 工费说明
+	Images                 []string `json:"images,omitempty"`                 // 款式多图（首图=主图）
+	DetailImages           []string `json:"detailImages,omitempty"`           // 款式详情图（style_detail 场景上传）
+	ApplicableServiceTypes []string `json:"applicableServiceTypes,omitempty"` // 适用服务类型
+	RecommendedStoreRule   string   `json:"recommendedStoreRule,omitempty"`   // nearest / product_stores / all
+	SortOrder              int      `json:"sortOrder,omitempty"`
+	IsRecommended          bool     `json:"isRecommended,omitempty"`
+	IsHot                  bool     `json:"isHot,omitempty"`
 }
 
 type BrandSettings struct {

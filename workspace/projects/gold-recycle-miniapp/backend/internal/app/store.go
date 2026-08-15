@@ -61,6 +61,8 @@ const (
 	configKeyCustomerProfiles    = "customer_profiles"
 	configKeyCustomerHome        = "customer_home_config"
 	configKeyCustomerRecycleInfo = "customer_recycle_info"
+	configKeyAppointmentRules    = "appointment_rules"
+	configKeyUploadAssets        = "upload_assets"
 )
 
 const (
@@ -116,6 +118,8 @@ type MockStore struct {
 	customerSeq          int
 	customerHomeConfig   CustomerHomeResponse
 	customerRecycleInfo  CustomerRecycleInfo
+	appointmentRules     AppointmentRules
+	uploadAssets         []UploadAsset
 }
 
 func newMockStore(persistence *Persistence) (*MockStore, error) {
@@ -2539,12 +2543,38 @@ func (s *MockStore) bootstrapBaseConfigs(ctx context.Context) error {
 		return err
 	}
 	if found {
+		normalizeCustomerHomeConfigLocked(&homeConfig)
 		s.customerHomeConfig = homeConfig
 	} else {
 		s.customerHomeConfig = defaultCustomerHomeConfig()
 		if err := s.persistence.saveConfig(ctx, configKeyCustomerHome, s.customerHomeConfig); err != nil {
 			return err
 		}
+	}
+
+	var appointmentRules AppointmentRules
+	found, err = s.persistence.loadConfig(ctx, configKeyAppointmentRules, &appointmentRules)
+	if err != nil {
+		return err
+	}
+	if found && appointmentRules.SlotMinutes > 0 {
+		s.appointmentRules = appointmentRules
+	} else {
+		s.appointmentRules = defaultAppointmentRules()
+		if err := s.persistence.saveConfig(ctx, configKeyAppointmentRules, s.appointmentRules); err != nil {
+			return err
+		}
+	}
+
+	var uploadAssets []UploadAsset
+	found, err = s.persistence.loadConfig(ctx, configKeyUploadAssets, &uploadAssets)
+	if err != nil {
+		return err
+	}
+	if found {
+		s.uploadAssets = uploadAssets
+	} else if err := s.persistence.saveConfig(ctx, configKeyUploadAssets, s.uploadAssets); err != nil {
+		return err
 	}
 
 	var recycleInfo CustomerRecycleInfo

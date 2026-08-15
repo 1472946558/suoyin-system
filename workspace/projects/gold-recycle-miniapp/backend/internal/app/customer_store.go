@@ -32,6 +32,7 @@ var (
 	errDuplicateAppointment   = errors.New("duplicate appointment for same store and time slot")
 	errInvalidAppointmentTime = errors.New("invalid appointment time")
 	errAppointmentStatusFlow  = errors.New("appointment status transition not allowed")
+	errStoreAppointmentDisabled = errors.New("store appointment disabled")
 )
 
 // --- 顾客会话 ---
@@ -222,17 +223,7 @@ func (s *MockStore) customerProductList(category, keyword string, page, pageSize
 				continue
 			}
 		}
-		items = append(items, CustomerProductDTO{
-			ID:               p.ID,
-			Name:             p.Name,
-			ImageURL:         p.ImageURL,
-			Category:         p.Category,
-			Purity:           p.Purity,
-			RetailPrice:      p.RetailPrice,
-			GramWeight:       p.GramWeight,
-			RecommendedScene: p.RecommendedScene,
-			Tags:             p.Tags,
-		})
+		items = append(items, buildCustomerProductDTO(p))
 	}
 
 	total := len(items)
@@ -252,20 +243,37 @@ func (s *MockStore) customerProductDetail(id string) (CustomerProductDTO, bool) 
 	defer s.mu.RUnlock()
 	for _, p := range s.catalogProducts {
 		if p.ID == id && p.Status == "active" {
-			return CustomerProductDTO{
-				ID:               p.ID,
-				Name:             p.Name,
-				ImageURL:         p.ImageURL,
-				Category:         p.Category,
-				Purity:           p.Purity,
-				RetailPrice:      p.RetailPrice,
-				GramWeight:       p.GramWeight,
-				RecommendedScene: p.RecommendedScene,
-				Tags:             p.Tags,
-			}, true
+			return buildCustomerProductDTO(p), true
 		}
 	}
 	return CustomerProductDTO{}, false
+}
+
+// buildCustomerProductDTO 构造顾客可见的商品 DTO（含后台配置的扩展字段）
+func buildCustomerProductDTO(p CatalogProduct) CustomerProductDTO {
+	images := p.Images
+	if len(images) == 0 && p.ImageURL != "" {
+		images = []string{p.ImageURL}
+	}
+	return CustomerProductDTO{
+		ID:                     p.ID,
+		Name:                   p.Name,
+		ImageURL:               p.ImageURL,
+		Category:               p.Category,
+		Purity:                 p.Purity,
+		RetailPrice:            p.RetailPrice,
+		GramWeight:             p.GramWeight,
+		RecommendedScene:       p.RecommendedScene,
+		Tags:                   p.Tags,
+		LaborFeeRef:            p.LaborFeeRef,
+		Description:            p.Description,
+		LaborFeeNote:           p.LaborFeeNote,
+		Images:                 images,
+		DetailImages:           p.DetailImages,
+		ApplicableServiceTypes: p.ApplicableServiceTypes,
+		IsRecommended:          p.IsRecommended,
+		IsHot:                  p.IsHot,
+	}
 }
 
 func (s *MockStore) customerProductCategories() []string {
@@ -293,16 +301,25 @@ func (s *MockStore) customerStoreList() []CustomerStoreDTO {
 		if st.Status != "active" {
 			continue
 		}
-		items = append(items, CustomerStoreDTO{
-			ID:            st.ID,
-			Name:          st.Name,
-			City:          st.City,
-			Address:       st.Address,
-			ContactPhone:  st.ContactPhone,
-			BusinessHours: st.BusinessHours,
-		})
+		items = append(items, buildCustomerStoreDTO(st))
 	}
 	return items
+}
+
+// buildCustomerStoreDTO 构造顾客门店 DTO（含后台配置的扩展字段）
+func buildCustomerStoreDTO(st StoreInfo) CustomerStoreDTO {
+	enabled := st.AppointmentEnabled == nil || *st.AppointmentEnabled
+	return CustomerStoreDTO{
+		ID:                 st.ID,
+		Name:               st.Name,
+		City:               st.City,
+		Address:            st.Address,
+		ContactPhone:       st.ContactPhone,
+		BusinessHours:      st.BusinessHours,
+		ImageURL:           st.ImageURL,
+		ServiceTags:        st.ServiceTags,
+		AppointmentEnabled: enabled,
+	}
 }
 
 func (s *MockStore) customerStoreDetail(id string) (CustomerStoreDetailDTO, bool) {
@@ -310,15 +327,19 @@ func (s *MockStore) customerStoreDetail(id string) (CustomerStoreDetailDTO, bool
 	defer s.mu.RUnlock()
 	for _, st := range s.stores {
 		if st.ID == id && st.Status == "active" {
+			enabled := st.AppointmentEnabled == nil || *st.AppointmentEnabled
 			return CustomerStoreDetailDTO{
-				ID:            st.ID,
-				Name:          st.Name,
-				City:          st.City,
-				Address:       st.Address,
-				ContactPhone:  st.ContactPhone,
-				BusinessHours: st.BusinessHours,
-				Longitude:     st.Longitude,
-				Latitude:      st.Latitude,
+				ID:                 st.ID,
+				Name:               st.Name,
+				City:               st.City,
+				Address:            st.Address,
+				ContactPhone:       st.ContactPhone,
+				BusinessHours:      st.BusinessHours,
+				ImageURL:           st.ImageURL,
+				ServiceTags:        st.ServiceTags,
+				AppointmentEnabled: enabled,
+				Longitude:          st.Longitude,
+				Latitude:           st.Latitude,
 			}, true
 		}
 	}
@@ -328,19 +349,42 @@ func (s *MockStore) customerStoreDetail(id string) (CustomerStoreDetailDTO, bool
 func (s *MockStore) customerHomeData() CustomerHomeResponse {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if len(s.customerHomeConfig.Banners) == 0 && s.customerHomeConfig.BrandName == "" {
-		return defaultCustomerHomeConfig()
+	cfg := s.customerHomeConfig
+	if len(cfg.Banners) == 0 && cfg.BrandName == "" {
+		cfg = defaultCustomerHomeConfig()
 	}
-	return s.customerHomeConfig
+	normalizeCustomerHomeConfigLocked(&cfg)
+	// 顾客端只返回启用中的 Banner，按 SortOrder 排序
+	visible := make([]CustomerBanner, 0, len(cfg.Banners))
+	for _, b := range cfg.Banners {
+		if bannerEnabled(b.Enabled) && strings.TrimSpace(b.ImageURL) != "" {
+			visible = append(visible, b)
+		}
+	}
+	cfg.Banners = visible
+	// 注入预约规则摘要（替代前端硬编码）
+	rules := s.appointmentRules
+	if rules.SlotMinutes == 0 {
+		rules = defaultAppointmentRules()
+	}
+	cfg.AppointmentRules = AppointmentRulesSummary{
+		BookableDays:         rules.BookableDays,
+		SlotMinutes:          rules.SlotMinutes,
+		CancelLeadMinutes:    rules.CancelLeadMinutes,
+		SameDayLeadMinutes:   rules.SameDayLeadMinutes,
+		BookableServiceTypes: rules.BookableServiceTypes,
+	}
+	return cfg
 }
 
 func (s *MockStore) customerRecycleInfoData() CustomerRecycleInfo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if s.customerRecycleInfo.Title == "" {
+	info := s.customerRecycleInfo
+	if info.Title == "" || (len(info.Process) == 0 && len(info.Services) == 0) {
 		return defaultCustomerRecycleInfo()
 	}
-	return s.customerRecycleInfo
+	return info
 }
 
 // --- 顾客预约 ---
@@ -359,14 +403,31 @@ func (s *MockStore) createCustomerAppointment(customer CustomerProfile, req Crea
 		return CustomerAppointment{}, errInvalidAppointmentTime
 	}
 
-	// 当天预约至少提前 1 小时
-	if apptTime.Before(now.Add(1 * time.Hour)) {
+	// 预约规则（可配置，替换原硬编码）
+	rules := s.appointmentRulesSnapshot()
+
+	// 当天预约至少提前 sameDayLeadMinutes（默认 60 分钟）
+	if apptTime.Before(now.Add(time.Duration(rules.SameDayLeadMinutes) * time.Minute)) {
 		return CustomerAppointment{}, errInvalidAppointmentTime
 	}
 
-	// 可预约范围：未来 7 天
-	if apptTime.After(now.Add(7 * 24 * time.Hour)) {
+	// 可预约范围：未来 bookableDays（默认 7）天
+	if apptTime.After(now.Add(time.Duration(rules.BookableDays) * 24 * time.Hour)) {
 		return CustomerAppointment{}, errInvalidAppointmentTime
+	}
+
+	// 可预约服务类型受限时校验
+	if len(rules.BookableServiceTypes) > 0 {
+		allowed := false
+		for _, t := range rules.BookableServiceTypes {
+			if t == req.ServiceType {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return CustomerAppointment{}, errors.New("service type not bookable")
+		}
 	}
 
 	s.mu.Lock()
@@ -386,6 +447,11 @@ func (s *MockStore) createCustomerAppointment(customer CustomerProfile, req Crea
 		return CustomerAppointment{}, errAppointmentNotFound
 	}
 
+	// 门店预约开关（关闭后不可新预约）
+	if store.AppointmentEnabled != nil && !*store.AppointmentEnabled {
+		return CustomerAppointment{}, errStoreAppointmentDisabled
+	}
+
 	// 重复预约检查：同一手机号 + 同一门店 + 同一日期 + 同一时间
 	for _, a := range s.customerAppointments {
 		if a.CustomerPhone == req.ContactPhone && a.StoreID == req.StoreID &&
@@ -395,8 +461,7 @@ func (s *MockStore) createCustomerAppointment(customer CustomerProfile, req Crea
 		}
 	}
 
-	// 时段容量检查：同一门店同一时段最多 2 单（满则拒）
-	const slotCapacity = 2
+	// 时段容量检查：同一门店同一时段最多 slotCapacity 单（默认 2）
 	slotCount := 0
 	for _, a := range s.customerAppointments {
 		if a.StoreID == req.StoreID &&
@@ -406,7 +471,7 @@ func (s *MockStore) createCustomerAppointment(customer CustomerProfile, req Crea
 			slotCount++
 		}
 	}
-	if slotCount >= slotCapacity {
+	if slotCount >= rules.SlotCapacity {
 		return CustomerAppointment{}, errors.New("time slot is full")
 	}
 
@@ -462,11 +527,28 @@ func (s *MockStore) listCustomerAppointmentSlots(storeID, date string) ([]Custom
 		return nil, errAppointmentNotFound
 	}
 
-	// 营业时间 09:30 - 21:30，按 30 分钟粒度
-	startHour, startMin := 9, 30
-	endHour, endMin := 21, 30
-
-	const slotCapacity = 2 // 单时段容量
+	// 营业时间与粒度来自预约规则（可配置，默认 09:30-21:30 / 30 分钟）
+	rules := s.appointmentRulesSnapshot()
+	openTime, err := time.Parse("15:04", rules.OpenTime)
+	if err != nil {
+		openTime = time.Date(0, 1, 1, 9, 30, 0, 0, time.UTC)
+	}
+	closeTime, err := time.Parse("15:04", rules.CloseTime)
+	if err != nil {
+		closeTime = time.Date(0, 1, 1, 21, 30, 0, 0, time.UTC)
+	}
+	slotMinutes := rules.SlotMinutes
+	if slotMinutes <= 0 {
+		slotMinutes = 30
+	}
+	slotCapacity := rules.SlotCapacity
+	if slotCapacity <= 0 {
+		slotCapacity = 2
+	}
+	// 门店预约开关关闭时不返回可约时段
+	if store.AppointmentEnabled != nil && !*store.AppointmentEnabled {
+		return []CustomerStoreSlotDTO{}, nil
+	}
 
 	// 统计每个时段已预约数
 	slotBooked := map[string]int{}
@@ -480,12 +562,12 @@ func (s *MockStore) listCustomerAppointmentSlots(storeID, date string) ([]Custom
 		slotBooked[a.AppointmentTime]++
 	}
 
-	// 生成所有时段
-	cur := time.Date(0, 1, 1, startHour, startMin, 0, 0, time.UTC)
-	end := time.Date(0, 1, 1, endHour, endMin, 0, 0, time.UTC)
+	// 生成所有时段（按规则粒度递增）
+	cur := openTime
+	end := closeTime
 	var slots []CustomerStoreSlotDTO
 
-	for !cur.After(end) {
+	for cur.Before(end) {
 		timeStr := cur.Format("15:04")
 		booked := slotBooked[timeStr]
 		state := "open"
@@ -498,7 +580,7 @@ func (s *MockStore) listCustomerAppointmentSlots(storeID, date string) ([]Custom
 			Available: available,
 			State:     state,
 		})
-		cur = cur.Add(30 * time.Minute)
+		cur = cur.Add(time.Duration(slotMinutes) * time.Minute)
 	}
 
 	return slots, nil
@@ -635,7 +717,12 @@ func (s *MockStore) cancelCustomerAppointment(customerID, appointmentID, reason 
 			if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
 				return errAppointmentStatusFlow
 			}
-			if !canCancelAppointment(a, now) {
+			rules := s.appointmentRulesSnapshot()
+			cancelLead := rules.CancelLeadMinutes
+			if cancelLead <= 0 {
+				cancelLead = 120
+			}
+			if !canCancelAppointment(a, now, cancelLead) {
 				return errAppointmentTimeTooLate
 			}
 			s.customerAppointments[i].Status = AppointmentStatusCancelled
@@ -729,19 +816,37 @@ func (s *MockStore) staffUpdateAppointmentStatus(user UserAccount, appointmentID
 
 func defaultCustomerHomeConfig() CustomerHomeResponse {
 	return CustomerHomeResponse{
-		BrandName:    "金匠馆",
-		BrandSlogan1: "旧金换打新款",
-		BrandSlogan2: "包损耗",
-		Banners:      []CustomerBanner{},
+		BrandName:      "金匠馆",
+		BrandSlogan1:   "旧金换打新款",
+		BrandSlogan2:   "包损耗",
+		ServiceCopy:    "黄金维修 · 到店回收 · 款式定制",
+		EntryStyleText: "款式图",
+		EntryFeeText:   "工费",
+		Banners:        []CustomerBanner{},
 	}
 }
 
 func defaultCustomerRecycleInfo() CustomerRecycleInfo {
 	return CustomerRecycleInfo{
-		Title:   "黄金回收服务",
-		Content: "金匠馆专业黄金回收服务，旧金换打新款，包损耗。到店即可享受专业检测和公正估价。",
-		Process: "1. 到店咨询\n2. 黄金检测\n3. 确认价格\n4. 完成回收",
-		Notes:   "最终回收价格以门店线下检测为准。",
+		Title: "黄金回收服务",
+		Intro: "金匠馆专业黄金回收服务，旧金换打新款，包损耗。到店即可享受专业检测和公正估价。",
+		Process: []RecycleProcessStep{
+			{Step: 1, Title: "到店咨询", Desc: "携带黄金饰品到门店，专业顾问接待"},
+			{Step: 2, Title: "黄金检测", Desc: "使用专业仪器检测纯度和克重"},
+			{Step: 3, Title: "确认价格", Desc: "根据实时金价和检测结果给出报价"},
+			{Step: 4, Title: "完成回收", Desc: "确认无误后现场结算，款项即时到账"},
+		},
+		Services: []RecycleServiceItem{
+			{Icon: "recycle", Title: "旧金换新", Desc: "旧金饰折价换购新款，补差价即可"},
+			{Icon: "repair", Title: "黄金维修", Desc: "变形、断裂、损耗等维修修复服务"},
+			{Icon: "consult", Title: "款式咨询", Desc: "专业顾问提供款式与工费咨询"},
+			{Icon: "recycle", Title: "到店回收", Desc: "黄金饰品现场检测、公正估价、即时结算"},
+		},
+		Notices: []string{
+			"最终回收价格以门店线下检测为准",
+			"请携带有效身份证件办理回收业务",
+			"回收金价参考当日上海黄金交易所基准价",
+		},
 	}
 }
 
