@@ -60,6 +60,16 @@
   color: var(--color-text-sub);
 }
 
+.ad-value-danger {
+  color: var(--color-danger);
+}
+
+/* 取消信息 */
+.ad-cancel-info {
+  border: 2rpx solid rgba(244, 67, 54, 0.15);
+  background: #FEF5F5;
+}
+
 /* 门店操作 */
 .ad-store-actions {
   display: flex;

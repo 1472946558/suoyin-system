@@ -14,8 +14,8 @@
         <view class="mine-avatar-text">{{profile.phone ? profile.phone.substr(-4) : '顾'}}</view>
       </view>
       <view class="mine-user-info">
-        <view class="mine-user-name">顾客 {{profile.phone}}</view>
-        <view class="mine-user-tip">欢迎使用金匠倌</view>
+        <view class="mine-user-name">{{profile.phone || '尊贵顾客'}}</view>
+        <view class="mine-user-tip">欢迎使用金匠倌收银</view>
       </view>
     </block>
     <block wx:else>
@@ -38,6 +38,7 @@
       <view class="mine-menu-item" bindtap="onMyAppointments">
         <view class="mine-menu-icon">📅</view>
         <view class="mine-menu-text">我的预约</view>
+        <view class="mine-menu-badge" wx:if="{{pendingCount > 0}}">{{pendingCount}}</view>
         <view class="mine-menu-arrow">›</view>
       </view>
       <view class="mine-divider"></view>

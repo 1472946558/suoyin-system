@@ -45,13 +45,27 @@ Page({
   loadList(cb) {
     this.setData({ loading: true });
     api.getAppointments()
-      .then(list => {
-        const processed = (list || []).map(item => ({
+      .then(resp => {
+        // 后端返回 { items: [...], total: N }，兼容直接返回数组
+        var list = [];
+        if (Array.isArray(resp)) {
+          list = resp;
+        } else if (resp && Array.isArray(resp.items)) {
+          list = resp.items;
+        }
+        var processed = list.map(item => ({
           ...item,
-          statusText: appointmentStatusText(item.status),
+          // 后端已提供 statusText / serviceTypeText，缺失时本地兜底
+          statusText: item.statusText || appointmentStatusText(item.status),
           statusColor: appointmentStatusColor(item.status),
-          serviceText: serviceTypeText(item.serviceType)
+          serviceText: item.serviceTypeText || serviceTypeText(item.serviceType)
         }));
+        // 按预约时间倒序排列（最新的在前）
+        processed.sort(function(a, b) {
+          var ka = (a.appointmentDate || '') + (a.appointmentTime || '');
+          var kb = (b.appointmentDate || '') + (b.appointmentTime || '');
+          return kb.localeCompare(ka);
+        });
         this.setData({ list: processed, filteredList: this.filterByTab(processed, this.data.activeTab), loading: false });
         if (cb) cb();
       })

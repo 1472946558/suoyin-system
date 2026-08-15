@@ -38,9 +38,10 @@ Page({
         this.setData({
           detail,
           loading: false,
-          statusText: appointmentStatusText(detail.status),
+          // 后端已提供 statusText / serviceTypeText，缺失时本地兜底
+          statusText: detail.statusText || appointmentStatusText(detail.status),
           statusColor: appointmentStatusColor(detail.status),
-          serviceText: serviceTypeText(detail.serviceType),
+          serviceText: detail.serviceTypeText || serviceTypeText(detail.serviceType),
           canCancel: this.checkCanCancel(detail),
           canEditNotes: NOTES_EDITABLE.indexOf(detail.status) !== -1
         });
@@ -56,9 +57,11 @@ Page({
   // 检查是否可取消（PENDING/CONFIRMED 且距预约 > 2 小时）
   checkCanCancel(detail) {
     if (CANCELLABLE.indexOf(detail.status) === -1) return false;
-    const apptTime = new Date(detail.appointmentDate + 'T' + detail.startTime + ':00');
-    const now = new Date();
-    const diff = apptTime.getTime() - now.getTime();
+    // 后端已做 2 小时校验，前端也做一道提前判断
+    var apptTime = new Date(detail.appointmentDate + 'T' + detail.appointmentTime + ':00');
+    if (isNaN(apptTime.getTime())) return true; // 解析失败时不阻拦，让后端校验
+    var now = new Date();
+    var diff = apptTime.getTime() - now.getTime();
     return diff > 2 * 60 * 60 * 1000; // > 2 小时
   },
 
@@ -105,20 +108,15 @@ Page({
     }).catch(() => {});
   },
 
-  // 导航到门店
+  // 导航到门店 — DTO 不含坐标，跳转到门店详情页查看地图
   onNavigate() {
-    const detail = this.data.detail;
-    if (!detail) return;
-    if (!detail.storeLongitude || !detail.storeLatitude) {
-      wx.showToast({ title: '该门店暂未配置位置', icon: 'none' });
+    var detail = this.data.detail;
+    if (!detail || !detail.storeId) {
+      wx.showToast({ title: '暂无门店信息', icon: 'none' });
       return;
     }
-    wx.openLocation({
-      latitude: detail.storeLatitude,
-      longitude: detail.storeLongitude,
-      name: detail.storeName || '',
-      address: detail.storeAddress || '',
-      scale: 16
+    wx.navigateTo({
+      url: '/pkg-customer/store-detail/index?id=' + detail.storeId
     });
   }
 });

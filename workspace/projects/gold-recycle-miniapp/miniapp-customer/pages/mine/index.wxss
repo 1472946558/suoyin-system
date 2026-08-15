@@ -96,6 +96,19 @@
   color: var(--color-text-sub);
 }
 
+.mine-menu-badge {
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 22rpx;
+  min-width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  border-radius: 999rpx;
+  text-align: center;
+  padding: 0 10rpx;
+  margin-right: 8rpx;
+}
+
 .mine-menu-arrow {
   font-size: 36rpx;
   color: var(--color-text-tip);

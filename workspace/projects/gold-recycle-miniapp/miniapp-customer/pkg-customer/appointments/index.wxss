@@ -140,6 +140,22 @@
   color: var(--color-text-sub);
 }
 
+.apt-item-addr {
+  font-size: 24rpx;
+  color: var(--color-text-tip);
+  margin-top: 12rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 40rpx;
+}
+
+.apt-item-cancel {
+  font-size: 24rpx;
+  color: var(--color-danger);
+  margin-top: 8rpx;
+}
+
 .apt-item-arrow {
   position: absolute;
   right: 32rpx;

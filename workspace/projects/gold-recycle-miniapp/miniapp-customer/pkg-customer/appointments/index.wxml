@@ -59,7 +59,11 @@
         </view>
         <view class="apt-item-time">
           <text class="apt-item-date">{{item.appointmentDate}}</text>
-          <text class="apt-item-slot">{{item.startTime}} - {{item.endTime}}</text>
+          <text class="apt-item-slot">{{item.timeRange}}</text>
+        </view>
+        <view class="apt-item-addr" wx:if="{{item.storeAddress}}">{{item.storeAddress}}</view>
+        <view class="apt-item-cancel" wx:if="{{item.status === 'CANCELLED' && item.cancelReason}}">
+          取消原因：{{item.cancelReason}}
         </view>
         <view class="apt-item-arrow">›</view>
       </view>

@@ -43,24 +43,28 @@
         <text class="ad-label">预约门店</text>
         <text class="ad-value">{{detail.storeName}}</text>
       </view>
+      <view class="ad-row" wx:if="{{detail.storeAddress}}">
+        <text class="ad-label">门店地址</text>
+        <text class="ad-value ad-value-sub">{{detail.storeAddress}}</text>
+      </view>
       <view class="ad-row">
         <text class="ad-label">预约日期</text>
         <text class="ad-value">{{detail.appointmentDate}}</text>
       </view>
       <view class="ad-row">
         <text class="ad-label">预约时段</text>
-        <text class="ad-value">{{detail.startTime}} - {{detail.endTime}}</text>
+        <text class="ad-value">{{detail.timeRange}}</text>
       </view>
     </view>
 
     <!-- 门店操作 -->
-    <view class="card ad-section" wx:if="{{detail.storePhone || (detail.storeLongitude && detail.storeLatitude)}}">
+    <view class="card ad-section" wx:if="{{detail.storePhone || detail.storeId}}">
       <view class="ad-store-actions">
         <view class="btn-outline ad-store-btn" bindtap="onCallStore" wx:if="{{detail.storePhone}}">
           <text>📞 联系门店</text>
         </view>
-        <view class="btn-outline ad-store-btn" bindtap="onNavigate" wx:if="{{detail.storeLongitude && detail.storeLatitude}}">
-          <text>📍 地图导航</text>
+        <view class="btn-outline ad-store-btn" bindtap="onNavigate" wx:if="{{detail.storeId}}">
+          <text>📍 门店位置</text>
         </view>
       </view>
     </view>
@@ -74,6 +78,26 @@
       <view class="ad-remark-body">
         <text wx:if="{{detail.remark}}">{{detail.remark}}</text>
         <text class="ad-remark-empty" wx:else>无备注</text>
+      </view>
+    </view>
+
+    <!-- 取消信息 -->
+    <view class="card ad-section ad-cancel-info" wx:if="{{detail.status === 'CANCELLED' && detail.cancelReason}}">
+      <view class="ad-row">
+        <text class="ad-label">取消原因</text>
+        <text class="ad-value ad-value-danger">{{detail.cancelReason}}</text>
+      </view>
+      <view class="ad-row" wx:if="{{detail.cancelledAt}}">
+        <text class="ad-label">取消时间</text>
+        <text class="ad-value ad-value-sub">{{detail.cancelledAt}}</text>
+      </view>
+    </view>
+
+    <!-- 确认信息 -->
+    <view class="card ad-section" wx:if="{{detail.confirmedAt && detail.status !== 'CANCELLED'}}">
+      <view class="ad-row">
+        <text class="ad-label">确认时间</text>
+        <text class="ad-value ad-value-sub">{{detail.confirmedAt}}</text>
       </view>
     </view>
 

@@ -1,8 +1,8 @@
 // pkg-customer/appointment-create/index.js - 到店预约创建页
 const { api } = require('../../utils/request.js');
 const { ensureCustomerSession, customerPhoneAuth, getStoredProfile, getCustomerToken } = require('../../utils/customer-auth.js');
-const { SERVICE_TYPES, serviceTypeText } = require('../../utils/customer-services.js');
-const { next7Days, fmtDate, isPastTime, timePlusMin, parseTimeMin } = require('../../utils/customer-date.js');
+const { SERVICE_TYPES } = require('../../utils/customer-services.js');
+const { next7Days, fmtDate, isPastTime, timePlusMin } = require('../../utils/customer-date.js');
 
 Page({
   data: {
@@ -23,8 +23,15 @@ Page({
     slots: [],
     selectedSlot: '',
 
+    // 联系人
+    contactName: '',
+    contactPhone: '',
+
     // 备注
     remark: '',
+
+    // 协议
+    agreed: false,
 
     // 顾客
     isLoggedIn: false,
@@ -46,11 +53,7 @@ Page({
     const token = getCustomerToken();
     const profile = getStoredProfile();
     if (token && profile) {
-      this.setData({
-        isLoggedIn: true,
-        phoneVerified: !!profile.phone,
-        profile: profile
-      });
+      this.applyProfile(profile);
     }
 
     if (this.data.storeId) {
@@ -63,12 +66,18 @@ Page({
     const token = getCustomerToken();
     const profile = getStoredProfile();
     if (token && profile) {
-      this.setData({
-        isLoggedIn: true,
-        phoneVerified: !!profile.phone,
-        profile: profile
-      });
+      this.applyProfile(profile);
     }
+  },
+
+  applyProfile(profile) {
+    this.setData({
+      isLoggedIn: true,
+      phoneVerified: !!profile.phone,
+      profile: profile,
+      contactName: profile.nickname || this.data.contactName,
+      contactPhone: profile.phone || this.data.contactPhone
+    });
   },
 
   // 加载门店信息
@@ -89,18 +98,24 @@ Page({
   loadSlots() {
     if (!this.data.storeId || !this.data.selectedDate) return;
     api.getStoreSlots(this.data.storeId, this.data.selectedDate)
-      .then(slots => {
-        // 标记已过时段
-        const now = new Date();
-        const todayStr = fmtDate(now);
-        const processed = (slots || []).map(s => {
-          const isPast = (this.data.selectedDate === todayStr) && isPastTime(this.data.selectedDate, s.startTime);
+      .then(resp => {
+        // 后端返回 {date, slots: [...]}
+        const raw = (resp && Array.isArray(resp)) ? resp : (resp && resp.slots) || [];
+        const todayStr = fmtDate(new Date());
+        const processed = raw.map(s => {
+          const startTime = s.time;
+          const endTime = timePlusMin(startTime, 30);
+          const isPast = (this.data.selectedDate === todayStr) && isPastTime(this.data.selectedDate, startTime);
+          const isFull = s.available === false || s.state === 'full';
+          const isClosed = s.state === 'closed';
           return {
-            ...s,
-            label: s.startTime + ' - ' + (s.endTime || timePlusMin(s.startTime, 30)),
-            isPast: isPast,
-            isFull: s.available !== undefined && s.available <= 0,
-            disabled: isPast || (s.available !== undefined && s.available <= 0)
+            startTime: startTime,
+            endTime: endTime,
+            label: startTime + '-' + endTime,
+            isPast,
+            isFull,
+            isClosed,
+            disabled: isPast || isFull || isClosed
           };
         });
         this.setData({ slots: processed, selectedSlot: '' });
@@ -126,8 +141,45 @@ Page({
   // 选时段
   onSelectSlot(e) {
     const slot = e.currentTarget.dataset.slot;
-    if (this.data.slots.find(s => s.startTime === slot && s.disabled)) return;
+    const target = this.data.slots.find(s => s.startTime === slot);
+    if (target && target.disabled) return;
     this.setData({ selectedSlot: slot });
+  },
+
+  // 输入联系人
+  onNameInput(e) {
+    this.setData({ contactName: e.detail.value });
+  },
+
+  // 输入手机号
+  onPhoneInput(e) {
+    this.setData({ contactPhone: e.detail.value });
+    // 用户手动修改手机号时撤销验证状态
+    if (this.data.phoneVerified) {
+      this.setData({ phoneVerified: false });
+    }
+  },
+
+  // 点击获取手机号按钮（弹起授权）
+  onGetPhoneTap() {
+    // 触发子组件 button open-type=getPhoneNumber，由 onGetPhone 处理
+    // 这里仅提示，实际授权在 WXML 的 button 中
+    wx.showToast({ title: '请点击页面内"获取手机号"按钮', icon: 'none' });
+  },
+
+  // 切换协议勾选
+  onToggleAgree() {
+    this.setData({ agreed: !this.data.agreed });
+  },
+
+  // 查看协议
+  onTapAgreement() {
+    wx.showModal({
+      title: '预约须知',
+      content: '1. 预约成功后，门店将通过电话与您确认。\n2. 请按时到店，如需取消请提前 2 小时操作。\n3. 同一时段同一门店仅可预约一次。',
+      showCancel: false,
+      confirmText: '我知道了'
+    });
   },
 
   // 输入备注
@@ -152,11 +204,7 @@ Page({
       customerPhoneAuth(phoneCode)
         .then(profile => {
           wx.hideLoading();
-          this.setData({
-            isLoggedIn: true,
-            phoneVerified: true,
-            profile: profile
-          });
+          this.applyProfile(profile);
           wx.showToast({ title: '授权成功', icon: 'success' });
         })
         .catch(err => {
@@ -179,7 +227,10 @@ Page({
 
   // 提交预约
   onSubmit() {
-    const { storeId, selectedService, selectedDate, selectedSlot, remark, phoneVerified, submitting } = this.data;
+    const {
+      storeId, selectedService, selectedDate, selectedSlot,
+      contactName, contactPhone, remark, phoneVerified, submitting, agreed
+    } = this.data;
 
     if (submitting) return;
 
@@ -199,17 +250,32 @@ Page({
       wx.showToast({ title: '请选择时段', icon: 'none' });
       return;
     }
-    if (!phoneVerified) {
-      wx.showToast({ title: '请先授权手机号', icon: 'none' });
+    if (!contactName.trim()) {
+      wx.showToast({ title: '请输入联系人姓名', icon: 'none' });
+      return;
+    }
+    if (!contactPhone.trim()) {
+      wx.showToast({ title: '请输入手机号', icon: 'none' });
+      return;
+    }
+    // 简单校验：必须是 11 位数字
+    if (!/^1\d{10}$/.test(contactPhone)) {
+      wx.showToast({ title: '手机号格式不正确', icon: 'none' });
+      return;
+    }
+    if (!agreed) {
+      wx.showToast({ title: '请先阅读并同意《预约须知》', icon: 'none' });
       return;
     }
 
     this.setData({ submitting: true });
     const data = {
-      storeId: parseInt(storeId, 10),
+      storeId: storeId,
       serviceType: selectedService,
       appointmentDate: selectedDate,
-      startTime: selectedSlot,
+      appointmentTime: selectedSlot,
+      contactName: contactName.trim(),
+      contactPhone: contactPhone.trim(),
       remark: (remark || '').trim()
     };
 
@@ -226,9 +292,9 @@ Page({
       .catch(err => {
         this.setData({ submitting: false });
         const msg = err.message || '预约失败';
-        if (msg.includes('duplicate') || msg.includes('重复')) {
+        if (msg.indexOf('duplicate') >= 0 || msg.indexOf('重复') >= 0) {
           wx.showModal({ title: '提示', content: '该时段已有有效预约，请选择其他时段', showCancel: false });
-        } else if (msg.includes('capacity') || msg.includes('已满')) {
+        } else if (msg.indexOf('capacity') >= 0 || msg.indexOf('已满') >= 0) {
           wx.showModal({ title: '提示', content: '该时段已约满，请选择其他时段', showCancel: false });
         } else {
           wx.showToast({ title: msg, icon: 'none' });
@@ -238,9 +304,12 @@ Page({
 
   // 选择门店（跳到门店 Tab）
   onSelectStore() {
-    wx.navigateTo({
-      url: '/pkg-customer/store-detail/index?id=' + this.data.storeId,
-      fail: () => wx.switchTab({ url: '/pages/stores/index' })
-    });
+    if (this.data.storeId) {
+      wx.navigateTo({
+        url: '/pkg-customer/store-detail/index?id=' + this.data.storeId
+      });
+    } else {
+      wx.switchTab({ url: '/pages/stores/index' });
+    }
   }
 });

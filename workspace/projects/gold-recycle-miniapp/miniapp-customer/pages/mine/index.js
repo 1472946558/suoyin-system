@@ -6,7 +6,8 @@ Page({
   data: {
     isLoggedIn: false,
     profile: null,
-    servicePhone: ''
+    servicePhone: '',
+    pendingCount: 0
   },
 
   onLoad() {
@@ -32,9 +33,28 @@ Page({
           }
         })
         .catch(() => {});
+      // 静默加载待处理预约数
+      this.loadPendingCount();
     } else {
-      this.setData({ isLoggedIn: false, profile: null });
+      this.setData({ isLoggedIn: false, profile: null, pendingCount: 0 });
     }
+  },
+
+  loadPendingCount() {
+    api.getAppointments()
+      .then(resp => {
+        var list = [];
+        if (Array.isArray(resp)) {
+          list = resp;
+        } else if (resp && Array.isArray(resp.items)) {
+          list = resp.items;
+        }
+        var count = list.filter(function(item) {
+          return item.status === 'PENDING' || item.status === 'CONFIRMED';
+        }).length;
+        this.setData({ pendingCount: count });
+      })
+      .catch(() => {});
   },
 
   // 去预约/登录
