@@ -354,6 +354,12 @@
   border: 2rpx solid var(--color-primary);
 }
 
+.act-btn-disabled {
+  color: var(--color-text-tip);
+  border-color: var(--color-border);
+  background: #f7f7f7;
+}
+
 .act-icon {
   margin-right: 8rpx;
   font-size: 24rpx;
@@ -373,6 +379,12 @@
 
 .act-phone-icon {
   font-size: 28rpx;
+}
+
+.act-phone-disabled {
+  color: var(--color-text-tip);
+  border-color: var(--color-border);
+  background: #f7f7f7;
 }
 
 /* 空状态 */

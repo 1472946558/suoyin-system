@@ -120,30 +120,51 @@ Page({
     switch (linkType) {
       case 'products':
       case 'style_list':
-        wx.switchTab({ url: '/pages/customer-products/index' });
+        wx.switchTab({
+          url: '/pages/customer-products/index',
+          fail: () => this.showActionError('款式页暂不可用')
+        });
         break;
       case 'stores':
       case 'store_list':
-        wx.switchTab({ url: '/pages/customer-stores/index' });
+        wx.switchTab({
+          url: '/pages/customer-stores/index',
+          fail: () => this.showActionError('门店页暂不可用')
+        });
         break;
       case 'recycle':
-        wx.navigateTo({ url: '/pkg-customer/recycle-info/index' });
+        wx.navigateTo({
+          url: '/pkg-customer/recycle-info/index',
+          fail: () => this.showActionError('回收介绍页暂不可用')
+        });
         break;
       case 'appointment':
       case 'booking':
         this.goAppointment();
         break;
       case 'style_detail':
-        if (target) wx.navigateTo({ url: '/pkg-customer/product-detail/index?id=' + target });
+        if (target) wx.navigateTo({
+          url: '/pkg-customer/product-detail/index?id=' + encodeURIComponent(target),
+          fail: () => this.showActionError('款式详情暂不可用')
+        });
         break;
       case 'store_detail':
-        if (target) wx.navigateTo({ url: '/pkg-customer/store-detail/index?id=' + target });
+        if (target) wx.navigateTo({
+          url: '/pkg-customer/store-detail/index?id=' + encodeURIComponent(target),
+          fail: () => this.showActionError('门店详情暂不可用')
+        });
         break;
       case 'external_page':
-        if (banner.linkUrl) wx.navigateTo({ url: banner.linkUrl });
+        if (banner.linkUrl) wx.navigateTo({
+          url: banner.linkUrl,
+          fail: () => this.showActionError('内容页面暂不可用')
+        });
         break;
       default:
-        if (banner.linkUrl) wx.navigateTo({ url: banner.linkUrl });
+        if (banner.linkUrl) wx.navigateTo({
+          url: banner.linkUrl,
+          fail: () => this.showActionError('内容页面暂不可用')
+        });
         break;
     }
   },

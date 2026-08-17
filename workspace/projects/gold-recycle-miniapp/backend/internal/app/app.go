@@ -16,6 +16,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -93,6 +94,10 @@ func New() (*App, error) {
 		GoldPriceUpdatedAt:     env("GOLD_PRICE_UPDATED_AT", ""),
 		AssetsDir:              env("ASSETS_DIR", ""),
 		AssetsPublicBaseURL:    env("ASSETS_PUBLIC_BASE_URL", ""),
+	}
+
+	if err := validatePersistentRuntimeConfig(cfg); err != nil {
+		return nil, err
 	}
 
 	persistence, err := newPersistence(cfg)
@@ -233,7 +238,19 @@ func (a *App) withRequestContext(next http.Handler) http.Handler {
 
 func (a *App) withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", a.Config.CORSOrigin)
+		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		if origin != "" {
+			if !a.corsOriginAllowed(origin) {
+				if r.Method == http.MethodOptions {
+					w.WriteHeader(http.StatusForbidden)
+					return
+				}
+				a.writeError(w, r, http.StatusForbidden, 40303, "origin is not allowed")
+				return
+			}
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Add("Vary", "Origin")
+		}
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		if r.Method == http.MethodOptions {
@@ -242,6 +259,35 @@ func (a *App) withCORS(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (a *App) corsOriginAllowed(origin string) bool {
+	for _, configured := range strings.Split(a.Config.CORSOrigin, ",") {
+		configured = strings.TrimSpace(configured)
+		if configured == "*" || configured == origin {
+			return true
+		}
+	}
+	return false
+}
+
+func validatePersistentRuntimeConfig(cfg Config) error {
+	if !strings.EqualFold(strings.TrimSpace(cfg.Mode), "persistent") {
+		return nil
+	}
+	if strings.TrimSpace(cfg.TokenSecret) == "" || cfg.TokenSecret == "gold-recycle-dev-secret" {
+		return errors.New("persistent mode requires a non-default TOKEN_SECRET")
+	}
+	if strings.TrimSpace(cfg.CORSOrigin) == "" || strings.Contains(cfg.CORSOrigin, "*") {
+		return errors.New("persistent mode requires explicit CORS_ORIGIN origins")
+	}
+	if cfg.MiniAppAllowMockLogin {
+		return errors.New("persistent mode cannot enable MINIAPP_ALLOW_MOCK_LOGIN")
+	}
+	if !cfg.hasMiniAppWechatAuth() {
+		return errors.New("persistent mode requires WECHAT_MINIAPP_APP_ID and WECHAT_MINIAPP_APP_SECRET")
+	}
+	return nil
 }
 
 func (a *App) withAuth(next http.HandlerFunc) http.Handler {

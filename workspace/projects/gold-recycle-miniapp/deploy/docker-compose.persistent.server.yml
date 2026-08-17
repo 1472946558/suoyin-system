@@ -2,6 +2,8 @@ services:
   backend:
     environment:
       APP_MODE: persistent
+      TOKEN_SECRET: ${TOKEN_SECRET:?TOKEN_SECRET must be set in persistent mode}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN must be set in persistent mode}
       WECHAT_MINIAPP_APP_ID: ${WECHAT_MINIAPP_APP_ID:-}
       WECHAT_MINIAPP_APP_SECRET: ${WECHAT_MINIAPP_APP_SECRET:-}
       WECHAT_API_BASE_URL: ${WECHAT_API_BASE_URL:-https://api.weixin.qq.com}

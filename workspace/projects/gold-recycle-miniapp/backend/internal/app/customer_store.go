@@ -34,7 +34,20 @@ var (
 	errInvalidAppointmentTime   = errors.New("invalid appointment time")
 	errAppointmentStatusFlow    = errors.New("appointment status transition not allowed")
 	errStoreAppointmentDisabled = errors.New("store appointment disabled")
+	errAppointmentPersistence   = errors.New("appointment persistence failed")
 )
+
+// persistCustomerAppointmentLocked 是预约状态变更的唯一持久化出口。
+// 调用方必须已经持有 s.mu 的读锁或写锁；持久化失败时不能继续向接口返回成功。
+func (s *MockStore) persistCustomerAppointmentLocked(appt CustomerAppointment) error {
+	if s.persistence == nil {
+		return nil
+	}
+	if err := s.persistence.saveCustomerAppointment(context.Background(), appt); err != nil {
+		return fmt.Errorf("%w: %v", errAppointmentPersistence, err)
+	}
+	return nil
+}
 
 // --- 顾客会话 ---
 
@@ -506,8 +519,11 @@ func (s *MockStore) createCustomerAppointment(customer CustomerProfile, req Crea
 	}
 
 	s.customerAppointments = append(s.customerAppointments, appt)
-	if s.persistence != nil {
-		_ = s.persistence.saveCustomerAppointment(context.Background(), appt)
+	if err := s.persistCustomerAppointmentLocked(appt); err != nil {
+		// 内存状态必须和持久化状态保持一致；写库失败时撤销本次内存写入。
+		s.customerAppointments = s.customerAppointments[:len(s.customerAppointments)-1]
+		s.customerSeq--
+		return CustomerAppointment{}, err
 	}
 	return appt, nil
 }
@@ -602,10 +618,12 @@ func (s *MockStore) updateCustomerAppointmentNotes(customerID, appointmentID, re
 			if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
 				return errAppointmentStatusFlow
 			}
+			previous := s.customerAppointments[i]
 			s.customerAppointments[i].Remark = remark
 			s.customerAppointments[i].UpdatedAt = now
-			if s.persistence != nil {
-				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			if err := s.persistCustomerAppointmentLocked(s.customerAppointments[i]); err != nil {
+				s.customerAppointments[i] = previous
+				return err
 			}
 			return nil
 		}
@@ -731,12 +749,14 @@ func (s *MockStore) cancelCustomerAppointment(customerID, appointmentID, reason 
 			if !canCancelAppointment(a, now, cancelLead) {
 				return errAppointmentTimeTooLate
 			}
+			previous := s.customerAppointments[i]
 			s.customerAppointments[i].Status = AppointmentStatusCancelled
 			s.customerAppointments[i].CancelledAt = &now
 			s.customerAppointments[i].CancelReason = reason
 			s.customerAppointments[i].UpdatedAt = now
-			if s.persistence != nil {
-				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			if err := s.persistCustomerAppointmentLocked(s.customerAppointments[i]); err != nil {
+				s.customerAppointments[i] = previous
+				return err
 			}
 			return nil
 		}
@@ -775,6 +795,7 @@ func (s *MockStore) staffUpdateAppointmentStatus(user UserAccount, appointmentID
 	defer s.mu.Unlock()
 	for i, a := range s.customerAppointments {
 		if a.ID == appointmentID && s.canAccessStore(user, a.StoreID) {
+			previous := s.customerAppointments[i]
 			// 状态机校验
 			switch newStatus {
 			case AppointmentStatusConfirmed:
@@ -809,8 +830,9 @@ func (s *MockStore) staffUpdateAppointmentStatus(user UserAccount, appointmentID
 				return errAppointmentStatusFlow
 			}
 			s.customerAppointments[i].UpdatedAt = now
-			if s.persistence != nil {
-				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			if err := s.persistCustomerAppointmentLocked(s.customerAppointments[i]); err != nil {
+				s.customerAppointments[i] = previous
+				return err
 			}
 			return nil
 		}

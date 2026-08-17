@@ -707,12 +707,14 @@ func (s *MockStore) adminCancelAppointment(user UserAccount, appointmentID, reas
 			if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
 				return errAppointmentStatusFlow
 			}
+			previous := s.customerAppointments[i]
 			s.customerAppointments[i].Status = AppointmentStatusCancelled
 			s.customerAppointments[i].CancelledAt = &now
 			s.customerAppointments[i].CancelReason = reason
 			s.customerAppointments[i].UpdatedAt = now
-			if s.persistence != nil {
-				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			if err := s.persistCustomerAppointmentLocked(s.customerAppointments[i]); err != nil {
+				s.customerAppointments[i] = previous
+				return err
 			}
 			s.appendAuditLogLocked("预约管理", "后台取消预约", user.DisplayName, "warning", "medium",
 				fmt.Sprintf("预约 %s 已由后台取消：%s", a.AppointmentNo, reason))
@@ -735,10 +737,12 @@ func (s *MockStore) adminUpdateAppointmentStaffNote(user UserAccount, appointmen
 			if a.Status == AppointmentStatusCancelled || a.Status == AppointmentStatusCompleted {
 				return errAppointmentStatusFlow
 			}
+			previous := s.customerAppointments[i]
 			s.customerAppointments[i].StaffNote = staffNote
 			s.customerAppointments[i].UpdatedAt = now
-			if s.persistence != nil {
-				_ = s.persistence.saveCustomerAppointment(context.Background(), s.customerAppointments[i])
+			if err := s.persistCustomerAppointmentLocked(s.customerAppointments[i]); err != nil {
+				s.customerAppointments[i] = previous
+				return err
 			}
 			return nil
 		}

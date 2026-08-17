@@ -179,10 +179,10 @@ func (a *App) handleCustomerProducts(w http.ResponseWriter, r *http.Request) {
 
 	items, total := a.store.customerProductList(category, keyword, page, pageSize)
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]interface{}{
-		"items":    items,
-		"total":    total,
-		"page":     page,
-		"pageSize": pageSize,
+		"items":      items,
+		"total":      total,
+		"page":       page,
+		"pageSize":   pageSize,
 		"categories": a.store.customerProductCategories(),
 	})
 }
@@ -368,6 +368,8 @@ func (a *App) customerCreateAppointment(w http.ResponseWriter, r *http.Request) 
 			a.writeError(w, r, http.StatusNotFound, 40401, "store not found")
 		case errors.Is(err, errStoreAppointmentDisabled):
 			a.writeError(w, r, http.StatusConflict, 40905, "store appointment is disabled")
+		case errors.Is(err, errAppointmentPersistence):
+			a.writeError(w, r, http.StatusServiceUnavailable, 50302, "appointment could not be saved; please retry")
 		default:
 			a.writeError(w, r, http.StatusInternalServerError, 50001, "failed to create appointment")
 		}
@@ -430,6 +432,8 @@ func (a *App) customerCancelAppointment(w http.ResponseWriter, r *http.Request, 
 			a.writeError(w, r, http.StatusBadRequest, 40011, "cannot cancel after the cancellation deadline")
 		case errors.Is(err, errAppointmentStatusFlow):
 			a.writeError(w, r, http.StatusConflict, 40903, "appointment status transition not allowed")
+		case errors.Is(err, errAppointmentPersistence):
+			a.writeError(w, r, http.StatusServiceUnavailable, 50302, "appointment could not be saved; please retry")
 		default:
 			a.writeError(w, r, http.StatusInternalServerError, 50001, "failed to cancel appointment")
 		}
@@ -460,6 +464,8 @@ func (a *App) customerUpdateAppointmentNotes(w http.ResponseWriter, r *http.Requ
 			a.writeError(w, r, http.StatusNotFound, 40401, "appointment not found")
 		case errors.Is(err, errAppointmentStatusFlow):
 			a.writeError(w, r, http.StatusConflict, 40903, "cannot edit notes: appointment is not pending or confirmed")
+		case errors.Is(err, errAppointmentPersistence):
+			a.writeError(w, r, http.StatusServiceUnavailable, 50302, "appointment notes could not be saved; please retry")
 		default:
 			a.writeError(w, r, http.StatusInternalServerError, 50001, "failed to update appointment notes")
 		}
@@ -578,6 +584,8 @@ func (a *App) staffUpdateAppointmentStatus(w http.ResponseWriter, r *http.Reques
 			a.writeError(w, r, http.StatusNotFound, 40401, "appointment not found")
 		case errors.Is(err, errAppointmentStatusFlow):
 			a.writeError(w, r, http.StatusConflict, 40903, "appointment status transition not allowed")
+		case errors.Is(err, errAppointmentPersistence):
+			a.writeError(w, r, http.StatusServiceUnavailable, 50302, "appointment could not be saved; please retry")
 		default:
 			a.writeError(w, r, http.StatusInternalServerError, 50001, "failed to update appointment status")
 		}

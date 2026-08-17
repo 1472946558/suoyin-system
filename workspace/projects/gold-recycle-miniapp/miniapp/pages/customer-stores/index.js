@@ -3,6 +3,12 @@ const { api } = require('../../utils/request.js');
 const { distanceKm, fmtDistance } = require('../../utils/customer-distance.js');
 const { absUrl } = require('../../utils/customer-services.js');
 
+function hasValidCoordinates(store) {
+  const longitude = Number(store && store.longitude);
+  const latitude = Number(store && store.latitude);
+  return isFinite(longitude) && isFinite(latitude) && longitude !== 0 && latitude !== 0;
+}
+
 Page({
   data: {
     stores: [],
@@ -49,11 +55,15 @@ Page({
       (list || []).forEach(m => {
         if (m && m.longitude) map[m.id] = m;
       });
-      return stores.map(s => Object.assign({}, s, {
-        longitude: s.longitude || (map[s.id] ? map[s.id].longitude : 0),
-        latitude: s.latitude || (map[s.id] ? map[s.id].latitude : 0),
-        thumb: s.imageUrl ? absUrl(s.imageUrl) : ''
-      }));
+      return stores.map(s => {
+        const item = Object.assign({}, s, {
+          longitude: s.longitude || (map[s.id] ? map[s.id].longitude : 0),
+          latitude: s.latitude || (map[s.id] ? map[s.id].latitude : 0),
+          thumb: s.imageUrl ? absUrl(s.imageUrl) : ''
+        });
+        item.hasCoordinate = hasValidCoordinates(item);
+        return item;
+      });
     });
   },
 
@@ -66,8 +76,8 @@ Page({
 
     if (loc) {
       enriched = enriched.map(s => {
-        if (s.longitude && s.latitude) {
-          const d = distanceKm(loc.latitude, loc.longitude, s.latitude, s.longitude);
+        if (hasValidCoordinates(s)) {
+          const d = distanceKm(loc.latitude, loc.longitude, Number(s.latitude), Number(s.longitude));
           return Object.assign({}, s, { distance: d, distanceText: fmtDistance(d) });
         }
         return Object.assign({}, s, { distance: null, distanceText: '' });
@@ -187,7 +197,10 @@ Page({
   onTapStore(e) {
     const id = e.currentTarget.dataset.id;
     if (!id) return;
-    wx.navigateTo({ url: '/pkg-customer/store-detail/index?id=' + id });
+    wx.navigateTo({
+      url: '/pkg-customer/store-detail/index?id=' + encodeURIComponent(id),
+      fail: () => wx.showToast({ title: '门店详情暂不可用', icon: 'none' })
+    });
   },
 
   onTapAppointment(e) {
@@ -198,22 +211,26 @@ Page({
       wx.showToast({ title: '该门店暂未开放预约', icon: 'none' });
       return;
     }
-    wx.navigateTo({ url: '/pkg-customer/appointment-create/index?storeId=' + id });
+    wx.navigateTo({
+      url: '/pkg-customer/appointment-create/index?storeId=' + encodeURIComponent(id),
+      fail: () => wx.showToast({ title: '预约页面暂不可用', icon: 'none' })
+    });
   },
 
   onNavigate(e) {
     const id = e.currentTarget.dataset.id;
     const s = this.data.stores.find(x => x.id === id);
-    if (!s || !s.longitude || !s.latitude) {
+    if (!s || !hasValidCoordinates(s)) {
       wx.showToast({ title: '该门店暂未配置坐标', icon: 'none' });
       return;
     }
     wx.openLocation({
-      latitude: s.latitude,
-      longitude: s.longitude,
+      latitude: Number(s.latitude),
+      longitude: Number(s.longitude),
       name: s.name,
       address: s.address,
-      scale: 16
+      scale: 16,
+      fail: () => wx.showToast({ title: '打开地图失败，请稍后重试', icon: 'none' })
     });
   },
 

@@ -1461,7 +1461,9 @@ func TestNewPersistentModeRequiresBackingServices(t *testing.T) {
 			}
 			t.Setenv("PORT", "8080")
 			t.Setenv("TOKEN_SECRET", "test-secret")
-			t.Setenv("CORS_ORIGIN", "*")
+			t.Setenv("CORS_ORIGIN", "https://test.example")
+			t.Setenv("WECHAT_MINIAPP_APP_ID", "wx-test-appid")
+			t.Setenv("WECHAT_MINIAPP_APP_SECRET", "test-secret")
 			for key, value := range tc.env {
 				t.Setenv(key, value)
 			}

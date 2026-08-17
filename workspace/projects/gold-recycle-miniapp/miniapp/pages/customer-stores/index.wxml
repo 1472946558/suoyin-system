@@ -72,9 +72,10 @@
           <text class="act-icon">📅</text>
           <text>到店预约</text>
         </view>
-        <view class="act-btn act-btn-ghost" catchtap="onNavigate" data-id="{{nearestStore.id}}">
+        <view class="act-btn act-btn-ghost {{nearestStore.hasCoordinate ? '' : 'act-btn-disabled'}}" catchtap="onNavigate" data-id="{{nearestStore.id}}">
           <text class="act-icon">↗</text>
-          <text>地图导航</text>
+          <text wx:if="{{nearestStore.hasCoordinate}}">地图导航</text>
+          <text wx:else>暂无坐标</text>
         </view>
       </view>
     </view>
@@ -113,12 +114,16 @@
             <text class="act-icon">📅</text>
             <text>到店预约</text>
           </view>
-          <view class="act-btn act-btn-ghost" catchtap="onNavigate" data-id="{{item.id}}">
+          <view class="act-btn act-btn-ghost {{item.hasCoordinate ? '' : 'act-btn-disabled'}}" catchtap="onNavigate" data-id="{{item.id}}">
             <text class="act-icon">↗</text>
-            <text>地图导航</text>
+            <text wx:if="{{item.hasCoordinate}}">地图导航</text>
+            <text wx:else>暂无坐标</text>
           </view>
-          <view class="act-phone" catchtap="onCall" data-phone="{{item.contactPhone}}">
+          <view wx:if="{{item.contactPhone}}" class="act-phone" catchtap="onCall" data-phone="{{item.contactPhone}}">
             <text class="act-phone-icon">📞</text>
+          </view>
+          <view wx:else class="act-phone act-phone-disabled">
+            <text class="act-phone-icon">—</text>
           </view>
         </view>
       </view>

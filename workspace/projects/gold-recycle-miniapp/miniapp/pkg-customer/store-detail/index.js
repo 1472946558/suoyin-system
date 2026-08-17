@@ -3,6 +3,12 @@ const { api } = require('../../utils/request.js');
 const { distanceKm, fmtDistance } = require('../../utils/customer-distance.js');
 const { absUrl, serviceTypeText } = require('../../utils/customer-services.js');
 
+function hasValidCoordinates(store) {
+  const longitude = Number(store && store.longitude);
+  const latitude = Number(store && store.latitude);
+  return isFinite(longitude) && isFinite(latitude) && longitude !== 0 && latitude !== 0;
+}
+
 function todayStr() {
   const d = new Date();
   const y = d.getFullYear();
@@ -41,7 +47,7 @@ Page({
   },
 
   enrichStore(store) {
-    const hasCoordinate = store.longitude && store.latitude;
+    const hasCoordinate = hasValidCoordinates(store);
     let distanceText = '';
     const app = getApp();
     const loc = app.globalData.userLocation;
@@ -113,16 +119,17 @@ Page({
   onNavigate() {
     const store = this.data.store;
     if (!store) return;
-    if (!store.longitude || !store.latitude) {
+    if (!hasValidCoordinates(store)) {
       wx.showToast({ title: '该门店暂未配置位置', icon: 'none' });
       return;
     }
     wx.openLocation({
-      latitude: store.latitude,
-      longitude: store.longitude,
+      latitude: Number(store.latitude),
+      longitude: Number(store.longitude),
       name: store.name,
       address: store.address,
-      scale: 16
+      scale: 16,
+      fail: () => wx.showToast({ title: '打开地图失败，请稍后重试', icon: 'none' })
     });
   },
 
@@ -135,7 +142,7 @@ Page({
       return;
     }
     wx.navigateTo({
-      url: '/pkg-customer/appointment-create/index?storeId=' + store.id,
+      url: '/pkg-customer/appointment-create/index?storeId=' + encodeURIComponent(store.id),
       fail: () => wx.showToast({ title: '预约功能建设中', icon: 'none' })
     });
   }

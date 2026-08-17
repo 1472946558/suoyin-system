@@ -163,17 +163,17 @@ func (a *App) handleAdminUploadImages(w http.ResponseWriter, r *http.Request) {
 
 	user := currentUser(r.Context())
 	asset := UploadAsset{
-		ID:        fmt.Sprintf("img-%s-%04d", now.Format("20060102"), now.Nanosecond()%10000),
-		Scene:     scene,
-		URL:       url,
-		Path:      path,
-		Storage:   "local",
-		MimeType:  "image/" + map[string]string{"jpg": "jpeg", "png": "png", "webp": "webp"}[ext],
-		Size:      size,
-		RefID:     refID,
+		ID:           fmt.Sprintf("img-%s-%04d", now.Format("20060102"), now.Nanosecond()%10000),
+		Scene:        scene,
+		URL:          url,
+		Path:         path,
+		Storage:      "local",
+		MimeType:     "image/" + map[string]string{"jpg": "jpeg", "png": "png", "webp": "webp"}[ext],
+		Size:         size,
+		RefID:        refID,
 		OriginalName: filepath.Base(header.Filename),
-		CreatedBy: user.DisplayName,
-		CreatedAt: now,
+		CreatedBy:    user.DisplayName,
+		CreatedAt:    now,
 	}
 	if err := a.store.registerUploadAsset(asset); err != nil {
 		_ = os.Remove(absPath)
@@ -675,6 +675,8 @@ func (a *App) writeAdminAppointmentActionError(w http.ResponseWriter, r *http.Re
 		a.writeError(w, r, http.StatusForbidden, 40302, "store not accessible")
 	case errors.Is(err, errAppointmentStatusFlow):
 		a.writeError(w, r, http.StatusConflict, 40903, "appointment status transition not allowed")
+	case errors.Is(err, errAppointmentPersistence):
+		a.writeError(w, r, http.StatusServiceUnavailable, 50302, "appointment could not be saved; please retry")
 	default:
 		a.writeError(w, r, http.StatusInternalServerError, 50001, "failed to update appointment")
 	}
