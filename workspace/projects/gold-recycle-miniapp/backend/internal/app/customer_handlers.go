@@ -26,10 +26,11 @@ import (
 
 func toCustomerProfileDTO(p CustomerProfile) CustomerProfileDTO {
 	return CustomerProfileDTO{
-		ID:        p.ID,
-		Phone:     maskPhone(p.Phone),
-		Nickname:  p.Nickname,
-		AvatarURL: p.AvatarURL,
+		ID:            p.ID,
+		Phone:         maskPhone(p.Phone),
+		PhoneVerified: strings.TrimSpace(p.Phone) != "",
+		Nickname:      p.Nickname,
+		AvatarURL:     p.AvatarURL,
 	}
 }
 
@@ -346,10 +347,13 @@ func (a *App) customerCreateAppointment(w http.ResponseWriter, r *http.Request) 
 		a.writeError(w, r, http.StatusBadRequest, 40004, "missing contactName")
 		return
 	}
-	if strings.TrimSpace(req.ContactPhone) == "" {
-		a.writeError(w, r, http.StatusBadRequest, 40005, "missing contactPhone")
+	// 预约手机号必须来自当前顾客已完成的微信手机号授权，不能信任客户端手填号码。
+	// 顾客端只提交预约联系人信息，服务端使用档案中的原始手机号落库，避免脱敏号码或伪造号码进入预约单。
+	if strings.TrimSpace(customer.Phone) == "" {
+		a.writeError(w, r, http.StatusForbidden, 40310, "phone authorization required before booking")
 		return
 	}
+	req.ContactPhone = strings.TrimSpace(customer.Phone)
 
 	appt, err := a.store.createCustomerAppointment(customer, req)
 	if err != nil {
@@ -358,8 +362,12 @@ func (a *App) customerCreateAppointment(w http.ResponseWriter, r *http.Request) 
 			a.writeError(w, r, http.StatusBadRequest, 40010, "invalid appointment time: must be at least 1 hour from now and within 7 days")
 		case errors.Is(err, errDuplicateAppointment):
 			a.writeError(w, r, http.StatusConflict, 40901, "duplicate appointment for same store and time slot")
+		case errors.Is(err, errAppointmentCapacityFull):
+			a.writeError(w, r, http.StatusConflict, 40904, "appointment time slot is full")
 		case errors.Is(err, errAppointmentNotFound):
 			a.writeError(w, r, http.StatusNotFound, 40401, "store not found")
+		case errors.Is(err, errStoreAppointmentDisabled):
+			a.writeError(w, r, http.StatusConflict, 40905, "store appointment is disabled")
 		default:
 			a.writeError(w, r, http.StatusInternalServerError, 50001, "failed to create appointment")
 		}

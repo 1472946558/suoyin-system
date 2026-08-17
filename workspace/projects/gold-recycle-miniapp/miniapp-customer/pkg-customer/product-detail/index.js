@@ -46,12 +46,11 @@ Page({
     const serviceTypeTexts = Array.isArray(p.applicableServiceTypes) && p.applicableServiceTypes.length > 0
       ? p.applicableServiceTypes.map(serviceTypeText)
       : [];
-    return {
-      ...p,
+    return Object.assign({}, p, {
       images,
       priceMain,
       serviceTypeTexts
-    };
+    });
   },
 
   loadNearestStore() {

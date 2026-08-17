@@ -97,7 +97,7 @@ Page({
   applyProfile(profile) {
     this.setData({
       isLoggedIn: true,
-      phoneVerified: !!profile.phone,
+      phoneVerified: profile.phoneVerified === true || !!profile.phone,
       profile: profile,
       contactName: profile.nickname || this.data.contactName,
       contactPhone: profile.phone || this.data.contactPhone
@@ -265,7 +265,7 @@ Page({
   onSubmit() {
     const {
       storeId, selectedService, selectedDate, selectedSlot,
-      contactName, contactPhone, remark, phoneVerified, submitting, agreed
+      contactName, remark, phoneVerified, profile, submitting, agreed
     } = this.data;
 
     if (submitting) return;
@@ -290,13 +290,8 @@ Page({
       wx.showToast({ title: '请输入联系人姓名', icon: 'none' });
       return;
     }
-    if (!contactPhone.trim()) {
-      wx.showToast({ title: '请输入手机号', icon: 'none' });
-      return;
-    }
-    // 简单校验：必须是 11 位数字
-    if (!/^1\d{10}$/.test(contactPhone)) {
-      wx.showToast({ title: '手机号格式不正确', icon: 'none' });
+    if (!phoneVerified || !profile || (profile.phoneVerified !== true && !profile.phone)) {
+      wx.showToast({ title: '请先完成微信手机号授权', icon: 'none' });
       return;
     }
     if (!agreed) {
@@ -311,7 +306,6 @@ Page({
       appointmentDate: selectedDate,
       appointmentTime: selectedSlot,
       contactName: contactName.trim(),
-      contactPhone: contactPhone.trim(),
       remark: (remark || '').trim()
     };
 

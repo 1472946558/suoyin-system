@@ -433,6 +433,12 @@ func (s *MockStore) adminUpdateStoreCustomerConfig(user UserAccount, storeID str
 func (s *MockStore) appointmentRulesSnapshot() AppointmentRules {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	return s.appointmentRulesLocked()
+}
+
+// appointmentRulesLocked 返回预约规则快照。调用方必须已经持有 s.mu 的读锁或写锁。
+// 单独抽出该方法，避免在持锁状态下再次调用 appointmentRulesSnapshot 造成锁重入死锁。
+func (s *MockStore) appointmentRulesLocked() AppointmentRules {
 	rules := s.appointmentRules
 	if rules.SlotMinutes == 0 {
 		rules = defaultAppointmentRules()

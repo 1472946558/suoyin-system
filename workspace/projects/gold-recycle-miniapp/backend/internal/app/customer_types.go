@@ -167,10 +167,11 @@ type CustomerAppointmentDTO struct {
 
 // CustomerProfileDTO 顾客个人信息（脱敏）
 type CustomerProfileDTO struct {
-	ID        string `json:"id"`
-	Phone     string `json:"phone"` // 脱敏：138****1234
-	Nickname  string `json:"nickname,omitempty"`
-	AvatarURL string `json:"avatarUrl,omitempty"`
+	ID            string `json:"id"`
+	Phone         string `json:"phone"` // 脱敏：138****1234
+	PhoneVerified bool   `json:"phoneVerified"`
+	Nickname      string `json:"nickname,omitempty"`
+	AvatarURL     string `json:"avatarUrl,omitempty"`
 }
 
 // AppointmentRulesSummary 预约规则摘要（暴露给顾客端，替代硬编码）

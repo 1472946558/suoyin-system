@@ -53,8 +53,7 @@ Page({
         } else if (resp && Array.isArray(resp.items)) {
           list = resp.items;
         }
-        var processed = list.map(item => ({
-          ...item,
+        var processed = list.map(item => Object.assign({}, item, {
           // 后端已提供 statusText / serviceTypeText，缺失时本地兜底
           statusText: item.statusText || appointmentStatusText(item.status),
           statusColor: appointmentStatusColor(item.status),

@@ -49,8 +49,7 @@ Page({
       (list || []).forEach(m => {
         if (m && m.longitude) map[m.id] = m;
       });
-      return stores.map(s => ({
-        ...s,
+      return stores.map(s => Object.assign({}, s, {
         longitude: s.longitude || (map[s.id] ? map[s.id].longitude : 0),
         latitude: s.latitude || (map[s.id] ? map[s.id].latitude : 0),
         thumb: s.imageUrl ? absUrl(s.imageUrl) : ''
@@ -62,16 +61,16 @@ Page({
   applyLocation(stores) {
     const app = getApp();
     const loc = app.globalData.userLocation;
-    let enriched = stores.map(s => ({ ...s, distanceText: '' }));
+    let enriched = stores.map(s => Object.assign({}, s, { distanceText: '' }));
     let currentCity = '';
 
     if (loc) {
       enriched = enriched.map(s => {
         if (s.longitude && s.latitude) {
           const d = distanceKm(loc.latitude, loc.longitude, s.latitude, s.longitude);
-          return { ...s, distance: d, distanceText: fmtDistance(d) };
+          return Object.assign({}, s, { distance: d, distanceText: fmtDistance(d) });
         }
-        return { ...s, distance: null, distanceText: '' };
+        return Object.assign({}, s, { distance: null, distanceText: '' });
       });
       // 按距离排序（无坐标的排最后）
       enriched.sort((a, b) => {
@@ -110,14 +109,14 @@ Page({
 
   // 给门店打"可预约"标（基础判定：营业时间内）
   tagOpen(store) {
-    if (!store.businessHours) return { ...store, isOpen: true };
+    if (!store.businessHours) return Object.assign({}, store, { isOpen: true });
     const m = store.businessHours.match(/(\d{1,2}):(\d{2})\s*[-~]\s*(\d{1,2}):(\d{2})/);
-    if (!m) return { ...store, isOpen: true };
+    if (!m) return Object.assign({}, store, { isOpen: true });
     const now = new Date();
     const cur = now.getHours() * 60 + now.getMinutes();
     const open = parseInt(m[1]) * 60 + parseInt(m[2]);
     const close = parseInt(m[3]) * 60 + parseInt(m[4]);
-    return { ...store, isOpen: cur >= open && cur <= close };
+    return Object.assign({}, store, { isOpen: cur >= open && cur <= close });
   },
 
   tryLocate() {

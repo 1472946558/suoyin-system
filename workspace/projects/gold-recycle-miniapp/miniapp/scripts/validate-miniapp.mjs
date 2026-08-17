@@ -73,7 +73,13 @@ function checkRuntimeBrandSafety(relativePath) {
 function checkRuntimeCompatibility(relativePath) {
   if (!relativePath.endsWith(".js")) return;
   const content = readFileSync(path.join(root, relativePath), "utf8");
-  if (content.includes("...")) {
+  const code = content
+    .replace(/'(?:\\.|[^'\\])*'/gs, "")
+    .replace(/"(?:\\.|[^"\\])*"/gs, "")
+    .replace(/`(?:\\.|[^`\\])*`/gs, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+  if (/(^|[({[,:=])\s*\.\.\./m.test(code)) {
     fail(`${relativePath} uses spread syntax; use Object.assign for WeChat DevTools compatibility`);
   }
   if (/\{\s*\[[^\]]+\]\s*:/.test(content)) {

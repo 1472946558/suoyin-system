@@ -1,5 +1,27 @@
 # 变更日志
 
+## 2026-08-17 功能点 01：预约核心闭环商用交付候选
+
+### 本次交付范围
+- 修复预约取消在持有写锁时再次获取读锁造成的死锁；同时修复预约时段读取路径的同类锁重入风险。
+- 将预约容量已满从 500 错误改为可识别的 40904 业务错误，并补充门店关闭预约时的 40905 错误映射。
+- 预约手机号改为服务端读取已完成微信手机号授权的顾客档案，拒绝仅靠客户端手填手机号提交预约。
+- 顾客端预约页增加 `phoneVerified` 状态显示与授权后输入框锁定；提交请求不再携带客户端手机号作为可信数据。
+- 修复员工端校验器将“处理中...”等文本误判为扩展运算符的问题；顾客端实际扩展运算符全部替换为 `Object.assign`。
+
+### 验收证据
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go test ./... -count=1 -timeout=120s`：通过。
+- `go test -race ./internal/app -run 'TestCustomerAppointment|TestCustomerProfileDTO' -count=1 -timeout=60s`：通过。
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go vet ./...`：通过。
+- 顾客端全部 JavaScript 文件 `node --check`：通过。
+- `miniapp/npm run validate`：通过。
+- 新增 `backend/internal/app/customer_appointment_test.go`，覆盖取消死锁、手机号授权门槛、容量冲突映射、服务端手机号落库和 DTO 脱敏。
+
+### 交付状态
+- 状态：**代码与自动化检查通过，待发布确认**。
+- 未执行：生产数据库迁移、生产服务器变更、微信开发者工具真机验收、提交审核、生产部署。
+- 本功能点通过后才可进入预约场景的真实环境联调；不代表顾客端全部功能或整包小程序已完成商用验收。
+
 ## 2026-08-15 页面开发说明文档（8 页完整规格）
 
 ### 变更内容

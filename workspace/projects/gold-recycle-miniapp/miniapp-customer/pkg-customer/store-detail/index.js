@@ -69,7 +69,7 @@ Page({
         { text: '到店回收', icon: '💎' }
       ];
     }
-    return { ...store, hasCoordinate, distanceText, thumb, serviceTags };
+    return Object.assign({}, store, { hasCoordinate, distanceText, thumb, serviceTags });
   },
 
   tagIcon(tag) {

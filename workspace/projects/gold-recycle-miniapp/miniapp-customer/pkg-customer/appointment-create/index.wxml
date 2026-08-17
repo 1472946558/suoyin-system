@@ -127,12 +127,13 @@
         <text class="ac-input-icon">📱</text>
         <input
           class="ac-input"
-          type="number"
+          type="text"
           placeholder="请输入手机号"
           placeholder-class="ac-placeholder"
           value="{{contactPhone}}"
           bindinput="onPhoneInput"
           maxlength="11"
+          disabled="{{phoneVerified}}"
         />
         <block wx:if="{{!phoneVerified}}">
           <button

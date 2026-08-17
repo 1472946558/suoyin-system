@@ -61,8 +61,7 @@ Page({
 
   formatProduct(p) {
     const tags = Array.isArray(p.tags) ? p.tags : [];
-    return {
-      ...p,
+    return Object.assign({}, p, {
       imageUrl: absUrl(p.imageUrl),
       priceText: p.retailPrice > 0 ? '¥' + fmtPrice(p.retailPrice) : '面议',
       gramText: p.gramWeight > 0 ? p.gramWeight + 'g' : '',
@@ -70,7 +69,7 @@ Page({
       showHot: !!p.isHot,
       showRecommended: !!p.isRecommended,
       tagText: tags.length > 0 ? tags.join(' · ') : ''
-    };
+    });
   },
 
   onCategoryTap(e) {

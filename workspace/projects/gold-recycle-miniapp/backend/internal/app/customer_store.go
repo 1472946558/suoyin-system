@@ -25,13 +25,14 @@ import (
 )
 
 var (
-	errCustomerNotFound       = errors.New("customer not found")
-	errAppointmentNotFound    = errors.New("appointment not found")
-	errAppointmentCancelled   = errors.New("appointment already cancelled")
-	errAppointmentTimeTooLate = errors.New("cannot cancel within 2 hours of appointment")
-	errDuplicateAppointment   = errors.New("duplicate appointment for same store and time slot")
-	errInvalidAppointmentTime = errors.New("invalid appointment time")
-	errAppointmentStatusFlow  = errors.New("appointment status transition not allowed")
+	errCustomerNotFound         = errors.New("customer not found")
+	errAppointmentNotFound      = errors.New("appointment not found")
+	errAppointmentCancelled     = errors.New("appointment already cancelled")
+	errAppointmentTimeTooLate   = errors.New("cannot cancel within 2 hours of appointment")
+	errDuplicateAppointment     = errors.New("duplicate appointment for same store and time slot")
+	errAppointmentCapacityFull  = errors.New("time slot is full")
+	errInvalidAppointmentTime   = errors.New("invalid appointment time")
+	errAppointmentStatusFlow    = errors.New("appointment status transition not allowed")
 	errStoreAppointmentDisabled = errors.New("store appointment disabled")
 )
 
@@ -472,7 +473,7 @@ func (s *MockStore) createCustomerAppointment(customer CustomerProfile, req Crea
 		}
 	}
 	if slotCount >= rules.SlotCapacity {
-		return CustomerAppointment{}, errors.New("time slot is full")
+		return CustomerAppointment{}, errAppointmentCapacityFull
 	}
 
 	s.customerSeq++
@@ -528,7 +529,7 @@ func (s *MockStore) listCustomerAppointmentSlots(storeID, date string) ([]Custom
 	}
 
 	// 营业时间与粒度来自预约规则（可配置，默认 09:30-21:30 / 30 分钟）
-	rules := s.appointmentRulesSnapshot()
+	rules := s.appointmentRulesLocked()
 	openTime, err := time.Parse("15:04", rules.OpenTime)
 	if err != nil {
 		openTime = time.Date(0, 1, 1, 9, 30, 0, 0, time.UTC)
@@ -717,7 +718,7 @@ func (s *MockStore) cancelCustomerAppointment(customerID, appointmentID, reason 
 			if a.Status != AppointmentStatusPending && a.Status != AppointmentStatusConfirmed {
 				return errAppointmentStatusFlow
 			}
-			rules := s.appointmentRulesSnapshot()
+			rules := s.appointmentRulesLocked()
 			cancelLead := rules.CancelLeadMinutes
 			if cancelLead <= 0 {
 				cancelLead = 120

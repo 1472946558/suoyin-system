@@ -17,7 +17,7 @@ function getApiBase() {
  */
 function request({ path, method = 'GET', data, withAuth = true, header }) {
   const url = getApiBase() + path;
-  const finalHeader = { 'Content-Type': 'application/json', ...(header || {}) };
+  const finalHeader = Object.assign({ 'Content-Type': 'application/json' }, header || {});
   if (withAuth) {
     const token = getCustomerToken();
     if (token) {
