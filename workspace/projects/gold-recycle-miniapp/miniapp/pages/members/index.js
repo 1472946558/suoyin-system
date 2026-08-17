@@ -134,7 +134,7 @@ Page({
   onShow() {
     if (!canAccessFeature("members")) {
       wx.showToast({ title: "当前账号没有会员查看权限", icon: "none" });
-      wx.switchTab({ url: "/pages/home/index" });
+      wx.reLaunch({ url: "/pages/home/index" });
       return;
     }
     this.loadMembers();
@@ -320,7 +320,7 @@ Page({
       remark: member.notes
     });
     wx.showToast({ title: "会员信息已带入收银草稿", icon: "none" });
-    wx.switchTab({ url: "/pages/order/index" });
+    wx.reLaunch({ url: "/pages/order/index" });
   },
 
   copyPhone() {

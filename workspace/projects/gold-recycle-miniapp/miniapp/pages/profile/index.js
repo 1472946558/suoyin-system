@@ -179,7 +179,7 @@ Page({
       return;
     }
     if (key === "orders") {
-      wx.switchTab({ url: "/pages/orders/index" });
+      wx.reLaunch({ url: "/pages/orders/index" });
       return;
     }
     if (key === "printer") {

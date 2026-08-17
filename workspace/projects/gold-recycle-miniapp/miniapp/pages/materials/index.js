@@ -82,7 +82,7 @@ Page({
   onShow() {
     if (!canAccessFeature("materials")) {
       wx.showToast({ title: "当前账号没有旧料管理权限", icon: "none" });
-      wx.switchTab({ url: "/pages/home/index" });
+      wx.reLaunch({ url: "/pages/home/index" });
       return;
     }
     this.loadMaterials();

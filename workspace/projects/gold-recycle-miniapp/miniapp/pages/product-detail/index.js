@@ -115,6 +115,6 @@ Page({
       remark: product.recommendedScene
     });
     wx.showToast({ title: "商品参数已带入录单草稿", icon: "none" });
-    wx.switchTab({ url: "/pages/track/index" });
+    wx.reLaunch({ url: "/pages/track/index" });
   }
 });

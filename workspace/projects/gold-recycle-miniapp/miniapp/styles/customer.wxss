@@ -1,0 +1,132 @@
+/**
+ * app.wxss - 全局样式
+ */
+
+/* 设计 token：金色主题 */
+page {
+  --color-primary: #866E23;
+  --color-primary-light: #BFA15F;
+  --color-primary-bg: #FBF6E5;
+  --color-text-main: #1F1F1F;
+  --color-text-sub: #8A8F99;
+  --color-text-tip: #B0B5BD;
+  --color-border: #EDEEF0;
+  --color-bg: #FDFBE7;
+  --color-bg-card: #ffffff;
+  --color-success: #4CAF50;
+  --color-warning: #FF9800;
+  --color-danger: #F44336;
+  --page-inline-padding: 32rpx;
+  --page-section-gap: 24rpx;
+  --page-bottom-space: 48rpx;
+  --shadow-card: 0 2rpx 12rpx rgba(134, 110, 35, 0.08);
+  --radius-sm: 8rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  background: var(--color-bg);
+  color: var(--color-text-main);
+  font-size: 28rpx;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+}
+
+view, text, image, button, input, textarea, scroll-view, swiper, swiper-item {
+  box-sizing: border-box;
+}
+
+/* 主页面内容壳层：系统状态栏、原生导航栏和原生 TabBar 由微信负责。 */
+.page {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+/* 避免内容滚动到原生底栏或底部手势区下方。 */
+.page-bottom-safe {
+  padding-bottom: calc(var(--page-bottom-space) + env(safe-area-inset-bottom));
+}
+
+button {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  line-height: 1.4;
+}
+
+button::after {
+  border: none;
+}
+
+.row { display: flex; flex-direction: row; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.between { justify-content: space-between; }
+.center { justify-content: center; align-items: center; }
+.flex-1 { flex: 1; }
+
+.text-primary { color: var(--color-primary); }
+.text-sub { color: var(--color-text-sub); }
+.text-tip { color: var(--color-text-tip); }
+.text-bold { font-weight: 600; }
+
+.bg-card { background: var(--color-bg-card); }
+.bg-primary { background: var(--color-primary); color: #fff; }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 999rpx;
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.btn-outline {
+  background: #fff;
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+  border-radius: 999rpx;
+  padding: 22rpx 0;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.btn-disabled {
+  background: #E0E0E0;
+  color: #999;
+  border-radius: 999rpx;
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 30rpx;
+}
+
+.card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: 32rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.divider {
+  height: 1rpx;
+  background: var(--color-border);
+  margin: 24rpx 0;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  border: 2rpx solid var(--color-primary-light);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.empty {
+  padding: 120rpx 0;
+  text-align: center;
+  color: var(--color-text-tip);
+}

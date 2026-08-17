@@ -1,0 +1,149 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: privacy.wxml
+  功能描述: 顾客端隐私保护指引
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page legal-page">
+  <view class="legal-updated">更新日期：2026年8月15日</view>
+
+  <view class="legal-intro">
+    金匠倌收银小程序（以下简称"本小程序"）由北京纵横时空科技有限责任公司运营。我们高度重视您的个人信息保护，本指引说明我们如何收集、使用和保护您的个人信息。
+  </view>
+
+  <!-- 1. 信息收集清单 -->
+  <view class="legal-section">
+    <view class="legal-section-title">一、我们收集的个人信息</view>
+
+    <view class="legal-item">
+      <view class="legal-item-title">1. 位置信息</view>
+      <view class="legal-item-body">
+        <text class="legal-label">收集内容：</text>
+        <text>您的地理位置（经纬度）</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">使用目的：</text>
+        <text>计算您与各门店的距离，推荐最近门店</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">使用场景：</text>
+        <text>进入门店列表页或预约页时</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">是否上传服务器：</text>
+        <text>否，仅在小程序内存中计算，不上传、不存储</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">拒绝授权影响：</text>
+        <text>门店列表不按距离排序，可手动选择门店，不影响其他功能</text>
+      </view>
+    </view>
+
+    <view class="legal-item">
+      <view class="legal-item-title">2. 手机号</view>
+      <view class="legal-item-body">
+        <text class="legal-label">收集内容：</text>
+        <text>手机号</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">使用目的：</text>
+        <text>到店预约联系，门店员工通过手机号联系您确认预约</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">使用场景：</text>
+        <text>提交预约时通过微信手机号能力授权获取</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">存储方式：</text>
+        <text>存储于服务器，仅门店员工可见</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">拒绝授权影响：</text>
+        <text>无法提交预约，但不影响浏览商品和门店</text>
+      </view>
+    </view>
+
+    <view class="legal-item">
+      <view class="legal-item-title">3. 微信昵称和头像</view>
+      <view class="legal-item-body">
+        <text class="legal-label">收集内容：</text>
+        <text>微信昵称、头像</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">使用目的：</text>
+        <text>展示顾客个人信息</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">使用场景：</text>
+        <text>微信登录时获取</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">存储方式：</text>
+        <text>存储于服务器</text>
+      </view>
+    </view>
+
+    <view class="legal-item">
+      <view class="legal-item-title">4. 预约信息</view>
+      <view class="legal-item-body">
+        <text class="legal-label">收集内容：</text>
+        <text>预约门店、预约时间、服务类型、备注</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">使用目的：</text>
+        <text>到店预约服务</text>
+      </view>
+      <view class="legal-item-body">
+        <text class="legal-label">保存期限：</text>
+        <text>预约完成后保留 2 年</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 2. 信息使用 -->
+  <view class="legal-section">
+    <view class="legal-section-title">二、我们如何使用您的个人信息</view>
+    <view class="legal-text">我们仅将您的个人信息用于以下目的：</view>
+    <view class="legal-text">1. 提供门店推荐和到店预约服务；</view>
+    <view class="legal-text">2. 门店员工联系您确认预约；</view>
+    <view class="legal-text">3. 展示您的预约记录和预约状态。</view>
+    <view class="legal-text">我们不会将您的个人信息用于其他目的，也不会向第三方出售您的个人信息。</view>
+  </view>
+
+  <!-- 3. 信息存储与保护 -->
+  <view class="legal-section">
+    <view class="legal-section-title">三、信息存储与保护</view>
+    <view class="legal-text">您的个人信息存储于我们的服务器，服务器部署于中国境内。我们采取以下措施保护您的信息安全：</view>
+    <view class="legal-text">1. HTTPS 加密传输，确保数据传输安全；</view>
+    <view class="legal-text">2. 员工端访问需账号密码认证，不同角色有不同权限；</view>
+    <view class="legal-text">3. 顾客手机号仅门店员工可见，其他顾客无法查看。</view>
+  </view>
+
+  <!-- 4. 信息共享 -->
+  <view class="legal-section">
+    <view class="legal-section-title">四、信息共享</view>
+    <view class="legal-text">我们不会向第三方共享您的个人信息，但以下情况除外：</view>
+    <view class="legal-text">1. 获得您的明确同意；</view>
+    <view class="legal-text">2. 根据法律法规或政府部门的强制性要求。</view>
+  </view>
+
+  <!-- 5. 您的权利 -->
+  <view class="legal-section">
+    <view class="legal-section-title">五、您的权利</view>
+    <view class="legal-text">您有以下权利：</view>
+    <view class="legal-text">1. 查看和修改：您可在"我的"页面查看个人信息；</view>
+    <view class="legal-text">2. 删除：您可联系我们删除您的个人信息；</view>
+    <view class="legal-text">3. 撤回授权：您可在微信设置中撤回位置和手机号授权。</view>
+  </view>
+
+  <!-- 6. 联系我们 -->
+  <view class="legal-section">
+    <view class="legal-section-title">六、联系我们</view>
+    <view class="legal-text">如果您对本隐私保护指引有任何疑问，可通过以下方式联系我们：</view>
+    <view class="legal-text">运营方：北京纵横时空科技有限责任公司</view>
+    <view class="legal-text">客服电话：13456844944</view>
+  </view>
+
+  <view class="legal-bottom-spacer"></view>
+</view>

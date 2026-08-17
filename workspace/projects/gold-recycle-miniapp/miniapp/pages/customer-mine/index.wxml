@@ -1,0 +1,91 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 顾客端"我的"页面（Tab 4）
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page mine-page page-bottom-safe">
+
+  <!-- 用户头部 -->
+  <view class="mine-header">
+    <block wx:if="{{isLoggedIn && profile}}">
+      <view class="mine-avatar">
+        <view class="mine-avatar-text">{{profileTail}}</view>
+      </view>
+      <view class="mine-user">
+        <view class="mine-name">{{profile.phone || '尊贵顾客'}}</view>
+        <view class="mine-tip">{{serviceIntro || '欢迎使用金匠倌收银'}}</view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="mine-avatar mine-avatar-guest">
+        <view class="mine-avatar-text">游</view>
+      </view>
+      <view class="mine-user">
+        <view class="mine-name">游客模式</view>
+        <view class="mine-tip">{{serviceIntro || '授权手机号后可预约到店'}}</view>
+      </view>
+      <button class="mine-login" open-type="getPhoneNumber" bindgetphonenumber="onGetPhone">
+        授权登录
+      </button>
+    </block>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="mine-menu">
+    <view class="card mine-menu-card">
+      <view class="mine-menu-item" bindtap="onMyAppointments">
+        <view class="mine-menu-icon">📅</view>
+        <view class="mine-menu-text">我的预约</view>
+        <view class="mine-menu-badge" wx:if="{{pendingCount > 0}}">{{pendingCount}}</view>
+        <view class="mine-menu-arrow">›</view>
+      </view>
+      <view class="mine-divider"></view>
+      <view class="mine-menu-item" bindtap="onRecycleInfo">
+        <view class="mine-menu-icon">💎</view>
+        <view class="mine-menu-text">回收服务介绍</view>
+        <view class="mine-menu-arrow">›</view>
+      </view>
+    </view>
+
+    <view class="card mine-menu-card">
+      <view class="mine-menu-item" bindtap="onCallService">
+        <view class="mine-menu-icon">📞</view>
+        <view class="mine-menu-text">客服电话</view>
+        <view class="mine-menu-val">{{servicePhone}}</view>
+        <view class="mine-menu-arrow">›</view>
+      </view>
+      <view class="mine-divider"></view>
+      <view class="mine-menu-item" bindtap="onPrivacy">
+        <view class="mine-menu-icon">🔒</view>
+        <view class="mine-menu-text">隐私保护指引</view>
+        <view class="mine-menu-arrow">›</view>
+      </view>
+    </view>
+
+    <!-- 店长入口 -->
+    <view class="card mine-menu-card mine-staff">
+      <view class="mine-menu-item" bindtap="onStaffEntrance">
+        <view class="mine-menu-icon">👔</view>
+        <view class="mine-staff-body">
+          <view class="mine-menu-text">店长入口</view>
+          <view class="mine-staff-sub">门店店长 / 管理员登录</view>
+        </view>
+        <view class="mine-menu-arrow">›</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="mine-logout" wx:if="{{isLoggedIn}}">
+    <view class="btn-danger mine-logout-btn" bindtap="onLogout">退出登录</view>
+  </view>
+
+  <!-- 底部信息 -->
+  <view class="mine-footer">
+    <view class="mine-footer-brand">金匠倌</view>
+    <view class="mine-footer-ver">V1.0.0</view>
+    <view class="mine-footer-copy">© 2026 北京纵横时空科技有限责任公司</view>
+  </view>
+</view>

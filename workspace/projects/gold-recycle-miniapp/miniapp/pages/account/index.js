@@ -51,7 +51,7 @@ function openHome() {
   wx.reLaunch({
     url: "/pages/home/index",
     fail() {
-      wx.switchTab({ url: "/pages/home/index" });
+      wx.reLaunch({ url: "/pages/home/index" });
     }
   });
 }

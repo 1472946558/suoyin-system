@@ -50,7 +50,7 @@ Page({
     this.setTabBarIndex();
     if (!canAccessFeature("orders")) {
       wx.showToast({ title: "当前账号没有订单查看权限", icon: "none" });
-      wx.switchTab({ url: "/pages/home/index" });
+      wx.reLaunch({ url: "/pages/home/index" });
       return;
     }
     this.loadOrders();
@@ -156,6 +156,6 @@ Page({
   },
 
   goOrder() {
-    wx.switchTab({ url: "/pages/order/index" });
+    wx.reLaunch({ url: "/pages/order/index" });
   }
 });

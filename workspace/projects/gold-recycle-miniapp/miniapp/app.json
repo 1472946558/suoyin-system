@@ -1,5 +1,10 @@
 {
   "pages": [
+    "pages/customer-home/index",
+    "pages/customer-products/index",
+    "pages/customer-stores/index",
+    "pages/customer-mine/index",
+    "pages/customer-privacy/index",
     "pages/account/index",
     "pages/home/index",
     "pages/order/index",
@@ -19,52 +24,70 @@
     "pages/legal/privacy",
     "pages/legal/terms"
   ],
+  "subpackages": [
+    {
+      "root": "pkg-customer",
+      "name": "pkg-customer",
+      "pages": [
+        "product-detail/index",
+        "store-detail/index",
+        "appointment-create/index",
+        "appointments/index",
+        "appointment-detail/index",
+        "appointment-notes/index",
+        "recycle-info/index"
+      ]
+    }
+  ],
   "window": {
-    "navigationBarTitleText": "金匠倌收银",
-    "navigationBarBackgroundColor": "#333333",
-    "navigationBarTextStyle": "white",
-    "backgroundColor": "#FDFBE7",
+    "navigationBarTitleText": "金匠倌",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fdfbe7",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
     "color": "#8A8F99",
     "selectedColor": "#866E23",
-    "backgroundColor": "#333333",
-    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
     "list": [
       {
-        "pagePath": "pages/home/index",
+        "pagePath": "pages/customer-home/index",
         "text": "首页",
-        "iconPath": "assets/tabbar/home-normal.png",
-        "selectedIconPath": "assets/tabbar/home-active.png"
+        "iconPath": "assets/customer-tabbar/home.png",
+        "selectedIconPath": "assets/customer-tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/order/index",
-        "text": "收银",
-        "iconPath": "assets/tabbar/order-normal.png",
-        "selectedIconPath": "assets/tabbar/order-active.png"
+        "pagePath": "pages/customer-products/index",
+        "text": "款式",
+        "iconPath": "assets/customer-tabbar/products.png",
+        "selectedIconPath": "assets/customer-tabbar/products-active.png"
       },
       {
-        "pagePath": "pages/track/index",
-        "text": "录单",
-        "iconPath": "assets/tabbar/track-normal.png",
-        "selectedIconPath": "assets/tabbar/track-active.png"
+        "pagePath": "pages/customer-stores/index",
+        "text": "门店",
+        "iconPath": "assets/customer-tabbar/stores.png",
+        "selectedIconPath": "assets/customer-tabbar/stores-active.png"
       },
       {
-        "pagePath": "pages/orders/index",
-        "text": "订单",
-        "iconPath": "assets/tabbar/orders-normal.png",
-        "selectedIconPath": "assets/tabbar/orders-active.png"
-      },
-      {
-        "pagePath": "pages/profile/index",
-        "text": "设置",
-        "iconPath": "assets/tabbar/profile-normal.png",
-        "selectedIconPath": "assets/tabbar/profile-active.png"
+        "pagePath": "pages/customer-mine/index",
+        "text": "我的",
+        "iconPath": "assets/customer-tabbar/mine.png",
+        "selectedIconPath": "assets/customer-tabbar/mine-active.png"
       }
     ]
   },
   "style": "v2",
   "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于查找附近的门店"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
+  "__usePrivacyCheck__": true,
   "sitemapLocation": "sitemap.json"
 }

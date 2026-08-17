@@ -57,7 +57,7 @@ Page({
   onLoad(query) {
     if (!isLoggedIn()) {
       wx.showToast({ title: "请先登录门店账号", icon: "none" });
-      wx.switchTab({ url: "/pages/home/index" });
+      wx.reLaunch({ url: "/pages/home/index" });
       return;
     }
     wx.setNavigationBarTitle({
@@ -248,20 +248,20 @@ Page({
   },
 
   editCashier() {
-    wx.switchTab({ url: "/pages/order/index" });
+    wx.reLaunch({ url: "/pages/order/index" });
   },
 
   editEntry() {
-    wx.switchTab({ url: "/pages/track/index" });
+    wx.reLaunch({ url: "/pages/track/index" });
   },
 
   goOrders() {
-    wx.switchTab({ url: "/pages/orders/index" });
+    wx.reLaunch({ url: "/pages/orders/index" });
   },
 
   startNew() {
     clearDraft();
-    wx.switchTab({ url: "/pages/order/index" });
+    wx.reLaunch({ url: "/pages/order/index" });
   },
 
   previewPhoto(event) {

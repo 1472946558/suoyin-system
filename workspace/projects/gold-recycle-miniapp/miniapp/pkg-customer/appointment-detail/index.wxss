@@ -1,0 +1,190 @@
+@import "../../styles/customer.wxss";
+
+/* pkg-customer/appointment-detail/index.wxss - 预约详情页 */
+
+.ad-page {
+  min-height: 100vh;
+  padding-bottom: 140rpx;
+}
+
+/* 空状态 */
+.ad-empty {
+  padding: 200rpx 0;
+  text-align: center;
+}
+
+.ad-empty-text {
+  font-size: 28rpx;
+  color: var(--color-text-tip);
+}
+
+/* 状态头部 - 按状态分色 */
+.ad-status-bar {
+  padding: 96rpx 40rpx 72rpx;
+  color: #fff;
+  text-align: center;
+}
+
+.ad-status-PENDING {
+  background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
+}
+
+.ad-status-CONFIRMED {
+  background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+}
+
+.ad-status-ARRIVED {
+  background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+}
+
+.ad-status-COMPLETED {
+  background: linear-gradient(135deg, #8A8F99 0%, #B0B5BD 100%);
+}
+
+.ad-status-CANCELLED {
+  background: linear-gradient(135deg, #B0B5BD 0%, #9E9E9E 100%);
+}
+
+.ad-status-NO_SHOW,
+.ad-status-TERMINATED {
+  background: linear-gradient(135deg, #F44336 0%, #EF5350 100%);
+}
+
+.ad-status-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.ad-status-text {
+  font-size: 40rpx;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+}
+
+.ad-status-no {
+  font-size: 24rpx;
+  margin-top: 16rpx;
+  opacity: 0.85;
+}
+
+/* 卡片 */
+.ad-card {
+  margin: 24rpx 32rpx;
+  padding: 40rpx 32rpx;
+}
+
+.ad-row {
+  display: flex;
+  padding: 16rpx 0;
+  align-items: flex-start;
+}
+
+.ad-label {
+  width: 160rpx;
+  font-size: 26rpx;
+  color: var(--color-text-sub);
+  flex-shrink: 0;
+}
+
+.ad-label-auto {
+  width: auto;
+}
+
+.ad-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--color-text-main);
+  line-height: 1.5;
+}
+
+.ad-value-sub {
+  font-size: 24rpx;
+  color: var(--color-text-sub);
+}
+
+.ad-value-danger {
+  color: var(--color-danger);
+}
+
+.ad-value-phone {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* 取消信息 */
+.ad-cancel-info {
+  border: 2rpx solid rgba(244, 67, 54, 0.12);
+  background: #FEF5F5;
+}
+
+/* 门店操作 */
+.ad-store-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.ad-store-btn {
+  flex: 1;
+  padding: 24rpx 0;
+  font-size: 26rpx;
+}
+
+/* 备注 */
+.ad-remark-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.ad-edit {
+  font-size: 26rpx;
+  color: var(--color-primary);
+}
+
+.ad-remark-body {
+  font-size: 28rpx;
+  color: var(--color-text-main);
+  line-height: 1.6;
+  min-height: 48rpx;
+}
+
+.ad-remark-empty {
+  color: var(--color-text-tip);
+}
+
+/* meta */
+.ad-meta {
+  background: transparent;
+  box-shadow: none;
+  padding: 12rpx 32rpx;
+}
+
+/* 底部操作栏 */
+.ad-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 20rpx;
+  box-shadow: 0 -2rpx 12rpx rgba(134, 110, 35, 0.08);
+}
+
+.ad-cta-btn {
+  flex: 1;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+}
+
+/* btn-danger 局部样式（复用全局 btn-outline 结构） */
+.btn-danger {
+  background: #fff;
+  color: var(--color-danger);
+  border: 2rpx solid var(--color-danger);
+  border-radius: 999rpx;
+  text-align: center;
+  font-weight: 500;
+}

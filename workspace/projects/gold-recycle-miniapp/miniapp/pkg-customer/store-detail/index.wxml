@@ -1,0 +1,113 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 顾客端门店详情页
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page detail-page">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="empty">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 失败重试 -->
+  <view wx:elif="{{error}}" class="empty">
+    <text>{{error === 'store not found' ? '门店不存在或已关闭' : error}}</text>
+    <view class="btn-outline retry-btn" bindtap="onRetry">重新加载</view>
+  </view>
+
+  <!-- 门店内容 -->
+  <block wx:elif="{{store}}">
+    <!-- 头部 Hero -->
+    <view class="s-hero">
+      <image wx:if="{{store.thumb}}" class="s-hero-img" src="{{store.thumb}}" mode="aspectFill" />
+      <view class="s-hero-bg">
+        <view class="s-hero-tag">{{store.city || '金匠倌'}}</view>
+        <view class="s-hero-name">{{store.name}}</view>
+        <view class="s-hero-meta">
+          <text wx:if="{{store.distanceText}}" class="s-hero-dist">📍 {{store.distanceText}}</text>
+          <text wx:if="{{store.businessHours}}" class="s-hero-status">营业中</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 信息卡 -->
+    <view class="card s-card s-info">
+      <view class="s-row">
+        <text class="s-icon">📍</text>
+        <view class="s-row-main">
+          <view class="s-label">门店地址</view>
+          <view class="s-value" bindtap="onNavigate">{{store.address}}</view>
+        </view>
+        <view wx:if="{{store.hasCoordinate}}" class="s-row-action" bindtap="onNavigate">
+          <text class="s-row-action-text">导航</text>
+        </view>
+      </view>
+      <view class="s-divider"></view>
+      <view class="s-row" wx:if="{{store.businessHours}}">
+        <text class="s-icon">🕘</text>
+        <view class="s-row-main">
+          <view class="s-label">营业时间</view>
+          <view class="s-value">{{store.businessHours}}</view>
+        </view>
+      </view>
+      <view class="s-divider" wx:if="{{store.businessHours}}"></view>
+      <view class="s-row" wx:if="{{store.contactPhone}}">
+        <text class="s-icon">📞</text>
+        <view class="s-row-main" bindtap="onCall">
+          <view class="s-label">联系电话</view>
+          <view class="s-value s-phone">{{store.contactPhone}}</view>
+        </view>
+        <view class="s-row-action" catchtap="onCall">
+          <text class="s-row-action-text">拨打</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 今日可预约时段 -->
+    <view class="card s-card s-slots" wx:if="{{todaySlots.length > 0 && store.appointmentEnabled !== false}}">
+      <view class="s-slots-head">
+        <text class="s-section-title">今日可预约时段</text>
+        <text class="s-slots-more" bindtap="onAppointment">去预约 ›</text>
+      </view>
+      <view class="s-slots-grid">
+        <view
+          wx:for="{{todaySlots}}"
+          wx:key="time"
+          class="slot-chip {{item.state === 'open' ? 'slot-open' : 'slot-disabled'}}"
+        >
+          <text class="slot-time">{{item.time}}</text>
+          <text class="slot-state">{{item.state === 'open' ? '可预约' : '已约满'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 服务介绍 -->
+    <view class="card s-card s-service">
+      <view class="s-section-title">本店服务</view>
+      <view class="s-service-tags">
+        <view class="s-tag" wx:for="{{store.serviceTags}}" wx:key="text">
+          <text class="s-tag-icon">{{item.icon}}</text>
+          <text>{{item.text}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 温馨提示 -->
+    <view class="s-tips">
+      <text class="s-tip-icon">ⓘ</text>
+      <text class="s-tip-text">到店前请提前预约，门店将在预约时段优先为您服务</text>
+    </view>
+
+    <!-- 占位防遮挡 -->
+    <view class="s-bottom-spacer"></view>
+
+    <!-- 底部操作 -->
+    <view class="s-cta">
+      <button class="btn-outline s-btn" bindtap="onCall">📞 拨打电话</button>
+      <button class="btn-outline s-btn" bindtap="onNavigate">↗ 地图导航</button>
+      <button wx:if="{{store.appointmentEnabled !== false}}" class="btn-primary s-btn" bindtap="onAppointment">📅 到店预约</button>
+    </view>
+  </block>
+</view>

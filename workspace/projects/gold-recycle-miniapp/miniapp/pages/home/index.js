@@ -200,7 +200,7 @@ Page({
     }
     const { type, url } = event.currentTarget.dataset;
     if (type === "tab") {
-      wx.switchTab({ url });
+      wx.reLaunch({ url });
       return;
     }
     wx.navigateTo({ url });
@@ -211,6 +211,6 @@ Page({
   },
 
   resumeDraft() {
-    wx.switchTab({ url: "/pages/order/index" });
+    wx.reLaunch({ url: "/pages/order/index" });
   }
 });

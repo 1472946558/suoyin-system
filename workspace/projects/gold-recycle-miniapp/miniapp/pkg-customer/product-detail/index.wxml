@@ -1,0 +1,129 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 顾客端款式详情页
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page detail-page">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="empty">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 失败重试 -->
+  <view wx:elif="{{error}}" class="empty">
+    <text>{{error === 'product not found' ? '商品不存在或已下架' : error}}</text>
+    <view class="btn-outline retry-btn" bindtap="onRetry">重新加载</view>
+  </view>
+
+  <!-- 商品内容 -->
+  <block wx:elif="{{product}}">
+    <!-- 主图轮播 -->
+    <swiper
+      class="d-hero"
+      indicator-dots="{{product.images.length > 1}}"
+      indicator-color="rgba(255,255,255,0.4)"
+      indicator-active-color="#fff"
+      autoplay="{{false}}"
+      circular="{{product.images.length > 1}}"
+      duration="300"
+    >
+      <swiper-item wx:for="{{product.images}}" wx:key="*this">
+        <image class="d-hero-img" src="{{item}}" mode="aspectFill" bindtap="onTapImage" data-idx="{{index}}" />
+      </swiper-item>
+    </swiper>
+
+    <!-- 名称 / 工费 -->
+    <view class="card d-info">
+      <view class="d-name">{{product.name}}</view>
+      <view class="d-tags" wx:if="{{product.category || product.purity}}">
+        <text class="tag" wx:if="{{product.category}}">{{product.category}}</text>
+        <text class="tag" wx:if="{{product.purity}}">{{product.purity}}</text>
+        <text class="tag tag-service" wx:for="{{product.serviceTypeTexts}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="d-divider"></view>
+      <view class="d-price-block">
+        <view class="d-price-label">工费参考</view>
+        <view class="d-price-main">
+          <text class="d-price-symbol">¥</text>
+          <text class="d-price-value">{{product.priceMain}}</text>
+          <text class="d-price-unit">起</text>
+        </view>
+        <view class="d-price-tip">ⓘ {{product.laborFeeNote || '工费以店铺确认为准'}}</view>
+      </view>
+    </view>
+
+    <!-- 款式说明 -->
+    <view class="card d-section">
+      <view class="d-section-title">
+        <text class="d-section-bar">|</text>
+        <text>款式说明</text>
+      </view>
+      <view class="d-section-body">
+        <text class="d-section-text">{{product.description}}</text>
+        <view class="d-section-deco">金匠倌</view>
+      </view>
+    </view>
+
+    <!-- 工费说明 -->
+    <view class="card d-section">
+      <view class="d-section-title">
+        <text class="d-section-bar">|</text>
+        <text>工费说明</text>
+      </view>
+      <view class="d-fee">
+        <view class="d-fee-item">
+          <view class="d-fee-icon">⊞</view>
+          <view class="d-fee-name">按款式复杂度</view>
+          <view class="d-fee-sub">不同复杂度工费不同</view>
+        </view>
+        <view class="d-fee-item">
+          <view class="d-fee-icon">⚖</view>
+          <view class="d-fee-name">按克重</view>
+          <view class="d-fee-sub">克重越大工费越高</view>
+        </view>
+        <view class="d-fee-item">
+          <view class="d-fee-icon">⚒</view>
+          <view class="d-fee-name">按工艺难度</view>
+          <view class="d-fee-sub">工艺越复杂工费越高</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 附近门店推荐 -->
+    <view class="card d-section d-stores">
+      <view class="d-section-title d-stores-head" bindtap="onTapStores">
+        <text class="d-section-bar">|</text>
+        <text>附近门店推荐</text>
+        <text class="d-stores-more">更多门店 ›</text>
+      </view>
+      <view wx:if="{{product.nearestStore}}" class="d-store-row" bindtap="onTapNearestStore" data-id="{{product.nearestStore.id}}">
+        <view class="d-store-img">
+          <image wx:if="{{product.nearestStore.thumb}}" class="d-store-img-pic" src="{{product.nearestStore.thumb}}" mode="aspectFill" />
+          <view wx:else class="d-store-img-placeholder center">
+            <text class="d-store-img-text">金匠倌</text>
+          </view>
+        </view>
+        <view class="d-store-info">
+          <view class="d-store-name">{{product.nearestStore.name}}</view>
+          <view class="d-store-addr">📍 {{product.nearestStore.distanceText}} {{product.nearestStore.address}}</view>
+        </view>
+        <view class="d-store-arrow">›</view>
+      </view>
+      <view wx:else class="d-store-empty">
+        <text>附近暂无门店</text>
+      </view>
+    </view>
+
+    <!-- 占位防止被底部 CTA 遮挡 -->
+    <view class="d-bottom-spacer"></view>
+
+    <!-- 底部操作栏 -->
+    <view class="d-cta">
+      <button class="btn-outline d-cta-btn" bindtap="onConsult">咨询门店</button>
+      <button class="btn-primary d-cta-btn" bindtap="onAppointment">到店预约</button>
+    </view>
+    <view class="d-cta-disclaimer">商品仅供参考，到店咨询详情</view>
+  </block>
+</view>

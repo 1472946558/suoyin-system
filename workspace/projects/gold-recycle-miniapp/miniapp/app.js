@@ -15,6 +15,7 @@ const { seedOrders } = require("./utils/orderStore");
 const { seedCatalog } = require("./utils/catalogStore");
 const { appConfig } = require("./utils/config");
 const { getProfile, clearProfile } = require("./utils/userStore");
+const { ensureCustomerSession } = require("./utils/customer-auth");
 
 function getSystemInfo() {
   if (wx.getDeviceInfo && wx.getWindowInfo && wx.getAppBaseInfo) {
@@ -39,8 +40,13 @@ App({
     servicePhone: appConfig.servicePhone,
     city: appConfig.storeCity,
     apiBaseUrl: appConfig.apiBaseUrl,
+    apiBase: appConfig.apiBaseUrl,
     mode: appConfig.mode,
-    sysinfo: null
+    sysinfo: null,
+    homeConfig: null,
+    userLocation: null,
+    locationAttempted: false,
+    locationDenied: false
   },
 
   BLEInformation: {
@@ -68,6 +74,8 @@ App({
       seedOrders();
       seedCatalog();
     }
+    // 顾客端采用游客可浏览、预约时再授权的模式；静默登录失败不阻塞首页。
+    ensureCustomerSession().catch(() => {});
   },
 
   getModel() {

@@ -31,7 +31,7 @@ Page({
     this.setTabBarIndex();
     if (!canAccessFeature("recycle")) {
       wx.showToast({ title: "当前账号没有回收录单权限", icon: "none" });
-      wx.switchTab({ url: "/pages/home/index" });
+      wx.reLaunch({ url: "/pages/home/index" });
       return;
     }
     refreshProfileStoreBinding().finally(() => {

@@ -88,7 +88,7 @@ Page({
   onShow() {
     if (!canAccessFeature("products")) {
       wx.showToast({ title: "当前账号没有商品查看权限", icon: "none" });
-      wx.switchTab({ url: "/pages/home/index" });
+      wx.reLaunch({ url: "/pages/home/index" });
       return;
     }
     this.loadProducts();
@@ -210,7 +210,7 @@ Page({
       remark: product.recommendedScene
     });
     wx.showToast({ title: "商品参数已带入录单草稿", icon: "none" });
-    wx.switchTab({ url: "/pages/track/index" });
+    wx.reLaunch({ url: "/pages/track/index" });
   },
 
   copySku() {

@@ -1,0 +1,138 @@
+<!--
+  Copyright (c) 2026 北京纵横时空科技有限责任公司
+  文件名: index.wxml
+  功能描述: 顾客端附近门店列表页
+  作者: 廖心慈
+  创建日期: 2026-08-15
+-->
+<view class="page stores-page page-bottom-safe">
+  <!-- 顶部：定位 + 重新定位 -->
+  <view class="loc-bar">
+    <view class="loc-bar-left">
+      <text class="loc-pin">📍</text>
+      <text class="loc-text">当前定位：{{currentCity || '未获取到位置'}}</text>
+    </view>
+    <view class="loc-bar-btn" bindtap="onRelocate">
+      <text class="loc-bar-btn-icon">↻</text>
+      <text>重新定位</text>
+    </view>
+  </view>
+
+  <!-- 定位失败/提示 -->
+  <view wx:if="{{locError}}" class="loc-tip">
+    <text class="loc-tip-text">{{locError}}</text>
+    <text class="loc-tip-action" bindtap="onOpenSetting">手动选择门店 ›</text>
+  </view>
+
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input">
+      <text class="search-icon">⌕</text>
+      <input
+        class="search-field"
+        type="text"
+        placeholder="搜索门店名称或地址"
+        placeholder-class="search-placeholder"
+        value="{{keyword}}"
+        bindinput="onSearchInput"
+      />
+      <text wx:if="{{keyword}}" class="search-clear" bindtap="onClearSearch">×</text>
+    </view>
+  </view>
+
+  <!-- 离你最近 -->
+  <view wx:if="{{nearestStore}}" class="section">
+    <view class="section-title">
+      <text class="section-pin">📍</text>
+      <text>离你最近</text>
+    </view>
+    <view class="card nearest-card">
+        <view class="nearest-head" bindtap="onTapStore" data-id="{{nearestStore.id}}">
+          <view class="nearest-img">
+            <image wx:if="{{nearestStore.thumb}}" class="nearest-img-pic" src="{{nearestStore.thumb}}" mode="aspectFill" />
+            <view wx:else class="nearest-img-placeholder center">
+              <text class="nearest-img-text">金匠倌</text>
+            </view>
+          </view>
+          <view class="nearest-main">
+            <view class="nearest-row1">
+              <text class="nearest-name">{{nearestStore.name}}</text>
+              <text class="nearest-tag" wx:if="{{nearestStore.appointmentEnabled !== false && nearestStore.isOpen}}">可预约</text>
+              <text class="nearest-tag nearest-tag-off" wx:elif="{{nearestStore.appointmentEnabled === false}}">暂未开放</text>
+            </view>
+          <view class="nearest-addr">📍 {{nearestStore.address}}</view>
+          <view class="nearest-hours" wx:if="{{nearestStore.businessHours}}">🕘 {{nearestStore.businessHours}}</view>
+        </view>
+        <view class="nearest-dist" wx:if="{{nearestStore.distanceText}}">
+          {{nearestStore.distanceText}}
+        </view>
+      </view>
+      <view class="nearest-actions">
+        <view class="act-btn act-btn-solid" catchtap="onTapAppointment" data-id="{{nearestStore.id}}">
+          <text class="act-icon">📅</text>
+          <text>到店预约</text>
+        </view>
+        <view class="act-btn act-btn-ghost" catchtap="onNavigate" data-id="{{nearestStore.id}}">
+          <text class="act-icon">↗</text>
+          <text>地图导航</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 门店列表 -->
+  <view class="section">
+    <view class="section-title">门店列表</view>
+    <view wx:if="{{filteredStores.length > 0}}" class="store-list">
+      <view
+        wx:for="{{filteredStores}}"
+        wx:key="id"
+        class="card store-item"
+      >
+        <view class="store-head" bindtap="onTapStore" data-id="{{item.id}}">
+          <view class="store-img">
+            <image wx:if="{{item.thumb}}" class="store-img-pic" src="{{item.thumb}}" mode="aspectFill" />
+            <view wx:else class="store-img-placeholder center">
+              <text class="store-img-text">金匠倌</text>
+            </view>
+          </view>
+          <view class="store-main">
+            <view class="store-row1">
+              <text class="store-name">{{item.name}}</text>
+              <text class="store-dist" wx:if="{{item.distanceText}}">{{item.distanceText}}</text>
+            </view>
+            <view class="store-addr">📍 {{item.address}}</view>
+            <view class="store-hours" wx:if="{{item.businessHours}}">🕘 {{item.businessHours}}</view>
+            <view class="store-appt" wx:if="{{item.appointmentEnabled === false}}">
+              <text class="store-appt-off">暂未开放预约</text>
+            </view>
+          </view>
+        </view>
+        <view class="store-actions">
+          <view class="act-btn act-btn-solid" catchtap="onTapAppointment" data-id="{{item.id}}">
+            <text class="act-icon">📅</text>
+            <text>到店预约</text>
+          </view>
+          <view class="act-btn act-btn-ghost" catchtap="onNavigate" data-id="{{item.id}}">
+            <text class="act-icon">↗</text>
+            <text>地图导航</text>
+          </view>
+          <view class="act-phone" catchtap="onCall" data-phone="{{item.contactPhone}}">
+            <text class="act-phone-icon">📞</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:elif="{{!loading}}" class="empty">
+      <text>{{error || '暂无门店'}}</text>
+      <view wx:if="{{error}}" class="btn-outline retry-btn" bindtap="onRetry">重新加载</view>
+    </view>
+
+    <view wx:if="{{loading && filteredStores.length === 0}}" class="empty">
+      <text>加载中...</text>
+    </view>
+  </view>
+
+  <view class="bottom-spacer"></view>
+</view>

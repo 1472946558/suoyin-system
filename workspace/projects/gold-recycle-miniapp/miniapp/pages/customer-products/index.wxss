@@ -1,0 +1,279 @@
+@import "../../styles/customer.wxss";
+
+/* pages/products/index.wxss - 款式列表页（款式图 / 工费） */
+
+.products-page {
+  min-height: 100vh;
+}
+
+/* 顶部搜索栏 */
+.search-bar {
+  background: var(--color-bg-card);
+  padding: 20rpx 32rpx;
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg);
+  border-radius: 999rpx;
+  padding: 0 24rpx;
+  height: 72rpx;
+}
+
+.search-icon {
+  font-size: 32rpx;
+  color: var(--color-text-sub);
+  margin-right: 12rpx;
+}
+
+.search-field {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--color-text-main);
+  height: 72rpx;
+  line-height: 72rpx;
+}
+
+.search-placeholder {
+  color: var(--color-text-tip);
+}
+
+.search-clear {
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 36rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: var(--color-text-tip);
+  background: #E0E0E0;
+  border-radius: 50%;
+}
+
+/* 分类筛选栏 */
+.cat-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+  background: var(--color-bg-card);
+  padding: 16rpx 8rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.cat-item {
+  display: inline-block;
+  padding: 12rpx 32rpx;
+  margin: 0 8rpx;
+  border-radius: 999rpx;
+  background: #fff;
+  color: var(--color-text-sub);
+  font-size: 26rpx;
+  border: 2rpx solid var(--color-border);
+  transition: all 0.2s;
+}
+
+.cat-item-active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* 工费说明提示 */
+.notice-banner {
+  display: flex;
+  align-items: center;
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-md);
+  padding: 20rpx 24rpx;
+  margin: 20rpx 24rpx 0;
+  border: 1rpx solid var(--color-primary-light);
+}
+
+.notice-icon {
+  font-size: 28rpx;
+  margin-right: 12rpx;
+}
+
+.notice-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: var(--color-primary);
+}
+
+/* 商品双列网格 */
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 20rpx 24rpx;
+  justify-content: space-between;
+}
+
+.p-card {
+  width: 344rpx;
+  margin-bottom: 24rpx;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.p-thumb {
+  width: 100%;
+  height: 344rpx;
+  position: relative;
+}
+
+.p-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.p-img-placeholder {
+  background: linear-gradient(135deg, #F4D58D 0%, #BFA15F 60%, #866E23 100%);
+  color: #fff;
+}
+
+.p-placeholder-text {
+  font-size: 44rpx;
+  font-weight: 600;
+  letter-spacing: 6rpx;
+  opacity: 0.9;
+}
+
+/* 徽章 */
+.p-badge {
+  position: absolute;
+  top: 12rpx;
+  left: 12rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  color: #fff;
+  z-index: 2;
+}
+
+.p-badge-hot {
+  background: #FF5722;
+}
+
+.p-badge-rec {
+  background: #FF9800;
+}
+
+/* 工费参考 */
+.p-labor {
+  margin-top: 10rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.p-labor-label {
+  font-size: 20rpx;
+  color: var(--color-text-tip);
+  background: #F5F5F5;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+}
+
+.p-labor-val {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.p-tagline {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: var(--color-text-tip);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p-body {
+  padding: 20rpx;
+}
+
+.p-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--color-text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p-meta {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+}
+
+.p-cat {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border: 2rpx solid var(--color-primary-light);
+  border-radius: 8rpx;
+  padding: 2rpx 12rpx;
+}
+
+.p-purity {
+  font-size: 22rpx;
+  color: var(--color-text-sub);
+  margin-left: 12rpx;
+}
+
+.p-price-row {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.p-price {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.p-gram {
+  font-size: 24rpx;
+  color: var(--color-text-tip);
+}
+
+.p-action {
+  margin-top: 16rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx dashed var(--color-border);
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  color: var(--color-primary);
+}
+
+.p-action-arrow {
+  font-size: 28rpx;
+  margin-left: 4rpx;
+  line-height: 1;
+}
+
+/* 空状态 */
+.retry-btn {
+  width: 240rpx;
+  margin: 24rpx auto 0;
+  padding: 16rpx 0;
+  font-size: 26rpx;
+}
+
+/* 加载更多 */
+.load-more {
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--color-text-tip);
+  padding: 16rpx 0 0;
+}
