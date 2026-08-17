@@ -5,7 +5,7 @@
   作者: 廖心慈
   创建日期: 2026-08-15
 -->
-<view class="page products-page">
+<view class="page products-page page-bottom-safe">
   <!-- 顶部搜索栏 -->
   <view class="search-bar">
     <view class="search-input">

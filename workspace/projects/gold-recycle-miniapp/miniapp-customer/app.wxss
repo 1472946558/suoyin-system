@@ -16,6 +16,9 @@ page {
   --color-success: #4CAF50;
   --color-warning: #FF9800;
   --color-danger: #F44336;
+  --page-inline-padding: 32rpx;
+  --page-section-gap: 24rpx;
+  --page-bottom-space: 48rpx;
   --shadow-card: 0 2rpx 12rpx rgba(134, 110, 35, 0.08);
   --radius-sm: 8rpx;
   --radius-md: 16rpx;
@@ -29,6 +32,18 @@ page {
 
 view, text, image, button, input, textarea, scroll-view, swiper, swiper-item {
   box-sizing: border-box;
+}
+
+/* 主页面内容壳层：系统状态栏、原生导航栏和原生 TabBar 由微信负责。 */
+.page {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+/* 避免内容滚动到原生底栏或底部手势区下方。 */
+.page-bottom-safe {
+  padding-bottom: calc(var(--page-bottom-space) + env(safe-area-inset-bottom));
 }
 
 button {

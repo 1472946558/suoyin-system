@@ -68,14 +68,6 @@ Page({
       });
   },
 
-  onTapMore() {
-    wx.showToast({ title: '更多功能开发中', icon: 'none' });
-  },
-
-  onTapScan() {
-    wx.scanCode({ success: () => {}, fail: () => {} });
-  },
-
   onBannerTap(e) {
     const idx = e.currentTarget.dataset.index;
     const banner = this.data.homeData.banners[idx];

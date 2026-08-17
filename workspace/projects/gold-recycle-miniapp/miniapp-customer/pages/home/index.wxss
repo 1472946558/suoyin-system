@@ -3,47 +3,10 @@
  */
 .home-page {
   min-height: 100vh;
-  padding-bottom: 60rpx;
-}
-
-.home-topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24rpx 32rpx 16rpx;
-}
-
-.home-topbar-title {
-  font-size: 36rpx;
-  font-weight: 600;
-  color: var(--color-text-main);
-  flex: 1;
-  text-align: center;
-}
-
-.home-topbar-icons {
-  position: absolute;
-  right: 32rpx;
-  top: 24rpx;
-  display: flex;
-  align-items: center;
-}
-
-.home-topbar-icon {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  background: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  color: var(--color-text-sub);
-  margin-left: 12rpx;
 }
 
 .banner-wrap {
-  margin: 16rpx 32rpx 24rpx;
+  margin: 32rpx 32rpx 24rpx;
   border-radius: 24rpx;
   overflow: hidden;
 }
@@ -275,5 +238,5 @@
   text-align: center;
   font-size: 24rpx;
   color: var(--color-text-tip);
-  padding: 32rpx 0;
+  padding: 32rpx 0 0;
 }

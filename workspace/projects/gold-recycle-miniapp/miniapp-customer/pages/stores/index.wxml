@@ -5,7 +5,7 @@
   作者: 廖心慈
   创建日期: 2026-08-15
 -->
-<view class="page stores-page">
+<view class="page stores-page page-bottom-safe">
   <!-- 顶部：定位 + 重新定位 -->
   <view class="loc-bar">
     <view class="loc-bar-left">

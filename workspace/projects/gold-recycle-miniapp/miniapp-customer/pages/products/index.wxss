@@ -2,7 +2,6 @@
 
 .products-page {
   min-height: 100vh;
-  padding-bottom: 60rpx;
 }
 
 /* 顶部搜索栏 */
@@ -274,5 +273,5 @@
   text-align: center;
   font-size: 24rpx;
   color: var(--color-text-tip);
-  padding: 16rpx 0 32rpx;
+  padding: 16rpx 0 0;
 }

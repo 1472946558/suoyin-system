@@ -2,7 +2,6 @@
 
 .stores-page {
   min-height: 100vh;
-  padding-bottom: 40rpx;
 }
 
 /* 定位栏 */
@@ -384,5 +383,5 @@
 
 /* 底部空间 */
 .bottom-spacer {
-  height: 40rpx;
+  height: 0;
 }

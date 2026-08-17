@@ -5,20 +5,7 @@
   作者: 廖心慈
   创建日期: 2026-08-15
 -->
-<view class="page home-page">
-  <!-- 顶部品牌栏 -->
-  <view class="home-topbar">
-    <text class="home-topbar-title">{{homeData.brandName || '金匠倌'}}</text>
-    <view class="home-topbar-icons">
-      <view class="home-topbar-icon" bindtap="onTapMore">
-        <text>···</text>
-      </view>
-      <view class="home-topbar-icon" bindtap="onTapScan">
-        <text>⊙</text>
-      </view>
-    </view>
-  </view>
-
+<view class="page home-page page-bottom-safe">
   <!-- Banner 轮播 -->
   <view class="banner-wrap" wx:if="{{homeData.banners && homeData.banners.length > 0}}">
     <swiper class="banner-swiper" indicator-dots autoplay interval="3500" duration="500" circular>
