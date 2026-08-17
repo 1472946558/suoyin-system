@@ -213,8 +213,8 @@
 | stores[].address | string | 同上 | 门店地址 | — |
 | stores[].contactPhone | string | 同上 | 联系电话 | — |
 | stores[].businessHours | string | 同上 | 营业时间 | 如 "09:30-21:30" |
-| stores[].longitude | number | `GET /api/v1/customer/stores/{id}` 补齐 | 经度 | 列表接口不返回 |
-| stores[].latitude | number | 同上 | 纬度 | 列表接口不返回 |
+| stores[].longitude | number | `GET /api/v1/customer/stores` 返回 | 经度 | 后端未配置时为 0 |
+| stores[].latitude | number | 同上 | 纬度 | 后端未配置时为 0 |
 | stores[].distance | number|null | 前端 Haversine 计算 | 距离 km | 无定位/无坐标为 null |
 | stores[].distanceText | string | 前端格式化 | 距离文案 | "800m" / "1.2km" / "" |
 | stores[].isOpen | boolean | 前端解析 businessHours | 是否营业中 | — |
@@ -679,8 +679,8 @@ NOTES_EDITABLE = ['PENDING', 'CONFIRMED']
 | address | ✅ | ✅ | — |
 | contactPhone | ✅ | ✅ | — |
 | businessHours | ✅ | ✅ | — |
-| longitude | ❌ | ✅ | 仅详情返回 |
-| latitude | ❌ | ✅ | 仅详情返回 |
+| longitude | ✅ | ✅ | 列表和详情均返回；未配置时为 0 |
+| latitude | ✅ | ✅ | 列表和详情均返回；未配置时为 0 |
 
 ### 5.3 顾客 token 与员工 token 隔离
 

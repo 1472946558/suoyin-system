@@ -36,10 +36,10 @@ Page({
       });
   },
 
-  // 列表接口无经纬度，并发拉详情补齐
+  // 新接口直接返回经纬度；保留详情补齐逻辑兼容旧接口/历史环境
   enrichStores(stores) {
     const tasks = stores
-      .filter(s => !s.longitude)
+      .filter(s => !(Number(s.longitude) && Number(s.latitude)))
       .map(s => api.getStoreDetail(s.id)
         .then(d => ({ id: s.id, longitude: d.longitude, latitude: d.latitude }))
         .catch(() => null));
@@ -122,6 +122,14 @@ Page({
   tryLocate() {
     const app = getApp();
     if (app.globalData.userLocation) return Promise.resolve();
+    if (app.globalData.locationAttempted) {
+      if (app.globalData.locationDenied) {
+        const note = (app.globalData.homeConfig && app.globalData.homeConfig.locationPermissionNote) || '定位服务未开启，无法获取附近门店';
+        this.setData({ locError: note });
+      }
+      return Promise.resolve();
+    }
+    app.globalData.locationAttempted = true;
     return new Promise(resolve => {
       wx.getLocation({
         type: 'gcj02',
@@ -132,6 +140,7 @@ Page({
         },
         fail: () => {
           const app = getApp();
+          app.globalData.locationDenied = true;
           const note = (app.globalData.homeConfig && app.globalData.homeConfig.locationPermissionNote) || '定位服务未开启，无法获取附近门店';
           this.setData({ locError: note });
           resolve();
@@ -155,6 +164,8 @@ Page({
   onRelocate() {
     const app = getApp();
     delete app.globalData.userLocation;
+    app.globalData.locationAttempted = false;
+    app.globalData.locationDenied = false;
     this.setData({ locError: null });
     wx.showLoading({ title: '定位中...', mask: true });
     this.tryLocate().finally(() => wx.hideLoading());
@@ -175,11 +186,13 @@ Page({
 
   onTapStore(e) {
     const id = e.currentTarget.dataset.id;
+    if (!id) return;
     wx.navigateTo({ url: '/pkg-customer/store-detail/index?id=' + id });
   },
 
   onTapAppointment(e) {
     const id = e.currentTarget.dataset.id;
+    if (!id) return;
     const s = this.data.stores.find(x => x.id === id);
     if (s && s.appointmentEnabled === false) {
       wx.showToast({ title: '该门店暂未开放预约', icon: 'none' });
@@ -205,6 +218,13 @@ Page({
   },
 
   onOpenSetting() {
-    wx.openSetting({ success: () => this.tryLocate() });
+    wx.openSetting({
+      success: () => {
+        const app = getApp();
+        app.globalData.locationAttempted = false;
+        app.globalData.locationDenied = false;
+        this.tryLocate();
+      }
+    });
   }
 });

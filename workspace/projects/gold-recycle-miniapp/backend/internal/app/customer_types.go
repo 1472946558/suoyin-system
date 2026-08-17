@@ -120,6 +120,8 @@ type CustomerStoreDTO struct {
 	Name          string  `json:"name"`
 	City          string  `json:"city"`
 	Address       string  `json:"address"`
+	Longitude     float64 `json:"longitude"`
+	Latitude      float64 `json:"latitude"`
 	ContactPhone  string  `json:"contactPhone,omitempty"`
 	BusinessHours string  `json:"businessHours,omitempty"`
 	ImageURL      string  `json:"imageUrl,omitempty"`

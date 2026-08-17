@@ -1,5 +1,27 @@
 # 变更日志
 
+## 2026-08-17 功能点 02：顾客浏览与最近门店推荐交付候选
+
+### 本次交付范围
+- 首页和商品详情页不再默认取第一家门店，统一按顾客定位计算距离并推荐最近门店；未授权定位时保留手动选店和第一家门店兜底。
+- 顾客门店列表接口直接返回经纬度，前端不再为每家门店额外请求详情；保留旧接口坐标补齐兼容逻辑。
+- 首页 Banner、首页门店图和商品详情门店图统一补全相对 `/assets/` 地址。
+- 定位失败、重新定位、打开设置后的状态统一处理，避免重复弹窗并保留手动选择门店提示。
+- 顾客端公开接口回归覆盖：仅 active 门店、门店经纬度、商品分页、商品详情、员工字段/内部价格字段不泄露。
+
+### 验收证据
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go test ./internal/app -run 'TestCustomerBrowseEndpointsExposePublicSafeData|TestCustomerAppointment|TestCustomerProfileDTO' -count=1 -timeout=60s`：通过。
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go test ./... -count=1 -timeout=120s`：通过。
+- `go test -race`（顾客浏览、预约、顾客 DTO）：通过。
+- `go vet ./...`：通过。
+- 顾客端 JS/JSON 检查、Haversine 距离计算检查：通过。
+- Node 模拟微信运行时验证“近门店优先”和“已有坐标不触发详情 N+1 请求”：通过。
+- `miniapp/npm run validate`：通过。
+
+### 交付状态
+- 状态：**代码与自动化检查通过，待真机/真实环境发布确认**。
+- 未执行：生产数据库、生产服务器、微信体验版/正式版上传和提审。
+
 ## 2026-08-17 功能点 01：预约核心闭环商用交付候选
 
 ### 本次交付范围

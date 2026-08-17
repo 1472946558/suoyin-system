@@ -315,6 +315,8 @@ func buildCustomerStoreDTO(st StoreInfo) CustomerStoreDTO {
 		Name:               st.Name,
 		City:               st.City,
 		Address:            st.Address,
+		Longitude:          st.Longitude,
+		Latitude:           st.Latitude,
 		ContactPhone:       st.ContactPhone,
 		BusinessHours:      st.BusinessHours,
 		ImageURL:           st.ImageURL,

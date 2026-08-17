@@ -59,26 +59,24 @@ Page({
         if (!stores || stores.length === 0) return;
         const app = getApp();
         const loc = app.globalData.userLocation;
-        let nearest = stores[0];
-        let minDist = Infinity;
-        stores.forEach(s => {
-          if (s.latitude && s.longitude && loc) {
-            const d = distanceKm(loc.latitude, loc.longitude, s.latitude, s.longitude);
-            if (d < minDist) {
-              minDist = d;
-              nearest = s;
-            }
+        const enriched = stores.map(store => {
+          const item = Object.assign({}, store, {
+            distance: null,
+            distanceText: '',
+            thumb: store.imageUrl ? absUrl(store.imageUrl) : ''
+          });
+          if (loc && Number(item.latitude) && Number(item.longitude)) {
+            item.distance = distanceKm(loc.latitude, loc.longitude, item.latitude, item.longitude);
+            item.distanceText = fmtDistance(item.distance) + ' · ';
           }
+          return item;
         });
-        if (nearest && loc && nearest.latitude) {
-          nearest.distanceText = fmtDistance(minDist) + ' · ';
-        } else {
-          nearest.distanceText = '';
-        }
-        // 补全门店图片
-        if (nearest.imageUrl) {
-          nearest.thumb = absUrl(nearest.imageUrl);
-        }
+        enriched.sort((a, b) => {
+          const da = a.distance == null ? Infinity : a.distance;
+          const db = b.distance == null ? Infinity : b.distance;
+          return da - db;
+        });
+        const nearest = enriched[0];
         this.setData({ 'product.nearestStore': nearest });
       })
       .catch(() => {});

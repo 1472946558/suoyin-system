@@ -17,13 +17,17 @@ Page({
 
   onShow() {
     this.loadHome();
-    this.loadStores();
+    this.tryLocate().finally(() => this.loadStores());
   },
 
   loadHome() {
     api.getHome()
       .then(data => {
-        const homeData = data || {};
+        const homeData = Object.assign({}, data || {}, {
+          banners: (data && Array.isArray(data.banners) ? data.banners : []).map(banner => Object.assign({}, banner, {
+            imageUrl: absUrl(banner.imageUrl)
+          }))
+        });
         this.setData({ homeData, servicePhone: homeData.servicePhone || '' });
         // 缓存到 globalData 供其他页面使用
         const app = getApp();
@@ -44,23 +48,26 @@ Page({
           this.setData({ nearestStore: null });
           return;
         }
-        // 取第一家作为最近门店
-        const first = stores[0];
-        // 使用真实距离（如果有经纬度）
         const app = getApp();
         const loc = app.globalData.userLocation;
-        if (loc && first.latitude && first.longitude) {
-          first.distance = distanceKm(loc.latitude, loc.longitude, first.latitude, first.longitude);
-          first.distanceText = fmtDistance(first.distance);
-        } else {
-          first.distance = 0;
-          first.distanceText = '';
-        }
-        // 补全门店图片 URL
-        if (first.imageUrl) {
-          first.thumb = absUrl(first.imageUrl);
-        }
-        this.setData({ nearestStore: first });
+        const enriched = stores.map(store => {
+          const item = Object.assign({}, store, {
+            thumb: store.imageUrl ? absUrl(store.imageUrl) : '',
+            distance: null,
+            distanceText: ''
+          });
+          if (loc && Number(item.latitude) && Number(item.longitude)) {
+            item.distance = distanceKm(loc.latitude, loc.longitude, item.latitude, item.longitude);
+            item.distanceText = fmtDistance(item.distance);
+          }
+          return item;
+        });
+        enriched.sort((a, b) => {
+          const da = a.distance == null ? Infinity : a.distance;
+          const db = b.distance == null ? Infinity : b.distance;
+          return da - db;
+        });
+        this.setData({ nearestStore: enriched[0] || null });
       })
       .catch(err => {
         console.warn('加载门店失败', err);
@@ -116,6 +123,7 @@ Page({
 
   onTapStore(e) {
     const store = e.currentTarget.dataset.store;
+    if (!store || !store.id) return;
     wx.navigateTo({ url: '/pkg-customer/store-detail/index?id=' + store.id });
   },
 
@@ -135,7 +143,7 @@ Page({
 
   onTapNavigate(e) {
     const store = e.currentTarget.dataset.store;
-    if (!store) return;
+    if (!store || !store.id) return;
     if (!store.longitude || !store.latitude) {
       // 详情页获取经纬度
       api.getStoreDetail(store.id).then(detail => {
@@ -164,5 +172,30 @@ Page({
 
   goAppointment() {
     wx.navigateTo({ url: '/pkg-customer/appointment-create/index' });
+  },
+
+  tryLocate() {
+    const app = getApp();
+    if (app.globalData.userLocation || app.globalData.locationAttempted) {
+      return Promise.resolve(app.globalData.userLocation);
+    }
+
+    app.globalData.locationAttempted = true;
+    return new Promise(resolve => {
+      wx.getLocation({
+        type: 'gcj02',
+        success: res => {
+          app.globalData.userLocation = {
+            latitude: res.latitude,
+            longitude: res.longitude
+          };
+          resolve(app.globalData.userLocation);
+        },
+        fail: () => {
+          app.globalData.locationDenied = true;
+          resolve(null);
+        }
+      });
+    });
   }
 });
