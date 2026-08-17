@@ -8,9 +8,25 @@
 <view class="page home-page page-bottom-safe">
   <!-- Banner 轮播 -->
   <view class="banner-wrap" wx:if="{{homeData.banners && homeData.banners.length > 0}}">
-    <swiper class="banner-swiper" indicator-dots autoplay interval="3500" duration="500" circular>
+    <swiper
+      class="banner-swiper"
+      indicator-dots
+      indicator-color="rgba(255,255,255,.45)"
+      indicator-active-color="#ffffff"
+      autoplay
+      interval="3500"
+      duration="500"
+      circular
+      easing-function="easeInOutCubic"
+    >
       <swiper-item wx:for="{{homeData.banners}}" wx:key="id" bindtap="onBannerTap" data-index="{{index}}">
-        <image class="banner-image" src="{{item.imageUrl}}" mode="aspectFill" />
+        <image wx:if="{{item.imageUrl}}" class="banner-image" src="{{item.imageUrl}}" mode="aspectFill" />
+        <view wx:else class="banner-fallback banner-fallback-{{item.theme}}">
+          <view class="banner-fallback-kicker">金匠倌</view>
+          <view class="banner-fallback-title">{{item.title}}</view>
+          <view class="banner-fallback-subtitle">{{item.subtitle}}</view>
+          <view class="banner-fallback-cta">点击查看 ›</view>
+        </view>
       </swiper-item>
     </swiper>
   </view>
@@ -67,8 +83,9 @@
           <view class="btn-primary store-action-btn" catchtap="onTapAppointment" data-store="{{nearestStore}}">
             <text>📅 到店预约</text>
           </view>
-          <view class="btn-outline store-action-btn" catchtap="onTapNavigate" data-store="{{nearestStore}}">
-            <text>➤ 地图导航</text>
+          <view class="btn-outline store-action-btn {{nearestStore.canNavigate ? '' : 'store-action-disabled'}}" catchtap="onTapNavigate" data-store="{{nearestStore}}">
+            <text wx:if="{{nearestStore.canNavigate}}">➤ 地图导航</text>
+            <text wx:else>📍 暂无坐标</text>
           </view>
         </view>
       </view>

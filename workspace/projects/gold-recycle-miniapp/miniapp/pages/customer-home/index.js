@@ -4,6 +4,31 @@ const { ensureCustomerSession } = require('../../utils/customer-auth.js');
 const { distanceKm, fmtDistance } = require('../../utils/customer-distance.js');
 const { absUrl } = require('../../utils/customer-services.js');
 
+// 后台尚未配置 Banner 时，仍保留可点击的顾客首页轮播骨架；配置真实图片后自动替换。
+const DEFAULT_BANNERS = [
+  {
+    id: 'default-style-banner',
+    title: '款式图 / 工费',
+    subtitle: '海量款式 · 工费透明',
+    linkType: 'style_list',
+    theme: 'style'
+  },
+  {
+    id: 'default-store-banner',
+    title: '附近门店',
+    subtitle: '就近选择，到店更方便',
+    linkType: 'store_list',
+    theme: 'store'
+  },
+  {
+    id: 'default-recycle-banner',
+    title: '黄金回收服务',
+    subtitle: '到店检测，现场沟通',
+    linkType: 'recycle',
+    theme: 'recycle'
+  }
+];
+
 Page({
   data: {
     homeData: {},
@@ -23,8 +48,10 @@ Page({
   loadHome() {
     api.getHome()
       .then(data => {
+        const serverBanners = data && Array.isArray(data.banners) ? data.banners : [];
+        const sourceBanners = serverBanners.length > 0 ? serverBanners : DEFAULT_BANNERS;
         const homeData = Object.assign({}, data || {}, {
-          banners: (data && Array.isArray(data.banners) ? data.banners : []).map(banner => Object.assign({}, banner, {
+          banners: sourceBanners.map(banner => Object.assign({}, banner, {
             imageUrl: absUrl(banner.imageUrl)
           }))
         });
@@ -37,7 +64,14 @@ Page({
       })
       .catch(err => {
         console.warn('加载首页失败', err);
-        this.setData({ homeData: { brandName: '金匠倌', brandSlogan1: '旧金换打新款', brandSlogan2: '包损耗' } });
+        this.setData({
+          homeData: {
+            brandName: '金匠倌',
+            brandSlogan1: '旧金换打新款',
+            brandSlogan2: '包损耗',
+            banners: DEFAULT_BANNERS
+          }
+        });
       });
   },
 
@@ -54,7 +88,8 @@ Page({
           const item = Object.assign({}, store, {
             thumb: store.imageUrl ? absUrl(store.imageUrl) : '',
             distance: null,
-            distanceText: ''
+            distanceText: '',
+            canNavigate: this.hasCoordinates(store)
           });
           if (loc && Number(item.latitude) && Number(item.longitude)) {
             item.distance = distanceKm(loc.latitude, loc.longitude, item.latitude, item.longitude);
@@ -114,17 +149,26 @@ Page({
   },
 
   onTapProducts() {
-    wx.switchTab({ url: '/pages/customer-products/index' });
+    wx.switchTab({
+      url: '/pages/customer-products/index',
+      fail: () => this.showActionError('款式页暂不可用')
+    });
   },
 
   onTapMoreStores() {
-    wx.switchTab({ url: '/pages/customer-stores/index' });
+    wx.switchTab({
+      url: '/pages/customer-stores/index',
+      fail: () => this.showActionError('门店页暂不可用')
+    });
   },
 
   onTapStore(e) {
     const store = e.currentTarget.dataset.store;
     if (!store || !store.id) return;
-    wx.navigateTo({ url: '/pkg-customer/store-detail/index?id=' + store.id });
+    wx.navigateTo({
+      url: '/pkg-customer/store-detail/index?id=' + encodeURIComponent(store.id),
+      fail: () => this.showActionError('门店详情暂不可用')
+    });
   },
 
   onTapAppointment(e) {
@@ -138,22 +182,25 @@ Page({
       wx.showToast({ title: '该门店暂未开放预约', icon: 'none' });
       return;
     }
-    wx.navigateTo({ url: '/pkg-customer/appointment-create/index?storeId=' + store.id });
+    wx.navigateTo({
+      url: '/pkg-customer/appointment-create/index?storeId=' + encodeURIComponent(store.id),
+      fail: () => this.showActionError('预约页面暂不可用')
+    });
   },
 
   onTapNavigate(e) {
     const store = e.currentTarget.dataset.store;
     if (!store || !store.id) return;
-    if (!store.longitude || !store.latitude) {
+    if (!this.hasCoordinates(store)) {
       // 详情页获取经纬度
       api.getStoreDetail(store.id).then(detail => {
-        if (detail.longitude && detail.latitude) {
+        if (this.hasCoordinates(detail)) {
           this.openMap(detail);
         } else {
-          wx.showToast({ title: '该门店暂未配置位置', icon: 'none' });
+          this.showActionError('该门店暂未配置经纬度');
         }
       }).catch(() => {
-        wx.showToast({ title: '导航失败', icon: 'none' });
+        this.showActionError('获取门店位置失败');
       });
       return;
     }
@@ -162,16 +209,30 @@ Page({
 
   openMap(store) {
     wx.openLocation({
-      latitude: store.latitude,
-      longitude: store.longitude,
+      latitude: Number(store.latitude),
+      longitude: Number(store.longitude),
       name: store.name,
       address: store.address,
-      scale: 16
+      scale: 16,
+      fail: () => this.showActionError('打开地图失败，请稍后重试')
     });
   },
 
   goAppointment() {
-    wx.navigateTo({ url: '/pkg-customer/appointment-create/index' });
+    wx.navigateTo({
+      url: '/pkg-customer/appointment-create/index',
+      fail: () => this.showActionError('预约页面暂不可用')
+    });
+  },
+
+  hasCoordinates(store) {
+    const longitude = Number(store && store.longitude);
+    const latitude = Number(store && store.latitude);
+    return isFinite(longitude) && isFinite(latitude) && longitude !== 0 && latitude !== 0;
+  },
+
+  showActionError(title) {
+    wx.showToast({ title, icon: 'none', duration: 1800 });
   },
 
   tryLocate() {
