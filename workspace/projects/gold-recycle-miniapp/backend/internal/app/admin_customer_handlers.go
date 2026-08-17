@@ -363,6 +363,8 @@ func (a *App) handleAdminCustomerRecycleInfo(w http.ResponseWriter, r *http.Requ
 		switch {
 		case errors.Is(err, errInvalidRecycleInfo):
 			a.writeError(w, r, http.StatusBadRequest, 40004, "title is required")
+		case errors.Is(err, errRecycleInfoV1Boundary):
+			a.writeError(w, r, http.StatusBadRequest, 40006, "recycle info cannot contain gold price, online estimate, settlement, door-to-door or mail-in service content in V1")
 		case err != nil:
 			a.writeError(w, r, http.StatusInternalServerError, 50001, "failed to update recycle info")
 		default:

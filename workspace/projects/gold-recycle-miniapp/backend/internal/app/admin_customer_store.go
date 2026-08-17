@@ -28,6 +28,7 @@ var (
 	errInvalidAppointmentRules = errors.New("invalid appointment rules")
 	errInvalidStyleInput       = errors.New("invalid style input")
 	errInvalidRecycleInfo      = errors.New("invalid recycle info")
+	errRecycleInfoV1Boundary   = errors.New("recycle info violates v1 boundary")
 	errUploadAssetNotFound     = errors.New("upload asset not found")
 	errUploadAssetInUse        = errors.New("upload asset still referenced")
 )
@@ -548,6 +549,9 @@ func (s *MockStore) adminUpdateCustomerRecycleInfo(user UserAccount, req Custome
 	if normalized.Notices == nil {
 		normalized.Notices = []string{}
 	}
+	if err := validateCustomerRecycleInfoV1(normalized); err != nil {
+		return CustomerRecycleInfo{}, err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -563,6 +567,41 @@ func (s *MockStore) adminUpdateCustomerRecycleInfo(user UserAccount, req Custome
 		fmt.Sprintf("回收服务介绍已更新：%s（流程 %d 步 / 服务 %d 项 / 须知 %d 条）",
 			normalized.Title, len(normalized.Process), len(normalized.Services), len(normalized.Notices)))
 	return normalized, nil
+}
+
+// validateCustomerRecycleInfoV1 防止 V1 回收介绍变成金价、估价或线上结算入口。
+// 顾客端 V1 只允许展示服务说明和到店流程；后台内容即使由管理员填写，也不能绕过产品边界。
+func validateCustomerRecycleInfoV1(info CustomerRecycleInfo) error {
+	forbiddenTerms := []string{
+		"金价",
+		"估价",
+		"报价",
+		"估值",
+		"结算",
+		"即时到账",
+		"上门",
+		"邮寄",
+		"在线估",
+		"在线回收",
+		"支付",
+		"付款",
+	}
+	values := []string{info.Title, info.Intro}
+	for _, step := range info.Process {
+		values = append(values, step.Title, step.Desc)
+	}
+	for _, service := range info.Services {
+		values = append(values, service.Title, service.Desc)
+	}
+	values = append(values, info.Notices...)
+	for _, value := range values {
+		for _, forbidden := range forbiddenTerms {
+			if strings.Contains(value, forbidden) {
+				return errRecycleInfoV1Boundary
+			}
+		}
+	}
+	return nil
 }
 
 // --- 后台预约记录管理 ---

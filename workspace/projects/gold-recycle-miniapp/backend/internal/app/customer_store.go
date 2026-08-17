@@ -387,6 +387,9 @@ func (s *MockStore) customerRecycleInfoData() CustomerRecycleInfo {
 	if info.Title == "" || (len(info.Process) == 0 && len(info.Services) == 0) {
 		return defaultCustomerRecycleInfo()
 	}
+	if err := validateCustomerRecycleInfoV1(info); err != nil {
+		return defaultCustomerRecycleInfo()
+	}
 	return info
 }
 
@@ -832,23 +835,24 @@ func defaultCustomerHomeConfig() CustomerHomeResponse {
 func defaultCustomerRecycleInfo() CustomerRecycleInfo {
 	return CustomerRecycleInfo{
 		Title: "黄金回收服务",
-		Intro: "金匠馆专业黄金回收服务，旧金换打新款，包损耗。到店即可享受专业检测和公正估价。",
+		Intro: "金匠馆专业黄金回收服务，旧金换打新款，包损耗。到店即可享受专业检测和服务咨询。",
 		Process: []RecycleProcessStep{
 			{Step: 1, Title: "到店咨询", Desc: "携带黄金饰品到门店，专业顾问接待"},
 			{Step: 2, Title: "黄金检测", Desc: "使用专业仪器检测纯度和克重"},
-			{Step: 3, Title: "确认价格", Desc: "根据实时金价和检测结果给出报价"},
-			{Step: 4, Title: "完成回收", Desc: "确认无误后现场结算，款项即时到账"},
+			{Step: 3, Title: "服务说明", Desc: "专业顾问说明检测结果与可办理服务"},
+			{Step: 4, Title: "到店办理", Desc: "确认服务内容后由门店协助办理"},
 		},
 		Services: []RecycleServiceItem{
 			{Icon: "recycle", Title: "旧金换新", Desc: "旧金饰折价换购新款，补差价即可"},
 			{Icon: "repair", Title: "黄金维修", Desc: "变形、断裂、损耗等维修修复服务"},
 			{Icon: "consult", Title: "款式咨询", Desc: "专业顾问提供款式与工费咨询"},
-			{Icon: "recycle", Title: "到店回收", Desc: "黄金饰品现场检测、公正估价、即时结算"},
+			{Icon: "recycle", Title: "到店回收", Desc: "黄金饰品现场检测，具体办理内容以门店说明为准"},
 		},
 		Notices: []string{
-			"最终回收价格以门店线下检测为准",
+			"最终服务内容以门店现场检测与沟通结果为准",
 			"请携带有效身份证件办理回收业务",
-			"回收金价参考当日上海黄金交易所基准价",
+			"请确认物品权属清晰",
+			"本版本仅支持预约到店咨询",
 		},
 	}
 }

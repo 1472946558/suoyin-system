@@ -1,5 +1,23 @@
 # 变更日志
 
+## 2026-08-17 功能点 03：黄金回收服务介绍 V1 合规交付候选
+
+### 本次交付范围
+- 修复前后端默认文案中“实时金价、估价、现场结算、即时到账”等超出 V1 范围的内容。
+- 默认流程调整为“到店咨询 → 黄金检测 → 服务说明 → 到店办理”。
+- 后台保存回收介绍时增加 V1 红线校验，拒绝金价、估价、报价、结算、上门、邮寄、支付等内容。
+- 顾客公开接口读取存量违规配置时自动返回安全默认内容，避免旧配置继续泄露到顾客端；不执行数据库迁移。
+- 保留“最终服务内容以门店现场检测与沟通结果为准”和预约到店 CTA，不增加在线估价或在线结算。
+
+### 验收证据
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go test ./internal/app -run 'TestCustomerRecycleInfoV1Boundary|TestCustomerBrowseEndpointsExposePublicSafeData|TestCustomerAppointment|TestCustomerProfileDTO' -count=1 -timeout=60s`：通过。
+- `node --check miniapp-customer/pkg-customer/recycle-info/index.js`：通过。
+- `TestCustomerRecycleInfoV1Boundary` 覆盖默认文案、后台拒绝违规文案、存量违规配置公开接口降级。
+
+### 交付状态
+- 状态：**代码与自动化检查通过，待真机/真实环境发布确认**。
+- 未执行：生产数据库迁移、生产服务器修改、微信体验版/正式版上传和提审。
+
 ## 2026-08-17 功能点 02：顾客浏览与最近门店推荐交付候选
 
 ### 本次交付范围
