@@ -160,6 +160,8 @@ type CustomerAppointmentDTO struct {
 	TimeRange       string     `json:"timeRange"` // 例 14:00-14:30
 	Status          string     `json:"status"`
 	StatusText      string     `json:"statusText"`
+	CanCancel       bool       `json:"canCancel"`
+	CanEditNotes    bool       `json:"canEditNotes"`
 	Remark          string     `json:"remark,omitempty"`
 	CreatedAt       time.Time  `json:"createdAt"`
 	CancelledAt     *time.Time `json:"cancelledAt,omitempty"`

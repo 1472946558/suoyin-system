@@ -1,7 +1,7 @@
 // pkg-customer/appointment-detail/index.js - 预约详情
 const { api } = require('../../utils/request.js');
 const { appointmentStatusText, appointmentStatusColor, appointmentStatusBgColor, serviceTypeText } = require('../../utils/customer-services.js');
-const { getStoredProfile } = require('../../utils/customer-auth.js');
+const { getCustomerToken, getStoredProfile } = require('../../utils/customer-auth.js');
 
 // 可取消状态
 var CANCELLABLE = ['PENDING', 'CONFIRMED'];
@@ -20,16 +20,22 @@ Page({
     serviceText: '',
     contactPhone: '',
     canCancel: false,
-    canEditNotes: false
+    canEditNotes: false,
+    cancelling: false
   },
 
   onLoad(query) {
+    var id = (query && query.id) || '';
     // 从本地存储读取用户手机号作为联系电话
     var profile = getStoredProfile();
     this.setData({
-      id: query.id || '',
+      id: id,
       contactPhone: (profile && profile.phone) ? profile.phone : ''
     });
+    if (!id || !getCustomerToken()) {
+      this.setData({ loading: false, error: id ? '请先登录后查看预约' : '缺少预约信息' });
+      return;
+    }
     this.loadDetail();
   },
 
@@ -40,6 +46,7 @@ Page({
   },
 
   loadDetail() {
+    if (!this.data.id || !getCustomerToken()) return;
     this.setData({ loading: true, error: null });
     api.getAppointment(this.data.id)
       .then(detail => {
@@ -50,8 +57,8 @@ Page({
           statusColor: appointmentStatusColor(detail.status),
           statusBgColor: appointmentStatusBgColor(detail.status),
           serviceText: detail.serviceTypeText || serviceTypeText(detail.serviceType),
-          canCancel: this.checkCanCancel(detail),
-          canEditNotes: NOTES_EDITABLE.indexOf(detail.status) !== -1
+          canCancel: typeof detail.canCancel === 'boolean' ? detail.canCancel : this.checkCanCancel(detail),
+          canEditNotes: typeof detail.canEditNotes === 'boolean' ? detail.canEditNotes : NOTES_EDITABLE.indexOf(detail.status) !== -1
         });
       })
       .catch(err => {
@@ -79,7 +86,11 @@ Page({
   // 取消预约
   onCancel() {
     const detail = this.data.detail;
-    if (!detail) return;
+    if (!detail || !this.data.canCancel || this.data.cancelling) return;
+    if (!getCustomerToken()) {
+      wx.showToast({ title: '请先登录后操作', icon: 'none' });
+      return;
+    }
 
     wx.showModal({
       title: '取消预约',
@@ -87,6 +98,7 @@ Page({
       confirmColor: '#F44336',
       success: (res) => {
         if (!res.confirm) return;
+        this.setData({ cancelling: true });
         api.cancelAppointment(this.data.id, '用户取消')
           .then(() => {
             wx.showToast({ title: '已取消', icon: 'success' });
@@ -94,13 +106,19 @@ Page({
           })
           .catch(err => {
             wx.showToast({ title: err.message || '取消失败', icon: 'none' });
-          });
+          })
+          .finally(() => this.setData({ cancelling: false }));
       }
     });
   },
 
   // 修改备注
   onEditNotes() {
+    if (!this.data.id || !this.data.canEditNotes) return;
+    if (!getCustomerToken()) {
+      wx.showToast({ title: '请先登录后操作', icon: 'none' });
+      return;
+    }
     const remark = this.data.detail.remark || '';
     wx.navigateTo({
       url: '/pkg-customer/appointment-notes/index?id=' + this.data.id + '&remark=' + encodeURIComponent(remark)
@@ -122,9 +140,12 @@ Page({
   // 拨打自己的联系电话
   onCallSelf() {
     var phone = this.data.contactPhone;
-    if (!phone) return;
+    if (!phone || phone.indexOf('*') !== -1) {
+      wx.showToast({ title: '手机号已脱敏，请通过授权后使用', icon: 'none' });
+      return;
+    }
     wx.makePhoneCall({
-      phoneNumber: String(phone).replace(/[*\s]/g, '')
+      phoneNumber: String(phone).replace(/\s/g, '')
     }).catch(() => {});
   },
 

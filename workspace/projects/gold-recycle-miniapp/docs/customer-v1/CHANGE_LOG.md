@@ -1,5 +1,26 @@
 # 变更日志
 
+## 2026-08-17 功能点 04：我的预约与预约详情安全交付候选
+
+### 本次交付范围
+- 顾客预约列表在未登录时不再触发请求；预约详情、备注编辑页增加参数与登录守卫。
+- 顾客预约 DTO 增加服务端计算的 `canCancel`、`canEditNotes`，前端以服务端规则为准展示操作按钮，兼容旧接口时才使用本地兜底。
+- 预约详情取消增加重复提交保护；备注页增加重复保存保护、异常 URL 参数安全解码和 200 字限制。
+- 预约详情不再尝试拨打脱敏手机号，门店电话继续使用后端白名单字段。
+- 后端所有预约详情、取消、备注接口继续以当前顾客 ID 查询，补充顾客间越权访问/操作回归测试。
+- 取消截止时间错误文案改为通用表述，避免后台规则调整后仍显示固定“2 小时”。
+
+### 验收证据
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go test ./internal/app -run 'TestCustomerAppointment|TestCustomerAppointmentOwnerIsolation|TestCustomerProfileDTO' -count=1 -timeout=90s`：通过。
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go test ./... -count=1 -timeout=120s`：通过。
+- `GOCACHE=/private/tmp/gold-recycle-go-build-cache go vet ./...`：通过。
+- 顾客端全部 JavaScript/JSON 检查：通过。
+- `miniapp/npm run validate`：通过。
+
+### 交付状态
+- 状态：**代码与自动化检查通过，待真机/真实环境发布确认**。
+- 未执行：生产数据库迁移、生产服务器修改、微信体验版/正式版上传和提审。
+
 ## 2026-08-17 功能点 03：黄金回收服务介绍 V1 合规交付候选
 
 ### 本次交付范围

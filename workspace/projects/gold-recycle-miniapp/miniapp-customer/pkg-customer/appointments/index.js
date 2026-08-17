@@ -39,6 +39,10 @@ Page({
   },
 
   onPullDownRefresh() {
+    if (!this.data.isLoggedIn) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     this.loadList(() => wx.stopPullDownRefresh());
   },
 
@@ -93,6 +97,7 @@ Page({
 
   onTapItem(e) {
     const id = e.currentTarget.dataset.id;
+    if (!id) return;
     wx.navigateTo({ url: '/pkg-customer/appointment-detail/index?id=' + id });
   },
 

@@ -317,7 +317,7 @@ func (a *App) customerListAppointments(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]CustomerAppointmentDTO, 0, len(appointments))
 	for _, appt := range appointments {
-		items = append(items, buildCustomerAppointmentDTO(appt))
+		items = append(items, a.customerAppointmentDTO(appt))
 	}
 
 	a.writeJSON(w, r, http.StatusOK, 0, "ok", map[string]interface{}{
@@ -374,7 +374,7 @@ func (a *App) customerCreateAppointment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	a.writeJSON(w, r, http.StatusCreated, 0, "ok", buildCustomerAppointmentDTO(appt))
+	a.writeJSON(w, r, http.StatusCreated, 0, "ok", a.customerAppointmentDTO(appt))
 }
 
 func (a *App) handleCustomerAppointmentActions(w http.ResponseWriter, r *http.Request) {
@@ -410,7 +410,7 @@ func (a *App) customerGetAppointment(w http.ResponseWriter, r *http.Request, app
 		a.writeError(w, r, http.StatusNotFound, 40401, "appointment not found")
 		return
 	}
-	a.writeJSON(w, r, http.StatusOK, 0, "ok", buildCustomerAppointmentDTO(appt))
+	a.writeJSON(w, r, http.StatusOK, 0, "ok", a.customerAppointmentDTO(appt))
 }
 
 func (a *App) customerCancelAppointment(w http.ResponseWriter, r *http.Request, appointmentID string) {
@@ -427,7 +427,7 @@ func (a *App) customerCancelAppointment(w http.ResponseWriter, r *http.Request, 
 		case errors.Is(err, errAppointmentCancelled):
 			a.writeError(w, r, http.StatusConflict, 40902, "appointment already cancelled or completed")
 		case errors.Is(err, errAppointmentTimeTooLate):
-			a.writeError(w, r, http.StatusBadRequest, 40011, "cannot cancel within 2 hours of appointment")
+			a.writeError(w, r, http.StatusBadRequest, 40011, "cannot cancel after the cancellation deadline")
 		case errors.Is(err, errAppointmentStatusFlow):
 			a.writeError(w, r, http.StatusConflict, 40903, "appointment status transition not allowed")
 		default:
@@ -437,7 +437,7 @@ func (a *App) customerCancelAppointment(w http.ResponseWriter, r *http.Request, 
 	}
 
 	appt, _ := a.store.getCustomerAppointment(customer.ID, appointmentID)
-	a.writeJSON(w, r, http.StatusOK, 0, "ok", buildCustomerAppointmentDTO(appt))
+	a.writeJSON(w, r, http.StatusOK, 0, "ok", a.customerAppointmentDTO(appt))
 }
 
 func (a *App) customerUpdateAppointmentNotes(w http.ResponseWriter, r *http.Request, appointmentID string) {
@@ -467,7 +467,22 @@ func (a *App) customerUpdateAppointmentNotes(w http.ResponseWriter, r *http.Requ
 	}
 
 	appt, _ := a.store.getCustomerAppointment(customer.ID, appointmentID)
-	a.writeJSON(w, r, http.StatusOK, 0, "ok", buildCustomerAppointmentDTO(appt))
+	a.writeJSON(w, r, http.StatusOK, 0, "ok", a.customerAppointmentDTO(appt))
+}
+
+// customerAppointmentDTO 返回顾客端预约 DTO，并由服务端计算当前可执行操作。
+// 前端可据此展示按钮，但接口本身仍会再次校验顾客身份、状态和截止时间。
+func (a *App) customerAppointmentDTO(appt CustomerAppointment) CustomerAppointmentDTO {
+	dto := buildCustomerAppointmentDTO(appt)
+	rules := a.store.appointmentRulesSnapshot()
+	cancelLead := rules.CancelLeadMinutes
+	if cancelLead <= 0 {
+		cancelLead = 120
+	}
+	dto.CanCancel = (appt.Status == AppointmentStatusPending || appt.Status == AppointmentStatusConfirmed) &&
+		canCancelAppointment(appt, time.Now(), cancelLead)
+	dto.CanEditNotes = appt.Status == AppointmentStatusPending || appt.Status == AppointmentStatusConfirmed
+	return dto
 }
 
 // --- 员工预约管理 ---
